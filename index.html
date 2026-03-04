@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPI 非言語 模擬試験β｜SPI3 WEBテスティング対応・無料</title>
+  <meta name="description" content="SPI3 WEBテスティング形式の非言語分野を無料で練習できる模擬試験サービス（β版）。推論・確率・損益算など10分野対応。登録不要。">
+  <meta property="og:title" content="SPI 非言語 模擬試験β">
+  <meta property="og:description" content="SPI3 WEBテスティング形式の非言語分野を無料で練習。推論・確率・損益算など10分野対応。登録不要。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://anebane.github.io/spi-practice/">
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SPDZ1K30TB"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SPDZ1K30TB');
+  </script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== スタート画面 ===== -->
+  <div id="screen-start" class="screen active">
+    <div class="start-container">
+      <h1 class="start-title">SPI 非言語 模擬試験 <span class="beta-badge">β</span></h1>
+      <p class="start-subtitle">SPI3 WEBテスティング形式対応</p>
+
+      <div class="config-section">
+        <div class="config-group">
+          <label class="config-label">出題数</label>
+          <div class="config-options" id="question-count">
+            <button class="config-btn" data-value="10">10問</button>
+            <button class="config-btn active" data-value="20">20問</button>
+            <button class="config-btn" data-value="30">30問</button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">モード</label>
+          <div class="config-options" id="exam-mode">
+            <button class="config-btn active" data-value="exam">試験モード</button>
+            <button class="config-btn" data-value="practice">練習モード</button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">難易度</label>
+          <div class="difficulty-grid" id="difficulty-select">
+            <label class="difficulty-item"><input type="checkbox" value="1" checked><span>易</span></label>
+            <label class="difficulty-item"><input type="checkbox" value="2" checked><span>中</span></label>
+            <label class="difficulty-item"><input type="checkbox" value="3" checked><span>難</span></label>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">出題分野</label>
+          <div class="category-grid" id="category-select">
+            <label class="category-item"><input type="checkbox" value="1" checked><span>推論</span></label>
+            <label class="category-item"><input type="checkbox" value="2" checked><span>場合の数・確率</span></label>
+            <label class="category-item"><input type="checkbox" value="3" checked><span>集合</span></label>
+            <label class="category-item"><input type="checkbox" value="4" checked><span>損益算</span></label>
+            <label class="category-item"><input type="checkbox" value="5" checked><span>速度算</span></label>
+            <label class="category-item"><input type="checkbox" value="6" checked><span>仕事算</span></label>
+            <label class="category-item"><input type="checkbox" value="7" checked><span>濃度算</span></label>
+            <label class="category-item"><input type="checkbox" value="8" checked><span>割合・比</span></label>
+            <label class="category-item"><input type="checkbox" value="9" checked><span>図表の読み取り</span></label>
+            <label class="category-item"><input type="checkbox" value="10" checked><span>順列・組み合わせ</span></label>
+          </div>
+          <div class="category-actions">
+            <button class="link-btn" id="select-all">すべて選択</button>
+            <button class="link-btn" id="deselect-all">すべて解除</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary btn-large" id="btn-start">試験を開始する</button>
+
+      <div class="beta-notice">
+        本サービスはβ版です。問題の誤りや改善のご提案は<a href="https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform" target="_blank" rel="noopener">フィードバックフォーム</a>からお寄せください。
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 試験画面 ===== -->
+  <div id="screen-exam" class="screen">
+    <header class="exam-header">
+      <div class="exam-header-left">
+        <span class="exam-logo">SPI 非言語 模擬試験 <span class="beta-badge-sm">β</span></span>
+      </div>
+      <div class="exam-header-right">
+        <span class="timer-display" id="total-timer">残り時間 --:--</span>
+        <span class="progress-display" id="progress-display">-- / --</span>
+      </div>
+    </header>
+
+    <div class="exam-body">
+      <div class="question-meta">
+        <span class="question-category" id="question-category">分野: --</span>
+        <span class="question-difficulty" id="question-difficulty">--</span>
+        <span class="question-number" id="question-number">問題 -- / --</span>
+      </div>
+
+      <div class="question-content" id="question-content">
+        <!-- 問題文がここに入る -->
+      </div>
+
+      <div class="answer-area" id="answer-area">
+        <!-- 回答入力UIがここに入る -->
+      </div>
+
+      <div class="question-timer-bar">
+        <div class="question-timer-fill" id="question-timer-fill"></div>
+      </div>
+
+      <!-- 練習モード用: 正誤・解説表示エリア -->
+      <div class="practice-feedback" id="practice-feedback" style="display:none;">
+        <div class="feedback-result" id="feedback-result"></div>
+        <div class="feedback-explanation" id="feedback-explanation"></div>
+      </div>
+
+      <div class="exam-actions">
+        <button class="btn-primary" id="btn-answer">回答して次へ</button>
+        <button class="btn-secondary" id="btn-skip">スキップ</button>
+        <button class="btn-secondary" id="btn-peek">解説を見る</button>
+      </div>
+
+      <!-- 解説プレビュー（一時停止）オーバーレイ -->
+      <div class="peek-overlay" id="peek-overlay" style="display:none;">
+        <div class="peek-overlay-backdrop" id="peek-backdrop"></div>
+        <div class="peek-panel">
+          <div class="peek-header">
+            <span class="peek-title">解説（タイマー一時停止中）</span>
+          </div>
+          <div class="peek-body">
+            <div class="peek-correct-answer" id="peek-correct-answer"></div>
+            <div class="peek-explanation" id="peek-explanation"></div>
+          </div>
+          <div class="peek-actions">
+            <button class="btn-primary" id="btn-peek-close">閉じて次の問題へ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 結果画面 ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-container">
+      <h2 class="result-title">試験結果</h2>
+
+      <div class="result-summary">
+        <div class="result-score">
+          <div class="score-label">正答率</div>
+          <div class="score-value" id="result-score">--%</div>
+          <div class="score-detail" id="result-detail">-- / -- 問正解</div>
+        </div>
+        <div class="result-time">
+          <div class="score-label">所要時間</div>
+          <div class="score-value" id="result-time">--:--</div>
+        </div>
+      </div>
+
+      <div class="score-bar-container">
+        <div class="score-bar" id="score-bar"></div>
+      </div>
+
+      <h3 class="section-title">分野別成績</h3>
+      <div class="category-results" id="category-results">
+        <!-- 分野別成績がここに入る -->
+      </div>
+
+      <div class="radar-chart-container">
+        <canvas id="radar-chart" width="400" height="400"></canvas>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn-primary" id="btn-review">解説を確認する</button>
+        <button class="btn-secondary" id="btn-retry">もう一度挑戦する</button>
+        <button class="btn-secondary" id="btn-back">設定に戻る</button>
+      </div>
+
+      <div class="beta-notice">
+        問題の誤りを見つけた場合は、解説画面の「この問題の誤りを報告する」ボタンからご報告ください。
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 解説画面 ===== -->
+  <div id="screen-review" class="screen">
+    <header class="exam-header">
+      <div class="exam-header-left">
+        <span class="exam-logo">解説</span>
+      </div>
+      <div class="exam-header-right">
+        <button class="btn-header" id="btn-review-back">結果に戻る</button>
+      </div>
+    </header>
+
+    <div class="review-body">
+      <div class="review-nav">
+        <button class="btn-secondary btn-small" id="btn-review-prev">前へ</button>
+        <span class="review-progress" id="review-progress">問題 -- / --</span>
+        <button class="btn-secondary btn-small" id="btn-review-next">次へ</button>
+      </div>
+
+      <div class="review-content">
+        <div class="review-result" id="review-result"></div>
+        <div class="review-question" id="review-question"></div>
+        <div class="review-answer" id="review-answer"></div>
+        <div class="review-explanation" id="review-explanation"></div>
+        <button class="btn-report" id="btn-report-error">この問題の誤りを報告する</button>
+      </div>
+
+      <div class="review-list" id="review-list">
+        <!-- 問題一覧ナビがここに入る -->
+      </div>
+    </div>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="generator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
