@@ -26,6 +26,23 @@
     window.open(url, "_blank");
   }
 
+  // --- SNSシェア ---
+  function shareOnX() {
+    var totalCorrect = 0;
+    var totalQuestions = state.questions.length;
+    state.questions.forEach(function(q) { if (q.correct) totalCorrect++; });
+    var percent = Math.round((totalCorrect / totalQuestions) * 100);
+    var text = "SPI非言語 模擬試験で " + percent + "% (" + totalCorrect + "/" + totalQuestions + "問正解) でした！"
+      + "\n無料・登録不要で何度でも練習できる"
+      + "\n#SPI #就活 #WEBテスティング";
+    var url = "https://anebane.github.io/spi-practice/";
+    window.open(
+      "https://x.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(url),
+      "_blank"
+    );
+    trackEvent("share_x", { score_percent: percent });
+  }
+
   // --- 状態管理 ---
   var state = {
     questions: [],
@@ -898,6 +915,11 @@
 
     document.getElementById("btn-review-next").addEventListener("click", function() {
       if (reviewIndex < state.questions.length - 1) showReviewQuestion(reviewIndex + 1);
+    });
+
+    // Xシェアボタン
+    document.getElementById("btn-share-x").addEventListener("click", function() {
+      shareOnX();
     });
 
     // 誤り報告ボタン

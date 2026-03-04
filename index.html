@@ -10,6 +10,9 @@
   <meta property="og:description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率など10分野対応。問題はランダム生成で何度でも練習可能。登録不要。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://anebane.github.io/spi-practice/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要">
+  <meta name="twitter:description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率など10分野対応。ランダム生成で何度でも練習可能。">
 
   <script type="application/ld+json">
   {
@@ -40,6 +43,47 @@
     },
     "inLanguage": "ja",
     "isAccessibleForFree": true
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "SPI WEBテスティングとテストセンターの違いは？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WEBテスティングは自宅のPC＋電卓で受験する形式で、テストセンターは専用会場のPCで受験します。本サービスはWEBテスティング形式に特化しており、電卓使用を前提とした出題・解説を行っています。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "本当に無料で何度でも受けられますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "はい、完全無料・登録不要です。問題の数値はランダム生成されるため、毎回異なる問題で何度でも練習できます。答えを覚えてしまう心配がありません。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "どの分野に対応していますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "SPI非言語の主要10分野に対応しています。推論、場合の数・確率、集合、損益算、速度算、仕事算、濃度算、割合・比、図表の読み取り、順列・組み合わせの全分野を練習できます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "試験モードと練習モードの違いは？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "試験モードはタイマー付きで本番さながらの環境で実力を測定できます。練習モードは1問ごとに正誤と解説がすぐ表示されるため、解法を学びながら進められます。"
+        }
+      }
+    ]
   }
   </script>
 
@@ -139,6 +183,26 @@
       </div>
 
       <button class="btn-primary btn-large" id="btn-start">試験を開始する</button>
+
+      <div class="faq-section">
+        <h2 class="faq-heading">よくある質問</h2>
+        <details class="faq-item">
+          <summary>SPI WEBテスティングとテストセンターの違いは？</summary>
+          <p>WEBテスティングは自宅のPC＋電卓で受験する形式で、テストセンターは専用会場のPCで受験します。本サービスはWEBテスティング形式に特化しており、電卓使用を前提とした出題・解説を行っています。</p>
+        </details>
+        <details class="faq-item">
+          <summary>本当に無料で何度でも受けられますか？</summary>
+          <p>はい、完全無料・登録不要です。問題の数値はランダム生成されるため、毎回異なる問題で何度でも練習できます。答えを覚えてしまう心配がありません。</p>
+        </details>
+        <details class="faq-item">
+          <summary>どの分野に対応していますか？</summary>
+          <p>SPI非言語の主要10分野に対応しています。推論、場合の数・確率、集合、損益算、速度算、仕事算、濃度算、割合・比、図表の読み取り、順列・組み合わせの全分野を練習できます。</p>
+        </details>
+        <details class="faq-item">
+          <summary>試験モードと練習モードの違いは？</summary>
+          <p>試験モードはタイマー付きで本番さながらの環境で実力を測定できます。練習モードは1問ごとに正誤と解説がすぐ表示されるため、解法を学びながら進められます。</p>
+        </details>
+      </div>
 
       <div class="beta-notice">
         本サービスはβ版です。問題・解説はAIにより生成されています。内容に誤りがある可能性があるため、お気づきの点は<a href="https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform" target="_blank" rel="noopener">フィードバックフォーム</a>からお知らせください。
@@ -242,6 +306,10 @@
         <button class="btn-primary" id="btn-review">解説を確認する</button>
         <button class="btn-secondary" id="btn-retry">もう一度挑戦する</button>
         <button class="btn-secondary" id="btn-back">設定に戻る</button>
+      </div>
+
+      <div class="share-section">
+        <button class="btn-share-x" id="btn-share-x">&#120143; で結果をシェア</button>
       </div>
 
       <div class="beta-notice">
