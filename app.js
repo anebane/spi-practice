@@ -154,7 +154,12 @@
     state.totalTimeSec = state.questions.length * 60;
     state.totalTimeRemaining = state.totalTimeSec;
 
-    trackEvent("exam_start", { question_count: state.questions.length, mode: state.mode });
+    trackEvent("exam_start", {
+      question_count: state.questions.length,
+      mode: state.mode,
+      difficulties: selectedDifficulties.join(","),
+      categories: selectedCategories.join(",")
+    });
     showScreen("exam");
     showQuestion(0);
     startTimer();
@@ -187,6 +192,8 @@
 
       if (state.questionTimeRemaining <= 0) {
         // 時間切れ → 自動スキップ
+        var tq = state.questions[state.currentIndex];
+        trackEvent("question_timeout", { question_id: tq.id, category: tq.category, difficulty: tq.difficulty });
         recordAnswer(null, true);
       }
     }, 1000);
@@ -473,6 +480,15 @@
       skipped: !!skipped
     };
 
+    trackEvent("question_answer", {
+      question_id: q.id,
+      category: q.category,
+      difficulty: q.difficulty,
+      is_correct: isCorrect,
+      time_spent: timeSpent,
+      skipped: !!skipped
+    });
+
     // 練習モード: フィードバック表示
     if (state.mode === "practice") {
       showPracticeFeedback(q, userAnswer, isCorrect, skipped);
@@ -518,6 +534,7 @@
 
     var q = state.questions[state.currentIndex];
     state.isPeeking = true;
+    trackEvent("peek_explanation", { question_id: q.id, category: q.category, difficulty: q.difficulty });
 
     // 正解と解説を表示
     document.getElementById("peek-correct-answer").textContent = "正解: " + formatAnswer(q.correctAnswer, q);
@@ -896,10 +913,19 @@
     document.getElementById("btn-review").addEventListener("click", showReview);
 
     document.getElementById("btn-retry").addEventListener("click", function() {
+      trackEvent("retry_exam");
       startExam();
     });
 
     document.getElementById("btn-back").addEventListener("click", function() {
+      var answered = state.answers.filter(function(a) { return a; }).length;
+      if (answered > 0 && answered < state.questions.length) {
+        trackEvent("exam_abandon", {
+          questions_answered: answered,
+          total_questions: state.questions.length,
+          mode: state.mode
+        });
+      }
       stopTimer();
       showScreen("start");
     });
@@ -910,11 +936,17 @@
     });
 
     document.getElementById("btn-review-prev").addEventListener("click", function() {
-      if (reviewIndex > 0) showReviewQuestion(reviewIndex - 1);
+      if (reviewIndex > 0) {
+        trackEvent("review_navigate", { direction: "prev", question_index: reviewIndex - 1 });
+        showReviewQuestion(reviewIndex - 1);
+      }
     });
 
     document.getElementById("btn-review-next").addEventListener("click", function() {
-      if (reviewIndex < state.questions.length - 1) showReviewQuestion(reviewIndex + 1);
+      if (reviewIndex < state.questions.length - 1) {
+        trackEvent("review_navigate", { direction: "next", question_index: reviewIndex + 1 });
+        showReviewQuestion(reviewIndex + 1);
+      }
     });
 
     // Xシェアボタン
@@ -926,6 +958,15 @@
     document.getElementById("btn-report-error").addEventListener("click", function() {
       openReportForm(reviewIndex);
       trackEvent("report_error", { question_id: (state.questions[reviewIndex] || {}).id });
+    });
+
+    // FAQ開閉トラッキング
+    document.querySelectorAll(".faq-item").forEach(function(item) {
+      item.addEventListener("toggle", function() {
+        if (item.open) {
+          trackEvent("faq_open", { faq_question: item.querySelector("summary").textContent.trim().substring(0, 50) });
+        }
+      });
     });
 
     // キーボードショートカット（解説画面）
