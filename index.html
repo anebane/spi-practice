@@ -3,12 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SPI 非言語 模擬試験β｜SPI3 WEBテスティング対応・無料</title>
-  <meta name="description" content="SPI3 WEBテスティング形式の非言語分野を無料で練習できる模擬試験サービス（β版）。推論・確率・損益算など10分野対応。登録不要。">
-  <meta property="og:title" content="SPI 非言語 模擬試験β">
-  <meta property="og:description" content="SPI3 WEBテスティング形式の非言語分野を無料で練習。推論・確率・損益算など10分野対応。登録不要。">
+  <title>SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要で何度でも練習</title>
+  <meta name="description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率など10分野に対応。登録不要・ブラウザで即スタート。問題はランダム生成で何度でも本番さながらに繰り返し練習できます。">
+  <link rel="canonical" href="https://anebane.github.io/spi-practice/">
+  <meta property="og:title" content="SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要">
+  <meta property="og:description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率など10分野対応。問題はランダム生成で何度でも練習可能。登録不要。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://anebane.github.io/spi-practice/">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "SPI非言語 無料模擬試験 - WEBテスティング形式練習アプリ",
+    "url": "https://anebane.github.io/spi-practice/",
+    "description": "SPI3 WEBテスティング形式の非言語分野を無料で練習できる模擬試験。推論・確率・損益算・速度算など10分野に対応。登録不要、ブラウザで即スタート。問題はランダム生成で何度でも練習できます。",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Modern browser required.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "JPY"
+    },
+    "featureList": [
+      "SPI3 WEBテスティング形式対応",
+      "10分野対応（推論・場合の数・確率・集合・損益算・速度算・仕事算・濃度算・割合・比・図表読み取り・順列組み合わせ）",
+      "パラメータランダム生成による無限練習",
+      "試験モード（タイマー付き）・練習モード（即時フィードバック）",
+      "3段階難易度設定",
+      "分野別成績・レーダーチャート"
+    ],
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "就職活動中の大学生・中途転職者"
+    },
+    "inLanguage": "ja",
+    "isAccessibleForFree": true
+  }
+  </script>
 
   <!-- Google Analytics 4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-SPDZ1K30TB"></script>
@@ -26,8 +59,35 @@
   <!-- ===== スタート画面 ===== -->
   <div id="screen-start" class="screen active">
     <div class="start-container">
-      <h1 class="start-title">SPI 非言語 模擬試験 <span class="beta-badge">β</span></h1>
+      <h1 class="start-title">SPI非言語 無料模擬試験 <span class="beta-badge">β</span></h1>
       <p class="start-subtitle">SPI3 WEBテスティング形式対応</p>
+      <p class="start-tagline">登録不要 · 完全無料 · 問題はランダム生成で何度でも練習可能</p>
+
+      <div class="feature-cards">
+        <div class="feature-card">
+          <div class="feature-icon">&#8734;</div>
+          <div class="feature-text">
+            <strong>無限の問題バリエーション</strong>
+            <span>パラメータをランダム生成。何度解いても違う問題で実力がつく</span>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9201;</div>
+          <div class="feature-text">
+            <strong>本番さながらの試験モード</strong>
+            <span>タイマー付きで時間配分を練習。練習モードなら即時フィードバック</span>
+          </div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#9678;</div>
+          <div class="feature-text">
+            <strong>10分野 · 弱点を可視化</strong>
+            <span>分野別成績とレーダーチャートで苦手分野が一目でわかる</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="start-categories">対応分野: 推論 / 場合の数・確率 / 集合 / 損益算 / 速度算 / 仕事算 / 濃度算 / 割合・比 / 図表の読み取り / 順列・組み合わせ</p>
 
       <div class="config-section">
         <div class="config-group">
@@ -89,7 +149,7 @@
   <div id="screen-exam" class="screen">
     <header class="exam-header">
       <div class="exam-header-left">
-        <span class="exam-logo">SPI 非言語 模擬試験 <span class="beta-badge-sm">β</span></span>
+        <span class="exam-logo">SPI非言語 無料模擬試験 <span class="beta-badge-sm">β</span></span>
       </div>
       <div class="exam-header-right">
         <span class="timer-display" id="total-timer">残り時間 --:--</span>
