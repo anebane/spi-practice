@@ -82,7 +82,7 @@ var QUESTION_TEMPLATES = [];
     id: "suiron_match_01",
     category: "推論",
     categoryId: 1,
-    difficulty: 2,
+    difficulty: 1,
     type: "pattern",
     patterns: [
       {
@@ -244,7 +244,7 @@ var QUESTION_TEMPLATES = [];
     id: "suiron_position_01",
     category: "推論",
     categoryId: 1,
-    difficulty: 2,
+    difficulty: 3,
     type: "pattern",
     patterns: [
       {
@@ -402,7 +402,7 @@ var QUESTION_TEMPLATES = [];
     id: "suiron_direction_01",
     category: "推論",
     categoryId: 1,
-    difficulty: 2,
+    difficulty: 1,
     type: "pattern",
     patterns: [
       {
@@ -597,7 +597,7 @@ var QUESTION_TEMPLATES = [];
     id: "kakuritsu_cond_01",
     category: "場合の数・確率",
     categoryId: 2,
-    difficulty: 3,
+    difficulty: 2,
     templateText: "袋に赤玉{{red}}個と白玉{{white}}個が入っている。1個取り出して色を確認し、戻さずにもう1個取り出す。1個目が赤玉だったとき、2個目も赤玉である確率を求めよ。",
     variables: {
       red: { type: "int", min: 3, max: 7, step: 1 },
@@ -927,7 +927,7 @@ var QUESTION_TEMPLATES = [];
     id: "soneki_compare_01",
     category: "損益算",
     categoryId: 4,
-    difficulty: 2,
+    difficulty: 3,
     templateText: "商品Aは原価{{costA}}円、定価は原価の{{markupA}}%増しで、定価の{{discountA}}%引きで売った。商品Bは原価{{costB}}円、定価は原価の{{markupB}}%増しで、定価の{{discountB}}%引きで売った。2つの商品の利益の差額はいくらか。",
     variables: {
       costA: { type: "int", min: 1000, max: 3000, step: 500 },
@@ -1193,7 +1193,7 @@ var QUESTION_TEMPLATES = [];
     id: "shigoto_3people_01",
     category: "仕事算",
     categoryId: 6,
-    difficulty: 3,
+    difficulty: 2,
     templateText: "ある仕事をAだけですると{{daysA}}日、Bだけですると{{daysB}}日、Cだけですると{{daysC}}日かかる。3人で一緒に仕事をすると何日かかるか。",
     variables: {
       daysA: { type: "choice", options: [4, 6, 8, 10, 12] },
@@ -1219,7 +1219,7 @@ var QUESTION_TEMPLATES = [];
     id: "shigoto_tank_01",
     category: "仕事算",
     categoryId: 6,
-    difficulty: 2,
+    difficulty: 1,
     templateText: "ある水槽を満水にするのにポンプAだけでは{{hoursA}}時間、ポンプBだけでは{{hoursB}}時間かかる。両方のポンプを同時に使うと何時間で満水になるか。",
     variables: {
       hoursA: { type: "choice", options: [3, 4, 5, 6, 8, 10] },
@@ -1242,7 +1242,7 @@ var QUESTION_TEMPLATES = [];
     id: "shigoto_efficiency_01",
     category: "仕事算",
     categoryId: 6,
-    difficulty: 2,
+    difficulty: 1,
     templateText: "ある仕事を仕上げるのにAは{{daysA}}日かかる。BはAの{{ratio}}倍の速さで仕事ができる。Bだけでこの仕事をすると何日かかるか。",
     variables: {
       daysA: { type: "choice", options: [6, 8, 10, 12, 15, 20, 24, 30] },
@@ -1374,7 +1374,7 @@ var QUESTION_TEMPLATES = [];
     id: "noudo_addwater_01",
     category: "濃度算",
     categoryId: 7,
-    difficulty: 2,
+    difficulty: 1,
     templateText: "濃度{{conc}}%の食塩水{{weight}}gに水を{{addWater}}g加えると、濃度は何%になるか。（小数第2位を四捨五入）",
     variables: {
       conc: { type: "choice", options: [5, 8, 10, 12, 15] },
@@ -1543,7 +1543,7 @@ var QUESTION_TEMPLATES = [];
     id: "wariai_increase_01",
     category: "割合・比",
     categoryId: 8,
-    difficulty: 2,
+    difficulty: 1,
     templateText: "ある工場の先月の生産量は{{original}}個だった。今月は先月より{{percent}}%増加した。今月の生産量は何個か。",
     variables: {
       original: { type: "int", min: 200, max: 2000, step: 100 },
@@ -1624,7 +1624,7 @@ var QUESTION_TEMPLATES = [];
     id: "wariai_population_01",
     category: "割合・比",
     categoryId: 8,
-    difficulty: 2,
+    difficulty: 3,
     templateText: "ある市の人口は去年{{population}}人だった。今年は男性が{{maleChange}}%増加し、女性が{{femaleChange}}%減少した。去年の男女比が{{maleRatio}}:{{femaleRatio}}のとき、今年の人口は何人か。",
     variables: {
       population: { type: "int", min: 10000, max: 50000, step: 5000 },
