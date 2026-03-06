@@ -641,7 +641,7 @@ var QUESTION_TEMPLATES = [];
     timeLimitSec: 90,
     validate: function(v) {
       var union = v.a + v.b - v.ab;
-      return v.ab <= Math.min(v.a, v.b) && union <= v.total && (v.total - union) >= 0;
+      return v.a <= v.total && v.b <= v.total && v.ab <= Math.min(v.a, v.b) && union <= v.total && (v.total - union) >= 0;
     }
   });
 
@@ -712,7 +712,7 @@ var QUESTION_TEMPLATES = [];
     templateText: "ある会社の社員{{total}}人のうち、電車通勤の人が{{a}}人、バス通勤の人が{{b}}人いる。電車とバスの両方を使う人が最も多い場合、その人数は何人か。",
     variables: {
       total: { type: "int", min: 40, max: 80, step: 10 },
-      a: { type: "int", min: 20, max: 50, step: 5 },
+      a: { type: "int", min: 20, max: 45, step: 5 },
       b: { type: "int", min: 15, max: 40, step: 5 }
     },
     answerType: "number",
@@ -723,7 +723,7 @@ var QUESTION_TEMPLATES = [];
     explanationTemplate: "【考え方】\n「両方の最大」は、小さい方の集合が大きい方に完全に含まれる場合。\n全員が重複するのが最大のケースです。\n\n【解法】\n① 電車通勤: {{a}}人、バス通勤: {{b}}人\n\n② 両方使う人の最大値 = min({{a}}, {{b}}) = {{answer}}人\n\n③ 理由: 少ない方の全員が多い方にも含まれる場合が最大\n  （バス通勤者全員が電車通勤者でもある、というケース）\n\n【ポイント】\n・最大 = min(A, B)…小さい方を超えることはできない\n・最小 = max(0, A+B-全体)…鳩の巣原理で最低限の重複",
     timeLimitSec: 90,
     validate: function(v) {
-      return v.a + v.b > v.total;
+      return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;
     }
   });
 
@@ -735,9 +735,9 @@ var QUESTION_TEMPLATES = [];
     difficulty: 2,
     templateText: "{{total}}人の社員のうち、英語ができる人が{{a}}人、中国語ができる人が{{b}}人いる。英語と中国語の両方ができる人は少なくとも何人いるか。",
     variables: {
-      total: { type: "int", min: 30, max: 60, step: 5 },
-      a: { type: "int", min: 15, max: 40, step: 5 },
-      b: { type: "int", min: 15, max: 40, step: 5 }
+      total: { type: "int", min: 40, max: 60, step: 5 },
+      a: { type: "int", min: 15, max: 35, step: 5 },
+      b: { type: "int", min: 15, max: 35, step: 5 }
     },
     answerType: "number",
     answerFormula: function(v) {
@@ -747,7 +747,7 @@ var QUESTION_TEMPLATES = [];
     explanationTemplate: "【考え方】\n「少なくとも何人」= 重複の最小値。AとBの合計が全体を超える分は、\nどうしても重複せざるを得ません（鳩の巣原理）。\n\n【解法】\n① A∩Bの最小値の公式:\n  max(0, A + B - 全体)\n\n② 代入:\n  max(0, {{a}} + {{b}} - {{total}}) = {{answer}}人\n\n③ 理由: {{a}}+{{b}} = {{a}}+{{b}} ですが、全体は{{total}}人しかいない\n  → {{a}}+{{b}}-{{total}}人分は必ずどちらにも属する\n\n【ポイント】\n・鳩の巣原理: n個の箱にn+1個入れると、必ずどこかに2つ入る\n・「少なくとも」→ 最小値の公式 max(0, A+B-全体)\n・「最大」→ min(A, B) とセットで覚える",
     timeLimitSec: 90,
     validate: function(v) {
-      return v.a + v.b > v.total;
+      return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;
     }
   });
 
