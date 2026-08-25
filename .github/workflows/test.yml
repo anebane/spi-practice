@@ -1,0 +1,33 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # src/questions/ を編集して questions.js の再生成を忘れると、
+      # ソースと配信物がズレたまま公開されてしまう。それを防ぐ。
+      - name: questions.js がソースと一致しているか
+        run: |
+          node tools/build-questions.js
+          if ! git diff --quiet questions.js; then
+            echo "::error::questions.js が src/questions/ と一致していません。"
+            echo "`node tools/build-questions.js` を実行してコミットしてください。"
+            git diff --stat questions.js
+            exit 1
+          fi
+
+      - name: 問題ジェネレータの検証（79テンプレート x 1000回）
+        run: ITERATIONS=1000 node test/generator.spec.js
+
+      - name: HTMLの健全性（未展開の変数・壊れた内部リンク）
+        run: node test/html.spec.js

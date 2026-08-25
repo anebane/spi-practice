@@ -24,6 +24,8 @@ for (const f of ["questions.js", "generator.js"]) {
 const TEMPLATES = vm.runInContext("QUESTION_TEMPLATES", ctx);
 const GEN = vm.runInContext("QuestionGenerator", ctx);
 
+const VALID_FORMATS = ["webtesting", "testcenter"];
+
 const failures = [];
 function fail(tid, rule, detail) {
   failures.push({ tid, rule, detail });
@@ -61,6 +63,24 @@ const NON_NEGATIVE_UNITS = ["人", "個", "通り", "km", "m", "分", "時間", 
 const seen = new Map();   // テンプレートごとの答えの分布（固定化の検出用）
 
 for (const t of TEMPLATES) {
+  // --- テンプレート定義そのものの検査（生成前） ---
+  // formats はテストセンター対応を判断する唯一の情報源。宣言漏れを許すと
+  // 「電卓不可・選択式」の環境に数値入力問題が混ざる事故になる。
+  if (!Array.isArray(t.formats) || t.formats.length === 0) {
+    fail(t.id, "formats未宣言", "対応形式を配列で宣言してください");
+  } else {
+    for (const f of t.formats) {
+      if (VALID_FORMATS.indexOf(f) === -1) fail(t.id, "formatsに未知の値", f);
+    }
+    // テストセンターは選択式のみ。数値入力の問題を testcenter に含めてはいけない
+    if (t.formats.indexOf("testcenter") !== -1 &&
+        t.answerType !== "choice" && t.type !== "pattern") {
+      fail(t.id, "testcenter非対応の回答形式", `answerType=${t.answerType} / type=${t.type}（テストセンターは選択式）`);
+    }
+  }
+  if (!t.category || !t.categoryId) fail(t.id, "カテゴリ未設定", `${t.category}/${t.categoryId}`);
+  if (![1, 2, 3].includes(t.difficulty)) fail(t.id, "難易度が1〜3でない", String(t.difficulty));
+
   const answers = new Set();
   for (let i = 0; i < ITERATIONS; i++) {
     let q;
