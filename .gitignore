@@ -4,3 +4,7 @@
 *service-account*.json
 *credentials*.json
 .env
+
+# 検索データ・レポートは公開しない（競合に戦略が見えるため）
+data/gsc/
+reports/
