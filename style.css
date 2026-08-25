@@ -1055,3 +1055,139 @@ body {
     font-size: 12px;
   }
 }
+
+/* ===== 規約・情報ページ（privacy / about / contact） ===== */
+.legal-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+.legal-header {
+  padding: 20px 0;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 32px;
+}
+.legal-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a237e;
+  text-decoration: none;
+}
+.legal-logo:hover { text-decoration: underline; }
+.legal-body {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 32px;
+}
+.legal-body h1 {
+  font-size: 24px;
+  color: #1a237e;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e8eaf6;
+}
+.legal-body h2 {
+  font-size: 17px;
+  color: #1a237e;
+  margin: 28px 0 10px;
+}
+.legal-body p { margin-bottom: 12px; }
+.legal-body ul { margin: 0 0 12px 20px; }
+.legal-body li { margin-bottom: 8px; }
+.legal-body a { color: #1a237e; }
+.legal-lead {
+  color: #555;
+  background: #e8eaf6;
+  padding: 12px 16px;
+  border-radius: 6px;
+}
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+.legal-table th,
+.legal-table td {
+  border: 1px solid #e0e0e0;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 14px;
+  vertical-align: top;
+}
+.legal-table th {
+  background: #f5f5f5;
+  width: 30%;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.legal-cta { margin: 16px 0; }
+.legal-btn {
+  display: inline-block;
+  background: #1a237e;
+  color: #fff !important;
+  text-decoration: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.legal-btn:hover { background: #283593; }
+.legal-note {
+  font-size: 13px;
+  color: #666;
+}
+.legal-date {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 13px;
+  color: #666;
+}
+.legal-footer {
+  margin-top: 32px;
+  text-align: center;
+}
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin-bottom: 12px;
+}
+.legal-nav a {
+  color: #1a237e;
+  font-size: 13px;
+}
+.legal-copy {
+  font-size: 12px;
+  color: #666;
+}
+
+/* ホーム画面フッター */
+.site-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+.site-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin-bottom: 10px;
+}
+.site-footer-nav a {
+  color: #1a237e;
+  font-size: 13px;
+}
+.site-footer-copy {
+  font-size: 12px;
+  color: #666;
+}
+
+@media (max-width: 600px) {
+  .legal-body { padding: 20px; }
+  .legal-body h1 { font-size: 20px; }
+  .legal-table th { width: 38%; }
+}

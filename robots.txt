@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://anebane.github.io/spi-practice/sitemap.xml
+Sitemap: https://tekisei-drill.com/sitemap.xml
