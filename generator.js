@@ -234,7 +234,11 @@ var QuestionGenerator = (function() {
 
   // --- テンプレート型問題の生成 ---
   function generateTemplateQuestion(template) {
-    var maxAttempts = 100;
+    // validate が厳しいテンプレートがある。実測で最も低いのは shigoto_tank_01 の
+    // 合格率8.3%（A×B/(A+B) が整数になる組み合わせのみ許可）。
+    // 100回だと約0.017%の確率で全滅して null を返し、出題数が足りなくなっていた。
+    // 1000回なら全滅確率は 1e-38 程度。ループ本体は軽い算術なので負荷は無視できる。
+    var maxAttempts = 1000;
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       var vars = generateVariables(template.variables);

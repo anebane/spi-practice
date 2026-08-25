@@ -183,3 +183,17 @@ if (fixed.length) {
 }
 
 process.exit(failures.length ? 1 : 0);
+
+// --- 試験セットが指定どおりの問題数を返すか ---
+// 生成失敗でpushされないと「20問」指定なのに19問になる無言の不具合が起きる。
+{
+  let shortfall = 0, runs = 300;
+  for (let i = 0; i < runs; i++) {
+    for (const n of [10, 20, 30]) {
+      const set = GEN.generateExamSet({ totalQuestions: n, selectedCategories: [], selectedDifficulties: [1, 2, 3] });
+      if (set.length !== n || set.some(q => !q)) shortfall++;
+    }
+  }
+  console.log(`\n試験セット ${runs * 3}回: 出題数の過不足 ${shortfall}件`);
+  if (shortfall) process.exitCode = 1;
+}
