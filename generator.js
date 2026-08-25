@@ -54,6 +54,12 @@ var QuestionGenerator = (function() {
       vars.k = kOptions[Math.floor(Math.random() * kOptions.length)];
     }
 
+    // 並べ替え確率: 文字リストをnに合わせて作る
+    if (template.id === "kakuritsu_arrange_01") {
+      var alpha = ["A", "B", "C", "D", "E", "F", "G"];
+      vars.letters = alpha.slice(0, vars.n).join(", ");
+    }
+
     // 損益算: 原価逆算問題 listPriceはmarkupRateに合わせて設定
     if (template.id === "soneki_loss_01") {
       var baseCost = randomInt(500, 3000, 100);
@@ -579,6 +585,14 @@ var QuestionGenerator = (function() {
     if (template.id === "junretsu_exclude_01") {
       d.allPerm = factorial(vars.n);
       d.headPerm = factorial(vars.n - 1);
+    }
+
+    if (template.id === "kakuritsu_arrange_01") {
+      d.allPerm = factorial(vars.n);
+      d.rest = vars.n - 2;
+      d.blocks = vars.n - 1;
+      d.blockPerm = factorial(vars.n - 1);
+      d.adjacent = factorial(vars.n - 1) * 2;
     }
 
     return d;

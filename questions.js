@@ -580,15 +580,18 @@ var QUESTION_TEMPLATES = [];
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 3,
-    templateText: "A, B, C, D, E の5文字を無作為に一列に並べるとき、AとBが隣り合う確率を求めよ。",
-    variables: {},
+    templateText: "{{letters}} の{{n}}文字を無作為に一列に並べるとき、AとBが隣り合う確率を求めよ。",
+    variables: {
+      n: { type: "int", min: 4, max: 7, step: 1 }
+    },
     answerType: "fraction",
     answerFormula: function(v) {
-      // AB隣り合う: 4!×2 = 48, 全体: 5! = 120
-      return { numerator: 2, denominator: 5 };
+      // AとBを1ブロックとみなす: (n-1)! × 2 通り / 全体 n! 通り = 2/n
+      var g = gcd(2, v.n);
+      return { numerator: 2 / g, denominator: v.n / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合う2人をまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: 5! = 120通り\n\n② AとBが隣り合う場合:\n  ABをひとまとめ（1ブロック）にする\n  → ブロック + 残り3人 = 4組の並び: 4! = 24通り\n  → ブロック内のA,Bの順(AB or BA): 2通り\n  → 隣り合う場合: 24 × 2 = 48通り\n\n③ 確率 = 48/120 = 2/5\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽",
+    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合う2つをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② AとBが隣り合う場合:\n  ABをひとまとめ（1ブロック）にする\n  → ブロック + 残り{{rest}}文字 = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内のA,Bの順(AB or BA): 2通り\n  → 隣り合う場合: {{blockPerm}} × 2 = {{adjacent}}通り\n\n③ 確率 = {{adjacent}}/{{allPerm}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・n文字のうち特定の2文字が隣り合う確率は、必ず 2/n になる\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽",
     timeLimitSec: 120
   });
 
