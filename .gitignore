@@ -1,1 +1,6 @@
 .DS_Store
+
+# 認証情報は絶対にコミットしない
+*service-account*.json
+*credentials*.json
+.env
