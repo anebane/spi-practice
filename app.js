@@ -35,7 +35,7 @@
     var text = "SPI非言語 模擬試験で " + percent + "% (" + totalCorrect + "/" + totalQuestions + "問正解) でした！"
       + "\n無料・登録不要で何度でも練習できる"
       + "\n#SPI #就活 #WEBテスティング";
-    var url = "https://anebane.github.io/spi-practice/";
+    var url = "https://tekisei-drill.com/";
     window.open(
       "https://x.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(url),
       "_blank"
