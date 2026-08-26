@@ -49,6 +49,46 @@
     });
   });
 
+  // --- iOS 向けの案内 ---
+  // beforeinstallprompt は Android/Chrome でしか発火しない。就活生の主力端末は
+  // iPhone なので、ここを埋めないと導線が実質 Android 専用になる。
+  // ただし iOS には API が無く「共有→ホーム画面に追加」しか手段がないため、
+  // ボタンではなく1行の案内文にする。
+  //
+  // 表示条件を絞る理由: このサイトの資産は「登録不要でスッと使える」体験で、
+  // しつこい案内はそれを直接壊す。バナーやオーバーレイにもしない
+  // （モバイル侵入型インタースティシャルとして検索評価にも触る）。
+  var DISMISS_KEY = "pwa_ios_hint_dismissed";
+
+  function isIosSafari() {
+    var ua = navigator.userAgent;
+    var ios = /iPad|iPhone|iPod/.test(ua) ||
+      // iPadOS はデスクトップ表示だと Macintosh を名乗るのでタッチ有無で判別する
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (!ios) return false;
+    // Chrome/Firefox/Edge の iOS 版は「ホーム画面に追加」が無いか挙動が違うので除く
+    return !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  }
+
+  function showIosHint() {
+    if (!isIosSafari()) return;
+    try { if (localStorage.getItem(DISMISS_KEY)) return; } catch (e) { /* 使えなくても続行 */ }
+
+    slot.innerHTML =
+      '<span class="pwa-ios-text">ホーム画面に追加すると、オフラインでも解けます（共有ボタン → ホーム画面に追加）</span>' +
+      '<button type="button" class="pwa-ios-close" id="pwa-ios-close" aria-label="この案内を閉じる">×</button>';
+    slot.hidden = false;
+    slot.classList.add("pwa-ios-hint");
+    track("pwa_ios_hint_shown");
+
+    document.getElementById("pwa-ios-close").addEventListener("click", function () {
+      slot.hidden = true;
+      try { localStorage.setItem(DISMISS_KEY, "1"); } catch (e) { /* 保存できなくても閉じる */ }
+      track("pwa_ios_hint_dismissed");
+    });
+  }
+  showIosHint();
+
   window.addEventListener("appinstalled", function () {
     track("pwa_installed");
     slot.hidden = true;
