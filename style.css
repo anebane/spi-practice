@@ -1341,3 +1341,8 @@ body {
 
 /* cta-btn を button 要素でも使えるようにする */
 button.cta-btn { border: none; font-size: 16px; cursor: pointer; font-family: inherit; }
+
+/* トップページの説明セクション（ツールより下に置く） */
+.home-about { margin-top: 32px; }
+.home-about p { font-size: 14px; color: #444; margin-bottom: 12px; line-height: 1.8; }
+.home-about a { color: #1a237e; }
