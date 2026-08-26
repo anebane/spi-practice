@@ -167,6 +167,70 @@ function countMatchSolutions(names, items, conds, limit) {
 }
 
 /**
+ * 嘘つき問題を作る。n人のうち1人だけが嘘をつく。
+ *
+ * 発言の組み合わせ次第で「嘘つきが特定できない」「矛盾して解が無い」ケースが
+ * 必ず出る。全パターン（誰が嘘つきか n 通り）を試して、整合するのが
+ * ちょうど1通りのときだけ採用する。
+ */
+function buildLiarPuzzle(names) {
+  var n = names.length;
+  var liar = Math.floor(Math.random() * n);
+
+  for (var attempt = 0; attempt < 80; attempt++) {
+    // 各人が「誰かについて 嘘つきだ / 嘘つきではない」と発言する
+    var stmts = names.map(function (spk, i) {
+      var others = names.filter(function (_, j) { return j !== i; });
+      var about = others[Math.floor(Math.random() * others.length)];
+      var claimsLiar = Math.random() < 0.5;   // 「about は嘘つきだ」と言うか
+      return { by: names[i], about: about, claimsLiar: claimsLiar };
+    });
+
+    // 「嘘つきが k 番目」と仮定したとき、全発言が整合するかを判定
+    var consistent = [];
+    for (var k = 0; k < n; k++) {
+      var ok = true;
+      for (var m = 0; m < stmts.length; m++) {
+        var st = stmts[m];
+        var speakerIsLiar = (st.by === names[k]);
+        var aboutIsLiar = (st.about === names[k]);
+        // 正直者の発言は真、嘘つきの発言は偽
+        var truthful = (st.claimsLiar === aboutIsLiar);
+        if (speakerIsLiar ? truthful : !truthful) { ok = false; break; }
+      }
+      if (ok) consistent.push(k);
+    }
+
+    if (consistent.length === 1) {
+      return {
+        names: names,
+        liar: names[consistent[0]],
+        stmtTexts: stmts.map(function (st) {
+          return "・" + st.by + "の発言:「" + st.about + "は嘘つき" + (st.claimsLiar ? "だ" : "ではない") + "」";
+        })
+      };
+    }
+  }
+  return null;
+}
+
+/** 嘘つき問題テンプレートの共通 resolve。 */
+function resolveLiarPuzzle(v) {
+  var SETS = [
+    ["A", "B", "C", "D"], ["P", "Q", "R", "S"], ["W", "X", "Y", "Z"],
+    ["甲", "乙", "丙", "丁"], ["赤木", "青木", "黒田", "白石"]
+  ];
+  var names = SETS[v.nameSet].slice(0, v.n);
+  var puz = buildLiarPuzzle(names);
+  if (!puz) { v._ok = false; return; }
+  v._ok = true;
+  v._names = names;
+  v._liar = puz.liar;
+  v.names = names.join(", ");
+  v.stmts = puz.stmtTexts.join("\n");
+}
+
+/**
  * 命題テンプレートの共通 resolve。
  * 「PならばQ」から対偶・逆・裏を機械生成し、対偶を正解、逆と裏を誤答にする。
  * 正解が1つであることは、辞書側で「逆が成り立たない組」に限ることで担保する。

@@ -456,4 +456,42 @@ if (failures.length) process.exitCode = 1;
   }
 }
 
+
+// --- 嘘つき問題: 整合する仮定がちょうど1通りか ---
+// 発言の組み合わせ次第で「特定できない」「矛盾して解が無い」問題が生まれる。
+// 順序推論と同じく、生成器を信用せず問題文をパースして判定し直す。
+{
+  const t = TEMPLATES.find(x => x.id === "suiron_statement_01");
+  let checked = 0, zero = 0, multi = 0, mismatch = 0;
+  if (t) {
+    for (let i = 0; i < 600; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const names = q.choices;
+      const stmts = q.text.split("\n").filter(l => l.startsWith("・")).map(l => {
+        const m = l.match(/^・(.+?)の発言:「(.+?)は嘘つき(だ|ではない)」$/);
+        return m ? { by: m[1], about: m[2], claimsLiar: m[3] === "だ" } : null;
+      }).filter(Boolean);
+      if (stmts.length !== names.length) continue;
+
+      const ok = names.filter(cand => stmts.every(st => {
+        const speakerLiar = st.by === cand;
+        const truthful = (st.claimsLiar === (st.about === cand));
+        return speakerLiar ? !truthful : truthful;
+      }));
+      checked++;
+      if (ok.length === 0) zero++;
+      else if (ok.length > 1) multi++;
+      else if (ok[0] !== names[q.correctAnswer]) mismatch++;
+    }
+  }
+  console.log(`\n嘘つき問題の一意性: ${checked}問を全パターンで検証`);
+  if (zero + multi + mismatch === 0) {
+    console.log("   ✅ すべて整合する仮定がちょうど1通り、答えも一致");
+  } else {
+    console.log(`   ❌ 解なし ${zero} / 複数 ${multi} / 答え不一致 ${mismatch}`);
+    process.exitCode = 1;
+  }
+}
+
 process.exit(process.exitCode ? 1 : 0);

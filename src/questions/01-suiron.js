@@ -215,23 +215,21 @@ var ORDER_ATTRS = {
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
-    difficulty: 2,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C の3人のうち、1人だけが嘘をついている。\n・Aの発言:「Bは嘘つきだ」\n・Bの発言:「Cは嘘つきではない」\n・Cの発言:「Aは嘘つきだ」\n\n嘘をついているのは誰か。",
-        choices: ["A", "B", "C"],
-        correctIndex: 0,
-        explanation: "場合分けで考えます:\n\n【Aが嘘つきの場合】\n・A「Bは嘘つき」→ 嘘なのでBは正直 ○\n・B「Cは嘘つきではない」→ 本当なのでCは正直 ○\n・C「Aは嘘つきだ」→ 本当 ○\n→ 嘘つきはAだけで整合!\n\n【Bが嘘つきの場合】\n・A「Bは嘘つき」→ 本当 ○\n・B「Cは嘘つきではない」→ 嘘なのでCは嘘つき → 嘘つきが2人で矛盾 ✗\n\n【Cが嘘つきの場合】\n・C「Aは嘘つきだ」→ 嘘なのでAは正直 ○\n・A「Bは嘘つき」→ 本当なのでBも嘘つき → 嘘つきが2人で矛盾 ✗\n\nよって嘘をついているのはAです。"
-      },
-      {
-        text: "P, Q, R の3人のうち、1人だけが嘘をついている。\n・Pの発言:「私は嘘つきではない」\n・Qの発言:「Pは正直者だ」\n・Rの発言:「Qは嘘つきだ」\n\n嘘をついているのは誰か。",
-        choices: ["P", "Q", "R"],
-        correctIndex: 2,
-        explanation: "場合分けで考えます:\n\n【Pが嘘つきの場合】\n・P「私は嘘つきではない」→ 嘘 → Pは嘘つき（整合）\n・Q「Pは正直者だ」→ Pは嘘つきなので、Qの発言は嘘 → Qも嘘つき → 2人で矛盾 ✗\n\n【Qが嘘つきの場合】\n・Q「Pは正直者だ」→ 嘘 → Pは嘘つき → 2人で矛盾 ✗\n\n【Rが嘘つきの場合】\n・P「私は嘘つきではない」→ 本当 → Pは正直 ○\n・Q「Pは正直者だ」→ 本当 ○\n・R「Qは嘘つきだ」→ 嘘 → Qは正直 ○\n→ 嘘つきはRだけで整合!\n\nよって嘘をついているのはRです。"
-      }
-    ],
+    difficulty: 3,
+    templateText: "{{names}} の{{n}}人のうち、1人だけが嘘をついている。\n{{stmts}}\n\n嘘をついているのは誰か。",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [3, 3, 4] }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveLiarPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._liar); },
+    buildChoices: function(v) {
+      return { choices: v._names.slice(), correctIndex: v._names.indexOf(v._liar) };
+    },
+    unit: "",
+    explanationTemplate: "「誰が嘘つきか」を1人ずつ仮定して、全員の発言と矛盾しないかを調べます。\n\n嘘つきが {{liar}} だと仮定すると、すべての発言が整合します。\n他の人を嘘つきと仮定すると、必ずどこかで矛盾が生じます。\n\n【ポイント】\n・正直者の発言は真、嘘つきの発言は偽\n・「Xは嘘つきだ」という発言は、Xが実際に嘘つきなら真\n・整合する仮定がちょうど1つになるまで全パターンを試す",
     timeLimitSec: 150
   });
 

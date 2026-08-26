@@ -170,6 +170,70 @@ function countMatchSolutions(names, items, conds, limit) {
 }
 
 /**
+ * 嘘つき問題を作る。n人のうち1人だけが嘘をつく。
+ *
+ * 発言の組み合わせ次第で「嘘つきが特定できない」「矛盾して解が無い」ケースが
+ * 必ず出る。全パターン（誰が嘘つきか n 通り）を試して、整合するのが
+ * ちょうど1通りのときだけ採用する。
+ */
+function buildLiarPuzzle(names) {
+  var n = names.length;
+  var liar = Math.floor(Math.random() * n);
+
+  for (var attempt = 0; attempt < 80; attempt++) {
+    // 各人が「誰かについて 嘘つきだ / 嘘つきではない」と発言する
+    var stmts = names.map(function (spk, i) {
+      var others = names.filter(function (_, j) { return j !== i; });
+      var about = others[Math.floor(Math.random() * others.length)];
+      var claimsLiar = Math.random() < 0.5;   // 「about は嘘つきだ」と言うか
+      return { by: names[i], about: about, claimsLiar: claimsLiar };
+    });
+
+    // 「嘘つきが k 番目」と仮定したとき、全発言が整合するかを判定
+    var consistent = [];
+    for (var k = 0; k < n; k++) {
+      var ok = true;
+      for (var m = 0; m < stmts.length; m++) {
+        var st = stmts[m];
+        var speakerIsLiar = (st.by === names[k]);
+        var aboutIsLiar = (st.about === names[k]);
+        // 正直者の発言は真、嘘つきの発言は偽
+        var truthful = (st.claimsLiar === aboutIsLiar);
+        if (speakerIsLiar ? truthful : !truthful) { ok = false; break; }
+      }
+      if (ok) consistent.push(k);
+    }
+
+    if (consistent.length === 1) {
+      return {
+        names: names,
+        liar: names[consistent[0]],
+        stmtTexts: stmts.map(function (st) {
+          return "・" + st.by + "の発言:「" + st.about + "は嘘つき" + (st.claimsLiar ? "だ" : "ではない") + "」";
+        })
+      };
+    }
+  }
+  return null;
+}
+
+/** 嘘つき問題テンプレートの共通 resolve。 */
+function resolveLiarPuzzle(v) {
+  var SETS = [
+    ["A", "B", "C", "D"], ["P", "Q", "R", "S"], ["W", "X", "Y", "Z"],
+    ["甲", "乙", "丙", "丁"], ["赤木", "青木", "黒田", "白石"]
+  ];
+  var names = SETS[v.nameSet].slice(0, v.n);
+  var puz = buildLiarPuzzle(names);
+  if (!puz) { v._ok = false; return; }
+  v._ok = true;
+  v._names = names;
+  v._liar = puz.liar;
+  v.names = names.join(", ");
+  v.stmts = puz.stmtTexts.join("\n");
+}
+
+/**
  * 命題テンプレートの共通 resolve。
  * 「PならばQ」から対偶・逆・裏を機械生成し、対偶を正解、逆と裏を誤答にする。
  * 正解が1つであることは、辞書側で「逆が成り立たない組」に限ることで担保する。
@@ -995,23 +1059,21 @@ var ORDER_ATTRS = {
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
-    difficulty: 2,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C の3人のうち、1人だけが嘘をついている。\n・Aの発言:「Bは嘘つきだ」\n・Bの発言:「Cは嘘つきではない」\n・Cの発言:「Aは嘘つきだ」\n\n嘘をついているのは誰か。",
-        choices: ["A", "B", "C"],
-        correctIndex: 0,
-        explanation: "場合分けで考えます:\n\n【Aが嘘つきの場合】\n・A「Bは嘘つき」→ 嘘なのでBは正直 ○\n・B「Cは嘘つきではない」→ 本当なのでCは正直 ○\n・C「Aは嘘つきだ」→ 本当 ○\n→ 嘘つきはAだけで整合!\n\n【Bが嘘つきの場合】\n・A「Bは嘘つき」→ 本当 ○\n・B「Cは嘘つきではない」→ 嘘なのでCは嘘つき → 嘘つきが2人で矛盾 ✗\n\n【Cが嘘つきの場合】\n・C「Aは嘘つきだ」→ 嘘なのでAは正直 ○\n・A「Bは嘘つき」→ 本当なのでBも嘘つき → 嘘つきが2人で矛盾 ✗\n\nよって嘘をついているのはAです。"
-      },
-      {
-        text: "P, Q, R の3人のうち、1人だけが嘘をついている。\n・Pの発言:「私は嘘つきではない」\n・Qの発言:「Pは正直者だ」\n・Rの発言:「Qは嘘つきだ」\n\n嘘をついているのは誰か。",
-        choices: ["P", "Q", "R"],
-        correctIndex: 2,
-        explanation: "場合分けで考えます:\n\n【Pが嘘つきの場合】\n・P「私は嘘つきではない」→ 嘘 → Pは嘘つき（整合）\n・Q「Pは正直者だ」→ Pは嘘つきなので、Qの発言は嘘 → Qも嘘つき → 2人で矛盾 ✗\n\n【Qが嘘つきの場合】\n・Q「Pは正直者だ」→ 嘘 → Pは嘘つき → 2人で矛盾 ✗\n\n【Rが嘘つきの場合】\n・P「私は嘘つきではない」→ 本当 → Pは正直 ○\n・Q「Pは正直者だ」→ 本当 ○\n・R「Qは嘘つきだ」→ 嘘 → Qは正直 ○\n→ 嘘つきはRだけで整合!\n\nよって嘘をついているのはRです。"
-      }
-    ],
+    difficulty: 3,
+    templateText: "{{names}} の{{n}}人のうち、1人だけが嘘をついている。\n{{stmts}}\n\n嘘をついているのは誰か。",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [3, 3, 4] }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveLiarPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._liar); },
+    buildChoices: function(v) {
+      return { choices: v._names.slice(), correctIndex: v._names.indexOf(v._liar) };
+    },
+    unit: "",
+    explanationTemplate: "「誰が嘘つきか」を1人ずつ仮定して、全員の発言と矛盾しないかを調べます。\n\n嘘つきが {{liar}} だと仮定すると、すべての発言が整合します。\n他の人を嘘つきと仮定すると、必ずどこかで矛盾が生じます。\n\n【ポイント】\n・正直者の発言は真、嘘つきの発言は偽\n・「Xは嘘つきだ」という発言は、Xが実際に嘘つきなら真\n・整合する仮定がちょうど1つになるまで全パターンを試す",
     timeLimitSec: 150
   });
 

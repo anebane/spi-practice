@@ -401,6 +401,11 @@ var QuestionGenerator = (function() {
       };
     }
 
+    // 推論(嘘つき): 解説で使う答え
+    if (template.id === "suiron_statement_01") {
+      return { liar: vars._liar };
+    }
+
     // 推論(対応関係): 解説で使う確定表
     if (/^suiron_match_/.test(template.id)) {
       return { assignText: vars._assign, answerItem: vars._answerItem };
