@@ -166,6 +166,43 @@ function countMatchSolutions(names, items, conds, limit) {
   return found;
 }
 
+/**
+ * 命題テンプレートの共通 resolve。
+ * 「PならばQ」から対偶・逆・裏を機械生成し、対偶を正解、逆と裏を誤答にする。
+ * 正解が1つであることは、辞書側で「逆が成り立たない組」に限ることで担保する。
+ */
+function resolvePropPuzzle(v) {
+  var pr = PROP_PAIRS[v.pair % PROP_PAIRS.length];
+
+  var contrapositive = pr.nq + "ならば" + pr.np;   // 対偶（必ず正しい）
+  var converse       = pr.q  + "ならば" + pr.p;    // 逆（必ずしも正しくない）
+  var inverse        = pr.np + "ならば" + pr.nq;   // 裏（逆と同値なので同様）
+  // 4つ目の誤答。「Qならば¬Q」のような自己矛盾を作ると、内容を考えなくても
+  // 明らかに誤りと分かってしまい選択肢として機能しない。
+  // 別の素材から命題を借りて、前提と無関係だが文としては成立する形にする。
+  var other = PROP_PAIRS[(v.pair + 1 + Math.floor(Math.random() * (PROP_PAIRS.length - 1))) % PROP_PAIRS.length];
+  var unrelated = pr.np + "ならば" + other.q;
+
+  var opts = [
+    { t: contrapositive, ok: true },
+    { t: converse, ok: false },
+    { t: inverse, ok: false },
+    { t: unrelated, ok: false }
+  ];
+  for (var i = opts.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
+  }
+  var texts = opts.map(function (o) { return o.t; });
+  if (new Set(texts).size !== texts.length) { v._ok = false; return; }
+
+  v._ok = true;
+  v._choices = texts;
+  v._correctIndex = opts.findIndex(function (o) { return o.ok; });
+  v.premise = pr.p + "ならば" + pr.q;
+  v.p = pr.p; v.q = pr.q; v.np = pr.np; v.nq = pr.nq;
+}
+
 /** 対応関係テンプレートの共通 resolve。 */
 function resolveMatchPuzzle(v) {
   var SETS = [
