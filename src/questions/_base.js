@@ -80,6 +80,119 @@ function buildOrderPuzzle(names, rel) {
 }
 
 /**
+ * 対応関係のパズルを作る（誰が何を持つか）。
+ *
+ * 順序推論と同じく、否定条件の選び方によっては割り当てが一意に定まらない。
+ * 全割り当てを総当たりして1通りのときだけ採用する。n<=4 なら24通り。
+ */
+function buildMatchPuzzle(names, items, itemsVerb) {
+  var n = names.length;
+  var assign = items.slice();
+  for (var i = assign.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = assign[i]; assign[i] = assign[j]; assign[j] = t;
+  }
+  // assign[k] を names[k] が持つ、が正解
+
+  // 正解と矛盾しない否定条件の候補（「XはYを持っていない」）
+  var cands = [];
+  for (var a = 0; a < n; a++) {
+    for (var b = 0; b < n; b++) {
+      if (assign[a] !== items[b]) cands.push([names[a], items[b]]);
+    }
+  }
+
+  for (var attempt = 0; attempt < 60; attempt++) {
+    var sh = cands.slice();
+    for (var k = sh.length - 1; k > 0; k--) {
+      var m = Math.floor(Math.random() * (k + 1));
+      var tmp = sh[k]; sh[k] = sh[m]; sh[m] = tmp;
+    }
+    var count = n - 1 + Math.floor(Math.random() * 3);
+    var conds = sh.slice(0, count);
+    if (countMatchSolutions(names, items, conds, 2) === 1) {
+      // 同じ人への否定条件はまとめて読みやすくする
+      var byName = {};
+      conds.forEach(function (c) { (byName[c[0]] = byName[c[0]] || []).push(c[1]); });
+      // 「Aは犬を選んでいない」「Aは犬も猫も選んでいない」と自然な日本語にする。
+      // 助詞を機械的に連結すると「Pはコーヒー選んでいない」のように壊れる。
+      var neg = negativeVerb(itemsVerb);
+      var texts = names.filter(function (nm) { return byName[nm]; }).map(function (nm) {
+        var list = byName[nm];
+        var obj = list.length === 1 ? list[0] + "を" : list.join("も") + "も";
+        return "・" + nm + "は" + obj + neg;
+      });
+      return { names: names, items: items, assign: assign, conds: conds, condTexts: texts };
+    }
+  }
+  return null;
+}
+
+/**
+ * 動詞を否定形にする。機械的に「ない」を足すと壊れるので語尾ごとに分ける。
+ * 飼っている→飼っていない / 注文した→注文していない / する→しない
+ */
+function negativeVerb(verb) {
+  if (/でいる$/.test(verb)) return verb.replace(/でいる$/, "でいない");  // 住んでいる→住んでいない
+  if (/ている$/.test(verb)) return verb.replace(/ている$/, "ていない");
+  if (/した$/.test(verb))   return verb.replace(/した$/, "していない");
+  if (/する$/.test(verb))   return verb.replace(/する$/, "しない");
+  return verb + "ていない";
+}
+
+/** 否定条件を満たす割り当てが何通りあるか数える。 */
+function countMatchSolutions(names, items, conds, limit) {
+  var found = 0, cur = [], used = {};
+  function rec() {
+    if (found >= limit) return;
+    if (cur.length === names.length) {
+      var map = {};
+      cur.forEach(function (it, i) { map[names[i]] = it; });
+      for (var c = 0; c < conds.length; c++) {
+        if (map[conds[c][0]] === conds[c][1]) return;
+      }
+      found++;
+      return;
+    }
+    for (var i = 0; i < items.length; i++) {
+      if (used[items[i]]) continue;
+      used[items[i]] = true; cur.push(items[i]);
+      rec();
+      cur.pop(); used[items[i]] = false;
+      if (found >= limit) return;
+    }
+  }
+  rec();
+  return found;
+}
+
+/** 対応関係テンプレートの共通 resolve。 */
+function resolveMatchPuzzle(v) {
+  var SETS = [
+    ["A", "B", "C", "D"], ["P", "Q", "R", "S"], ["W", "X", "Y", "Z"],
+    ["甲", "乙", "丙", "丁"], ["赤木", "青木", "黒田", "白石"]
+  ];
+  var names = SETS[v.nameSet].slice(0, v.n);
+  var th = MATCH_THEMES[v.theme % MATCH_THEMES.length];
+  var items = th.items.slice(0, v.n);
+  var puz = buildMatchPuzzle(names, items, th.verb);
+  if (!puz) { v._ok = false; return; }
+
+  var who = names[v.askWho % names.length];
+  v._ok = true;
+  v._items = items;
+  v._answerItem = puz.assign[names.indexOf(who)];
+  v._assign = names.map(function (nm, i) { return nm + " … " + puz.assign[i]; }).join("\n");
+  v.names = names.join(", ");
+  v.noun = th.noun;
+  v.verb = th.verb;
+  // 「Qが注文したのはどれか」のように、設問では過去/現在をそのまま使う
+  v.verb2 = th.verb;
+  v.who = who;
+  v.conds = puz.condTexts.join("\n");
+}
+
+/**
  * 順序推論テンプレートの共通 resolve。
  * 3本のテンプレートが場面(attrs)だけ変えて同じ仕組みを使う。
  */

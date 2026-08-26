@@ -83,6 +83,119 @@ function buildOrderPuzzle(names, rel) {
 }
 
 /**
+ * 対応関係のパズルを作る（誰が何を持つか）。
+ *
+ * 順序推論と同じく、否定条件の選び方によっては割り当てが一意に定まらない。
+ * 全割り当てを総当たりして1通りのときだけ採用する。n<=4 なら24通り。
+ */
+function buildMatchPuzzle(names, items, itemsVerb) {
+  var n = names.length;
+  var assign = items.slice();
+  for (var i = assign.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = assign[i]; assign[i] = assign[j]; assign[j] = t;
+  }
+  // assign[k] を names[k] が持つ、が正解
+
+  // 正解と矛盾しない否定条件の候補（「XはYを持っていない」）
+  var cands = [];
+  for (var a = 0; a < n; a++) {
+    for (var b = 0; b < n; b++) {
+      if (assign[a] !== items[b]) cands.push([names[a], items[b]]);
+    }
+  }
+
+  for (var attempt = 0; attempt < 60; attempt++) {
+    var sh = cands.slice();
+    for (var k = sh.length - 1; k > 0; k--) {
+      var m = Math.floor(Math.random() * (k + 1));
+      var tmp = sh[k]; sh[k] = sh[m]; sh[m] = tmp;
+    }
+    var count = n - 1 + Math.floor(Math.random() * 3);
+    var conds = sh.slice(0, count);
+    if (countMatchSolutions(names, items, conds, 2) === 1) {
+      // 同じ人への否定条件はまとめて読みやすくする
+      var byName = {};
+      conds.forEach(function (c) { (byName[c[0]] = byName[c[0]] || []).push(c[1]); });
+      // 「Aは犬を選んでいない」「Aは犬も猫も選んでいない」と自然な日本語にする。
+      // 助詞を機械的に連結すると「Pはコーヒー選んでいない」のように壊れる。
+      var neg = negativeVerb(itemsVerb);
+      var texts = names.filter(function (nm) { return byName[nm]; }).map(function (nm) {
+        var list = byName[nm];
+        var obj = list.length === 1 ? list[0] + "を" : list.join("も") + "も";
+        return "・" + nm + "は" + obj + neg;
+      });
+      return { names: names, items: items, assign: assign, conds: conds, condTexts: texts };
+    }
+  }
+  return null;
+}
+
+/**
+ * 動詞を否定形にする。機械的に「ない」を足すと壊れるので語尾ごとに分ける。
+ * 飼っている→飼っていない / 注文した→注文していない / する→しない
+ */
+function negativeVerb(verb) {
+  if (/でいる$/.test(verb)) return verb.replace(/でいる$/, "でいない");  // 住んでいる→住んでいない
+  if (/ている$/.test(verb)) return verb.replace(/ている$/, "ていない");
+  if (/した$/.test(verb))   return verb.replace(/した$/, "していない");
+  if (/する$/.test(verb))   return verb.replace(/する$/, "しない");
+  return verb + "ていない";
+}
+
+/** 否定条件を満たす割り当てが何通りあるか数える。 */
+function countMatchSolutions(names, items, conds, limit) {
+  var found = 0, cur = [], used = {};
+  function rec() {
+    if (found >= limit) return;
+    if (cur.length === names.length) {
+      var map = {};
+      cur.forEach(function (it, i) { map[names[i]] = it; });
+      for (var c = 0; c < conds.length; c++) {
+        if (map[conds[c][0]] === conds[c][1]) return;
+      }
+      found++;
+      return;
+    }
+    for (var i = 0; i < items.length; i++) {
+      if (used[items[i]]) continue;
+      used[items[i]] = true; cur.push(items[i]);
+      rec();
+      cur.pop(); used[items[i]] = false;
+      if (found >= limit) return;
+    }
+  }
+  rec();
+  return found;
+}
+
+/** 対応関係テンプレートの共通 resolve。 */
+function resolveMatchPuzzle(v) {
+  var SETS = [
+    ["A", "B", "C", "D"], ["P", "Q", "R", "S"], ["W", "X", "Y", "Z"],
+    ["甲", "乙", "丙", "丁"], ["赤木", "青木", "黒田", "白石"]
+  ];
+  var names = SETS[v.nameSet].slice(0, v.n);
+  var th = MATCH_THEMES[v.theme % MATCH_THEMES.length];
+  var items = th.items.slice(0, v.n);
+  var puz = buildMatchPuzzle(names, items, th.verb);
+  if (!puz) { v._ok = false; return; }
+
+  var who = names[v.askWho % names.length];
+  v._ok = true;
+  v._items = items;
+  v._answerItem = puz.assign[names.indexOf(who)];
+  v._assign = names.map(function (nm, i) { return nm + " … " + puz.assign[i]; }).join("\n");
+  v.names = names.join(", ");
+  v.noun = th.noun;
+  v.verb = th.verb;
+  // 「Qが注文したのはどれか」のように、設問では過去/現在をそのまま使う
+  v.verb2 = th.verb;
+  v.who = who;
+  v.conds = puz.condTexts.join("\n");
+}
+
+/**
  * 順序推論テンプレートの共通 resolve。
  * 3本のテンプレートが場面(attrs)だけ変えて同じ仕組みを使う。
  */
@@ -630,6 +743,17 @@ function drawMultiPieChart(ctx, w, h, config) {
 
 // 順序推論で使う「場面 / 条件の言い回し / 設問の言い回し」。
 // 3本のテンプレートで別々の場面を担当させ、内容が重ならないようにする。
+// 対応関係の題材。人数と項目数は必ず一致させる。
+// 「〜を選んでいない」の形に載る題材だけを置く。
+// 「住まい」は助詞が「に」なので同じ型に載らず、混ぜると日本語が壊れる。
+var MATCH_THEMES = [
+  { noun: "ペット",   verb: "飼っている", items: ["犬", "猫", "鳥", "うさぎ"] },
+  { noun: "スポーツ", verb: "している",   items: ["野球", "サッカー", "テニス", "水泳"] },
+  { noun: "科目",     verb: "選択している", items: ["数学", "国語", "英語", "理科"] },
+  { noun: "楽器",     verb: "演奏する",   items: ["ピアノ", "ギター", "バイオリン", "フルート"] },
+  { noun: "飲み物",   verb: "注文した",   items: ["コーヒー", "紅茶", "ジュース", "水"] }
+];
+
 var ORDER_ATTRS = {
   line: [
     { scene: "一列に並んでいる",   rel: "前にいる",       ask: ["先頭にいる", "前から{k}番目にいる", "最後尾にいる"] },
@@ -708,29 +832,23 @@ var ORDER_ATTRS = {
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
-    difficulty: 1,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C の3人がそれぞれ犬、猫、鳥のいずれか1匹ずつペットを飼っている。\n以下のことがわかっている。\n・Aは犬を飼っていない\n・Bは猫を飼っていない\n・Cは犬も猫も飼っていない\n\nBが飼っているペットは何か。",
-        choices: ["犬", "猫", "鳥"],
-        correctIndex: 0,
-        explanation: "条件を整理すると:\n・Cは犬も猫も飼っていない → Cは鳥\n・Aは犬を飼っていない → Aは猫（鳥はCなので）\n・Bは猫を飼っていない → Bは犬（鳥はC、猫はAなので）\n\nよってBは犬を飼っています。"
-      },
-      {
-        text: "P, Q, R の3人がそれぞれ東京、大阪、福岡のいずれかに住んでいる。\n以下のことがわかっている。\n・Pは東京に住んでいない\n・Qは大阪に住んでいない\n・Rは東京にも大阪にも住んでいない\n\nPが住んでいるのはどこか。",
-        choices: ["東京", "大阪", "福岡"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・Rは東京にも大阪にも住んでいない → Rは福岡\n・Pは東京に住んでいない → Pは大阪（福岡はRなので）\n・Qは大阪に住んでいない → Qは東京\n\nよってPは大阪に住んでいます。"
-      },
-      {
-        text: "X, Y, Z の3人がそれぞれ赤、青、黄のいずれか1色のシャツを着ている。\n以下のことがわかっている。\n・Xは青のシャツを着ていない\n・Yは赤のシャツを着ていない\n・Zは青も赤も着ていない\n\nYが着ているシャツの色は何か。",
-        choices: ["赤", "青", "黄"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・Zは青も赤も着ていない → Zは黄\n・Xは青を着ていない → Xは赤（黄はZなので）\n・Yは赤を着ていない → Yは青\n\nよってYは青のシャツを着ています。"
-      }
-    ],
+    difficulty: 2,
+    templateText: "{{names}} の{{n}}人が、それぞれ異なる{{noun}}を1つずつ{{verb}}。\n以下のことがわかっている。\n{{conds}}\n\n{{who}}が{{verb2}}のはどれか。",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [3, 3, 4] },
+      theme:   { type: "int", min: 0, max: 4, step: 1 },
+      askWho:  { type: "int", min: 0, max: 3, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveMatchPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._items.indexOf(v._answerItem); },
+    buildChoices: function(v) {
+      return { choices: v._items.slice(), correctIndex: v._items.indexOf(v._answerItem) };
+    },
+    unit: "",
+    explanationTemplate: "表を作り、否定条件に×を入れていきます。\n各行・各列に○がちょうど1つ入るので、×が埋まった行は残りが自動的に○になります。\n\n確定する組み合わせ:\n{{assignText}}\n\nしたがって答えは {{answerItem}} です。\n\n【ポイント】\n・頭で保持せず必ず表に落とす\n・「AもBも選んでいない」は2つ分の×",
     timeLimitSec: 120
   });
 
@@ -922,28 +1040,22 @@ var ORDER_ATTRS = {
     category: "推論",
     categoryId: 1,
     difficulty: 2,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C, D の4人がそれぞれ野球、サッカー、テニス、バスケのいずれかを好む。\n以下のことがわかっている。\n・Aはテニスもバスケも好きではない\n・Bはサッカーを好む\n・Cは野球を好まない\n・Dはテニスを好まない\n\nAが好むスポーツは何か。",
-        choices: ["野球", "サッカー", "テニス", "バスケ"],
-        correctIndex: 0,
-        explanation: "条件を整理:\n・Bはサッカー（確定）\n・Aはテニス✗、バスケ✗、サッカー✗（Bが担当）→ Aは野球\n・Cは野球✗ → Cはテニスかバスケ\n・Dはテニス✗ → Dはバスケ → Cはテニス\n\nよってAは野球を好みます。"
-      },
-      {
-        text: "P, Q, R, S の4人がそれぞれ月、火、水、木のいずれかに休暇を取る（重複なし）。\n以下のことがわかっている。\n・Pは木曜日に休む\n・Qは火曜日には休まない\n・Rは月曜日に休む\n・Sは木曜日には休まない\n\nQが休むのは何曜日か。",
-        choices: ["月曜", "火曜", "水曜", "木曜"],
-        correctIndex: 2,
-        explanation: "条件を整理:\n・Rは月曜（確定）\n・Pは木曜（確定）\n・残りは火曜と水曜にQとS\n・Qは火曜✗ → Qは水曜\n・Sは残りの火曜\n\nよってQは水曜日に休みます。"
-      },
-      {
-        text: "A, B, C の3人がそれぞれ医者、教師、弁護士のいずれかである。\n以下のことがわかっている。\n・Aの職業は教師ではない\n・Bの職業は医者でも弁護士でもない\n・Aの職業は医者ではない\n\nCの職業は何か。",
-        choices: ["医者", "教師", "弁護士"],
-        correctIndex: 0,
-        explanation: "条件を整理:\n・Bは医者✗、弁護士✗ → Bは教師\n・Aは教師✗、医者✗ → Aは弁護士\n・Cは残りの医者\n\nよってCの職業は医者です。"
-      }
-    ],
+    templateText: "{{names}} の{{n}}人が、それぞれ異なる{{noun}}を1つずつ{{verb}}。\n以下のことがわかっている。\n{{conds}}\n\n{{who}}が{{verb2}}のはどれか。",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [3, 3, 4] },
+      theme:   { type: "int", min: 0, max: 4, step: 1 },
+      askWho:  { type: "int", min: 0, max: 3, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveMatchPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._items.indexOf(v._answerItem); },
+    buildChoices: function(v) {
+      return { choices: v._items.slice(), correctIndex: v._items.indexOf(v._answerItem) };
+    },
+    unit: "",
+    explanationTemplate: "表を作り、否定条件に×を入れていきます。\n各行・各列に○がちょうど1つ入るので、×が埋まった行は残りが自動的に○になります。\n\n確定する組み合わせ:\n{{assignText}}\n\nしたがって答えは {{answerItem}} です。\n\n【ポイント】\n・頭で保持せず必ず表に落とす\n・「AもBも選んでいない」は2つ分の×",
     timeLimitSec: 150
   });
 
