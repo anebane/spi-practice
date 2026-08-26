@@ -85,7 +85,10 @@ jobs:
         # リンク切れ(404)が AdSense 審査の不合格原因になった事例がある。
         run: |
           set -euo pipefail
-          urls=$(curl -sS --max-time 20 --retry 3 --retry-delay 5 "$SITE/sitemap.xml" | grep -o '<loc>[^<]*' | sed 's/<loc>//')
+          # GA4ステップと同じ理由でパイプを使わない。grep -o は全入力を読むので
+          # 現状は通るが、形が同じで脆いので揃えておく。
+          curl -sS --max-time 20 --retry 3 --retry-delay 5 "$SITE/sitemap.xml" -o /tmp/sitemap.xml
+          urls=$(grep -o '<loc>[^<]*' /tmp/sitemap.xml | sed 's/<loc>//')
           [ -n "$urls" ] || { echo "::error::sitemap.xml から URL を取得できません"; exit 1; }
           fail=0
           while read -r u; do
@@ -96,8 +99,9 @@ jobs:
           exit $fail
 
       - name: 規約3ページが 200 か
-        # noindex にしてあるので sitemap には載せていないが、
         # AdSense 審査ではプライバシーポリシーの存在が見られる。
+        # sitemap には載せていない（検索需要が無く評価対象URLの質を薄めるため）が、
+        # noindex は 2026-08-26 に解除してクロール可能にしてある。
         run: |
           set -euo pipefail
           fail=0
@@ -112,7 +116,15 @@ jobs:
         # タグが消えると効果測定が止まるが、サイトは正常に見えるので気づけない。
         run: |
           set -euo pipefail
-          if ! curl -sS --max-time 20 --retry 3 --retry-delay 5 "$SITE/" | grep -q "$GA4_ID"; then
+          # curl の出力をパイプで grep -q に渡さないこと。
+          # grep -q は最初の一致で終了するためパイプが閉じ、curl がまだ書き込み中だと
+          # EPIPE で exit 23 になる。pipefail と組み合わさると「一致しているのに失敗」する。
+          # レスポンスがパイプバッファに収まるかどうかのレースなので間欠的に落ちる。
+          # ファイルに落とせばパイプが無くなり、この競合自体が消える。
+          curl -sS --max-time 20 --retry 3 --retry-delay 5 "$SITE/" -o /tmp/top.html
+          # ここまで来た＝取得は成功。以降の失敗は「取得できたが一致しない」だけを意味する。
+          # 「取得に失敗した」と「一致しない」は別の事故なので、set -e で分離している。
+          if ! grep -q "$GA4_ID" /tmp/top.html; then
             echo "::error::トップページに GA4 タグ($GA4_ID)が見つかりません"
             exit 1
           fi
