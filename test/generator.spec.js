@@ -232,4 +232,76 @@ if (failures.length) process.exitCode = 1;
   if (biased.length) process.exitCode = 1;
 }
 
+
+// --- 多様性: 各テンプレートが何種類の問題を作れるか ---
+//
+// なぜ必要か: 既存の検査は「1問1問が壊れていないか」しか見ていない。
+// そのため「テンプレートは13個あるが、実際には33種類しか作れない」という
+// 欠陥が半年間検出されなかった（推論は type:"pattern" の固定プールで、
+// 変数を埋める真のランダム生成ではない）。テンプレート数を数えても分からない。
+//
+// 利用者に見える形での影響は、分野を絞って解いたときの重複として出る。
+// 全分野デフォルトでは10分野に分散するので露出しないが、分野別ページは
+// まさに「その分野だけ練習」へ誘導するので、そこで表面化する。
+//
+// 測る単位は「利用者が別の問題と認識するもの」にする。問題文だけで数えると
+// chart 型を過小評価する（グラフはCanvas描画で問題文に含まれず、
+// chartConfig と答えだけが変わるため。実際 chart_bar_01 は問題文1種類だが
+// 中身は800種類ある）。
+{
+  const DIVERSITY_TARGET = 50;   // 目標。推論を作り直したらここまで引き上げる
+  const DIVERSITY_FLOOR = 1;     // 当面の下限。現状値を通す（推論の最小が1）
+  const SAMPLES = 400;
+
+  const variantKey = (q) => [
+    q.text,
+    q.chartConfig ? JSON.stringify(q.chartConfig) : "",
+    q.choices ? q.choices.join("|") : "",
+    answerKey(q.correctAnswer)
+  ].join("##");
+
+  const rows = [];
+  for (const t of TEMPLATES) {
+    const set = new Set();
+    for (let i = 0; i < SAMPLES; i++) {
+      const q = GEN.generateQuestion(t);
+      if (q) set.add(variantKey(q));
+    }
+    // 試行回数と同数になったら「それ以上あるが測れていない」状態。
+    // 400を真の種類数と読むと過小評価になるので区別する。
+    rows.push({ id: t.id, cat: t.category, n: set.size, capped: set.size >= SAMPLES });
+  }
+
+  const byCat = {};
+  for (const r of rows) (byCat[r.cat] ||= []).push(r);
+
+  console.log(`\n問題の多様性（各テンプレート ${SAMPLES} 回生成・目標 ${DIVERSITY_TARGET}種類/テンプレ）`);
+  const cats = Object.entries(byCat)
+    .map(([cat, v]) => ({
+      cat, n: v.length,
+      sum: v.reduce((a, b) => a + b.n, 0),
+      min: Math.min(...v.map(x => x.n)),
+      capped: v.some(x => x.capped)
+    }))
+    .sort((a, b) => a.sum / a.n - b.sum / b.n);
+  for (const c of cats) {
+    const avg = c.sum / c.n;
+    const mark = avg < DIVERSITY_TARGET ? " ← 目標未達"
+               : c.capped ? " （試行上限に到達＝実際はこれ以上）" : "";
+    console.log(`   ${c.cat.padEnd(12)} ${String(c.n).padStart(2)}テンプレ  計${String(c.sum).padStart(5)}種  平均${avg.toFixed(1).padStart(6)}  最小${String(c.min).padStart(4)}${mark}`);
+  }
+
+  const below = rows.filter(r => r.n < DIVERSITY_FLOOR);
+  if (below.length) {
+    console.log(`\n❌ 下限 ${DIVERSITY_FLOOR} 種類を下回るテンプレート ${below.length}件`);
+    for (const r of below.slice(0, 10)) console.log(`   - ${r.id} (${r.cat}): ${r.n}種類`);
+    process.exitCode = 1;
+  } else {
+    const short = rows.filter(r => r.n < DIVERSITY_TARGET).length;
+    console.log(`\n⚠️ 目標(${DIVERSITY_TARGET}種類)未満のテンプレート: ${short} / ${rows.length}`);
+    console.log(`   下限(${DIVERSITY_FLOOR})は満たしているのでテストは通す。`);
+    console.log(`   推論の作り直し後に DIVERSITY_FLOOR を引き上げること。`);
+  }
+}
+
 process.exit(process.exitCode ? 1 : 0);
