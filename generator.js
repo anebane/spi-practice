@@ -277,7 +277,7 @@ var QuestionGenerator = (function() {
       for (var k2 in derivedVars) allVars[k2] = derivedVars[k2];
       var explanation = renderTemplate(template.explanationTemplate, allVars);
 
-      return {
+      var result = {
         id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
         category: template.category,
         categoryId: template.categoryId,
@@ -290,6 +290,69 @@ var QuestionGenerator = (function() {
         explanation: explanation,
         timeLimitSec: template.timeLimitSec
       };
+
+      // 選択式テンプレート: distractors(vars, answer) が誤答候補を返す。
+      // 誤答は「よくある計算間違いの結果」にすることで、当てずっぽうで
+      // 正解できないようにする（近い値をランダムに散らすだけでは意味がない）。
+      if (template.distractors) {
+        var wrongs = template.distractors(vars, answer) || [];
+        var pool = [answer];
+        for (var wi = 0; wi < wrongs.length; wi++) {
+          var w = wrongs[wi];
+          if (!isFinite(w) || w === answer) continue;
+          if (Math.abs(w - Math.round(w)) > 0.001) w = Math.round(w * 100) / 100;
+          if (w < 0) continue;
+          if (pool.indexOf(w) === -1) pool.push(w);
+        }
+        if (pool.length < 4) continue;              // 選択肢が足りない組み合わせは捨てる
+
+        // 正解の「大きさの順位」が偏らないようにする。
+        // 誤答が全部小さいと正解が常に最大になり、逆に大小を必ず混ぜると
+        // 正解が常に真ん中になる。どちらも位置から推測できてしまうので、
+        // 小さい誤答・大きい誤答を何個ずつ採用するかを毎回ランダムに決める。
+        var smaller = [], larger = [];
+        for (var pi = 1; pi < pool.length; pi++) {
+          (pool[pi] < answer ? smaller : larger).push(pool[pi]);
+        }
+        var shuf = function(arr) {
+          for (var i = arr.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1)), t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+          }
+          return arr;
+        };
+        shuf(smaller); shuf(larger);
+
+        // 片側の在庫が3個に満たないと、その側から必ず選ばざるを得なくなり
+        // 正解の順位が偏る。足りない側を答えから機械的に作って補う。
+        // 倍・半分といった値は「桁を間違えた」誤答として不自然ではない。
+        var pad = function(arr, mk) {
+          for (var f = 2; arr.length < 3 && f <= 5; f++) {
+            var v = mk(f);
+            if (!isFinite(v) || v <= 0) continue;
+            v = Math.abs(v - Math.round(v)) > 0.001 ? Math.round(v * 100) / 100 : Math.round(v);
+            if (v !== answer && pool.indexOf(v) === -1 && arr.indexOf(v) === -1) arr.push(v);
+          }
+        };
+        pad(smaller, function(f) { return answer / f; });
+        pad(larger,  function(f) { return answer * f; });
+        // 在庫で実現できる範囲を先に求め、その中から一様に選ぶ。
+        // 「0〜3で選んでから在庫に合わせて丸める」と、丸めた先の値に偏る。
+        var lo = Math.max(0, 3 - smaller.length);
+        var hi = Math.min(3, larger.length);
+        if (lo > hi) continue;
+        var wantLarger = lo + Math.floor(Math.random() * (hi - lo + 1));
+        var picked = larger.slice(0, wantLarger).concat(smaller.slice(0, 3 - wantLarger));
+        if (picked.length < 3) continue;
+        pool = [answer].concat(picked);
+        for (var si = pool.length - 1; si > 0; si--) {
+          var sj = Math.floor(Math.random() * (si + 1));
+          var st = pool[si]; pool[si] = pool[sj]; pool[sj] = st;
+        }
+        result.choices = pool.map(function(v) { return String(v); });
+        result.correctAnswer = pool.indexOf(answer);
+      }
+
+      return result;
     }
 
     // フォールバック: 最後に生成された変数で強制返す
@@ -298,6 +361,17 @@ var QuestionGenerator = (function() {
 
   // --- 派生変数の計算 ---
   function computeDerivedVars(template, vars, answer) {
+    // 四則逆算: 解説で使う右辺の値と答え
+    if (template.categoryId === 11) {
+      var d11 = {};
+      d11.answer = answer;
+      if (template.id === "shisoku_mul_01")   d11.rhs = vars.b * vars.c;
+      if (template.id === "shisoku_add_01")   d11.rhs = vars.b + vars.c;
+      if (template.id === "shisoku_sub_01")   d11.rhs = vars.b * vars.c;
+      if (template.id === "shisoku_ratio_01") d11.rhs = vars.b / vars.c;
+      return d11;
+    }
+
     var d = {};
 
     // 共通

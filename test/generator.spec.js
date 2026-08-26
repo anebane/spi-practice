@@ -106,6 +106,10 @@ for (const t of TEMPLATES) {
     if (q.correctAnswer === undefined || q.correctAnswer === null) {
       fail(t.id, "答えなし", String(q.correctAnswer));
     } else if (q.answerType === "choice" || t.type === "pattern") {
+      // 選択式は必ず choices を持たなければならない。
+      // distractors が誤答を作れず choices が null のまま出ると、
+      // 回答できない問題が本番に出る。
+      if (!Array.isArray(q.choices)) fail(t.id, "選択式なのにchoicesが無い", String(q.choices));
       const n = Array.isArray(q.choices) ? q.choices.length : 0;
       if (n < 2) fail(t.id, "選択肢が不足", `${n}個`);
       if (!Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer >= n)
@@ -196,4 +200,32 @@ process.exit(failures.length ? 1 : 0);
   }
   console.log(`\n試験セット ${runs * 3}回: 出題数の過不足 ${shortfall}件`);
   if (shortfall) process.exitCode = 1;
+}
+
+// --- 選択式問題で、正解の「大きさの順位」が偏っていないか ---
+// 誤答が片側に寄ると「常に最大を選ぶ」「両端を避ける」だけで正解できてしまい、
+// 速度を測るテストとして成立しなくなる。新しい選択式問題を追加したときに
+// 壊れやすい性質なので機械的に守る。
+{
+  const choiceTemplates = TEMPLATES.filter(t => t.distractors);
+  let biased = [];
+  for (const t of choiceTemplates) {
+    const rank = [0, 0, 0, 0];
+    let n = 0;
+    for (let i = 0; i < 2000; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const nums = q.choices.map(Number);
+      if (nums.some(isNaN)) continue;
+      const a = nums[q.correctAnswer];
+      rank[nums.slice().sort((x, y) => x - y).indexOf(a)]++;
+      n++;
+    }
+    if (!n) continue;
+    const worst = Math.max(...rank) / n * 100;
+    if (worst > 35) biased.push(`${t.id}: 最頻の順位が ${worst.toFixed(0)}%（一様なら25%）`);
+  }
+  console.log(`\n選択式 ${choiceTemplates.length}種の正解位置の偏り: ${biased.length ? "❌" : "✅ なし"}`);
+  for (const b of biased) console.log("   - " + b);
+  if (biased.length) process.exitCode = 1;
 }
