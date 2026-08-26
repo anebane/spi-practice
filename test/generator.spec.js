@@ -186,7 +186,9 @@ if (fixed.length) {
   for (const [id, v] of fixed.slice(0, 10)) console.log(`   - ${id} (${v.cat}/${v.type})`);
 }
 
-process.exit(failures.length ? 1 : 0);
+// 終了コードはファイル末尾でまとめて決める。ここで exit すると
+// 以降に追記したテストが実行されない（実際に見落としが起きた）。
+if (failures.length) process.exitCode = 1;
 
 // --- 試験セットが指定どおりの問題数を返すか ---
 // 生成失敗でpushされないと「20問」指定なのに19問になる無言の不具合が起きる。
@@ -229,3 +231,5 @@ process.exit(failures.length ? 1 : 0);
   for (const b of biased) console.log("   - " + b);
   if (biased.length) process.exitCode = 1;
 }
+
+process.exit(process.exitCode ? 1 : 0);
