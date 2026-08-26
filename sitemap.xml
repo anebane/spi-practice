@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- about / privacy / contact は意図的に載せていない。
+     AdSense審査のため noindex は外してクロール可能にしたが、
+     検索需要が無く、サイトマップに入れると評価対象URLの質を薄めるため。 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://tekisei-drill.com/</loc>
