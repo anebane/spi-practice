@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "適性検査無限ドリル",
+  "short_name": "テキドリ",
+  "description": "SPI・玉手箱形式の適性検査をランダム生成で無限に練習できる無料ドリル。登録不要、オフラインでも解けます。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#1a237e",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "模擬試験を始める",
+      "short_name": "模擬試験",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "四則逆算（玉手箱形式）",
+      "short_name": "四則逆算",
+      "url": "/tamatebako-shisoku/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

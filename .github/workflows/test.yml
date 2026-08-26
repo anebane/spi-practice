@@ -31,3 +31,8 @@ jobs:
 
       - name: HTMLの健全性（未展開の変数・壊れた内部リンク）
         run: node test/html.spec.js
+
+      # sw.js のプリキャッシュ対象やアイコンは、消しても画面上は無症状のまま
+      # インストール不能になるので機械的に落とす
+      - name: PWA構成（manifest・アイコン・Service Workerのプリキャッシュ）
+        run: node test/pwa.spec.js
