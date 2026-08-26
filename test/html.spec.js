@@ -59,6 +59,15 @@ for (const p of pages) {
     if (!ok) fail(p, "リンク先が存在しない", m[1]);
   }
 
+  // 5. 広告リンクがHTMLに直書きされていないか
+  //    直書きすると PR表記が漏れる。景表法（ステマ規制）の要件であると同時に、
+  //    広告主が「広告表示がない場合、提携を解除する可能性」と明記した
+  //    提携維持の条件でもある。リンクは affiliate.js の PROGRAMS だけに置き、
+  //    PR表記を必ず伴う render() 経由でしか出せないようにする。
+  for (const m of html.matchAll(/(px\.a8\.net|www\d*\.a8\.net|a8mat=)/g)) {
+    fail(p, "広告リンクの直書き", `${m[1]} … affiliate.js の render() 経由で出してください`);
+  }
+
   // 5. 未展開のテンプレート変数
   if (/\{\{[^}]+\}\}/.test(html)) fail(p, "未展開の変数", html.match(/\{\{[^}]+\}\}/)[0]);
 }

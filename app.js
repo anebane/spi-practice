@@ -727,6 +727,21 @@
       catResultsEl.appendChild(row);
     }
 
+    // アフィリエイト枠。スコア帯で出し分ける。
+    // 置く位置は「次に何をすべきか」の文脈が立つ瞬間＝スコア表示の直後。
+    // 試験画面には置かない。AdSenseもこの画面には置かない（テキストが薄く
+    // 「価値の低いコンテンツ」判定のリスクがあるため）。役割分担は
+    // 結果画面=アフィリエイト / 記事ページ=AdSense。
+    if (typeof Affiliate !== "undefined") {
+      var sel = Affiliate.selectByScore(percent);
+      Affiliate.render(document.getElementById("affiliate-result"), {
+        programs: sel.programs,
+        band: sel.band,
+        placement: "result",
+        note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
+      });
+    }
+
     // 解説ページがある分野のうち、最も正答率が低かったものへ誘導する。
     // 全分野の最下位に解説ページが無いことが多いため、ページがある分野に限る。
     // 「全体で最も苦手」とは書かず、その分野の実際の正答率だけを示す。

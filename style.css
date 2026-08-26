@@ -1346,3 +1346,32 @@ button.cta-btn { border: none; font-size: 16px; cursor: pointer; font-family: in
 .home-about { margin-top: 32px; }
 .home-about p { font-size: 14px; color: #444; margin-bottom: 12px; line-height: 1.8; }
 .home-about a { color: #1a237e; }
+
+/* ===== アフィリエイト枠 ===== */
+/* PR表記は本文と同等の大きさにする。小さく薄く出すのは景表法上不十分。 */
+.af-block {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+  background: #fff;
+}
+.af-head { font-size: 15px; font-weight: 700; color: #1a237e; margin-bottom: 6px; }
+.af-pr {
+  /* 本文と同等の大きさにする。景表法の運用基準では「文字のサイズや色なども踏まえ
+     一般消費者にとって明瞭であること」が求められ、小さく薄い表記は不十分とされる。
+     body の 16px より小さくしないこと。 */
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  background: #fff3e0;
+  border-left: 4px solid #e65100;
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 10px;
+}
+.af-note { font-size: 13px; color: #666; margin-bottom: 10px; }
+.af-item { padding: 10px 0; border-top: 1px solid #f0f0f0; }
+.af-item:first-of-type { border-top: none; }
+.af-link { font-size: 16px; font-weight: 700; color: #1a237e; }
+.af-lead { font-size: 13px; color: #555; margin-top: 4px; }

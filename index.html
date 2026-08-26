@@ -339,6 +339,11 @@
         <div class="score-bar" id="score-bar"></div>
       </div>
 
+      <!-- アフィリエイト枠。中身は affiliate.js が描画する。
+           ここに直接リンクを書かないこと（PR表記が漏れる。
+           test/html.spec.js が HTML 内の a8.net URL を検出して落とす） -->
+      <div id="affiliate-result" style="display:none"></div>
+
       <h3 class="section-title">分野別成績</h3>
       <div class="cta-box" id="weak-category-cta" style="display:none"></div>
         <div class="category-results" id="category-results">
@@ -399,6 +404,7 @@
 
   <script src="questions.js"></script>
   <script src="generator.js"></script>
+  <script src="affiliate.js"></script>
   <script src="app.js"></script>
   <script src="/pwa.js" defer></script>
 </body>
