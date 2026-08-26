@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPI推論の解き方｜順序・位置・対応関係を表で解く【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPI非言語で最も出題が多い推論の解き方。順序推論・位置関係・対応関係を、表を使って機械的に整理する手順を例題つきで解説します。読んだあとすぐ推論だけを練習できます。登録不要・無料。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/suiron/">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>推論の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 推論</p>
+
+      <p class="article-lead"><strong>推論はSPI非言語で最も出題が多い分野です。</strong>そして計算力ではなく<strong>情報を整理する手順</strong>が問われます。頭の中で考えようとすると混乱しますが、表に落とせば機械的に解けます。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#kihon">推論の基本方針</a></li>
+          <li><a href="#junjo">順序推論</a></li>
+          <li><a href="#taiou">対応関係</a></li>
+          <li><a href="#mistake">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="kihon">1. 推論の基本方針</h2>
+      <p>推論の問題は、いくつかの条件が与えられ、そこから確定できることを答えます。<strong>共通する手順は3つです。</strong></p>
+      <ol>
+        <li><strong>確定する条件から先に書く</strong> — 「AはBより前」のような相対関係より、「Cは3番目」のような確定情報を優先します</li>
+        <li><strong>表に落とす</strong> — 頭で保持しようとすると必ず取りこぼします</li>
+        <li><strong>「確実にいえる」かを検証する</strong> — 選択肢が正しい可能性があるだけでは不正解です</li>
+      </ol>
+
+      <div class="callout">
+        <div class="callout-title">最頻出の落とし穴</div>
+        <p>設問が「確実にいえるものはどれか」を問うている場合、<strong>ありえるだけでは正解になりません</strong>。条件を満たす並び方が複数あるとき、そのすべてで成立することだけが「確実にいえる」ことです。</p>
+      </div>
+
+      <h2 id="junjo">2. 順序推論</h2>
+      <p>「A〜Eの5人が一列に並んでいる」のように、順番を確定させる問題です。</p>
+
+      <h3>例題</h3>
+      <p>A, B, C, D の4人が一列に並んでいる。次のことがわかっている。</p>
+      <ul>
+        <li>AはBより前にいる</li>
+        <li>CはDより前にいる</li>
+        <li>BはCより前にいる</li>
+      </ul>
+      <p>このとき、先頭から2番目にいるのは誰か。</p>
+
+      <h3>解き方</h3>
+      <p>相対関係を不等号でつなぎます。</p>
+      <p><code>A &lt; B</code>、<code>C &lt; D</code>、<code>B &lt; C</code></p>
+      <p>2つ目と3つ目をつなぐと <code>B &lt; C &lt; D</code>。ここに1つ目を加えると <code>A &lt; B &lt; C &lt; D</code> となり、順序が完全に確定します。<strong>答えは B です。</strong></p>
+
+      <p>ポイントは、<strong>ばらばらの条件を1本の不等式につなげられないか探すこと</strong>です。つながれば一気に確定します。</p>
+
+      <h2 id="taiou">3. 対応関係</h2>
+      <p>「3人がそれぞれ違うスポーツをしている」のように、要素の組み合わせを特定する問題です。ここでは<strong>必ず表を書きます。</strong></p>
+
+      <table class="compare-table">
+        <thead><tr><th></th><th>野球</th><th>サッカー</th><th>テニス</th></tr></thead>
+        <tbody>
+          <tr><th>A</th><td>×</td><td>○</td><td>×</td></tr>
+          <tr><th>B</th><td>○</td><td>×</td><td>×</td></tr>
+          <tr><th>C</th><td>×</td><td>×</td><td>○</td></tr>
+        </tbody>
+      </table>
+
+      <p>各行・各列に○がちょうど1つずつ入ります。この制約が強力で、<strong>×が2つ埋まれば残りは自動的に○</strong>になります。条件を1つずつ表に書き込み、確定したところから埋めていってください。</p>
+
+      <h2 id="mistake">4. つまずきやすい点</h2>
+      <h3>「AはBより前」＝隣とは限らない</h3>
+      <p>間に他の人が入る可能性があります。「隣り合う」と明記されていない限り、離れていてもかまいません。</p>
+      <h3>条件を使い切ったか確認する</h3>
+      <p>答えが出たように見えても、使っていない条件が残っていたら見落としがあります。全条件が矛盾なく成立するか確かめてください。</p>
+      <h3>時間をかけすぎない</h3>
+      <p>推論は1問あたりの負荷が高い分野です。手が止まったら見切る判断も必要です。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">推論だけを練習する</p>
+        <p>問題は毎回自動生成されるので、何度解いても違う問題です。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=1">推論の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおくだけで解ける</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>全10分野</span></li>
+        </ul>
+      </section>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+</body>
+</html>

@@ -12,6 +12,14 @@
     }
   }
 
+  // 解説ページが用意されている分野。ページが無い分野へリンクすると
+  // 404になるので、ここに載っている分野だけ導線を出す。
+  var CATEGORY_PAGES = {
+    "推論": "suiron",
+    "損益算": "soneki",
+    "場合の数・確率": "kakuritsu"
+  };
+
   // --- 誤り報告 ---
   var REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform?usp=pp_url";
 
@@ -103,6 +111,30 @@
     });
 
     // 開始ボタン
+    // 分野別ページから「この分野だけ練習」で来たときに、
+    // 対象分野だけを選択した状態で開始画面を出す。
+    (function applyCategoryParam() {
+      var m = location.search.match(/[?&]cat=(\d+)/);
+      if (!m) return;
+      var want = m[1];
+      var boxes = document.querySelectorAll("#category-select input");
+      var hit = false;
+      boxes.forEach(function(cb) {
+        var on = cb.value === want;
+        cb.checked = on;
+        if (on) hit = true;
+      });
+      if (!hit) { boxes.forEach(function(cb) { cb.checked = true; }); return; }
+      var note = document.getElementById("category-param-note");
+      if (note) {
+        var box = document.querySelector("#category-select input[value='" + want + "']");
+        var name = box && box.parentElement ? box.parentElement.textContent.trim() : "";
+        note.textContent = "「" + name + "」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。";
+        note.style.display = "";
+      }
+      trackEvent("category_practice_start", { category_id: want });
+    })();
+
     document.getElementById("btn-start").addEventListener("click", startExam);
   }
 
@@ -693,6 +725,31 @@
         '<div class="cat-bar-bg"><div class="cat-bar-fill" style="width:' + catPercent + '%"></div></div>' +
         '<span class="cat-score">' + data.correct + '/' + data.total + ' (' + catPercent + '%)  ' + avgTime + '秒/問</span>';
       catResultsEl.appendChild(row);
+    }
+
+    // 解説ページがある分野のうち、最も正答率が低かったものへ誘導する。
+    // 全分野の最下位に解説ページが無いことが多いため、ページがある分野に限る。
+    // 「全体で最も苦手」とは書かず、その分野の実際の正答率だけを示す。
+    var weakEl = document.getElementById("weak-category-cta");
+    if (weakEl) {
+      var target = null, targetRate = 101;
+      Object.keys(byCategory).forEach(function(cat) {
+        if (!CATEGORY_PAGES[cat]) return;
+        var cd = byCategory[cat];
+        if (!cd.total) return;
+        var rate = Math.round(cd.correct / cd.total * 100);
+        if (rate < targetRate) { targetRate = rate; target = cat; }
+      });
+      if (target && targetRate < 100) {
+        weakEl.innerHTML =
+          '<p class="cta-title">' + escapeHtml(target) + ' の正答率は ' + targetRate + '% でした</p>' +
+          '<p>解き方を確認して、この分野だけをもう一度練習できます。</p>' +
+          '<a class="cta-btn" href="categories/' + CATEGORY_PAGES[target] + '/">' +
+          escapeHtml(target) + ' の解き方を見る</a>';
+        weakEl.style.display = "";
+      } else {
+        weakEl.style.display = "none";
+      }
     }
 
     // レーダーチャート

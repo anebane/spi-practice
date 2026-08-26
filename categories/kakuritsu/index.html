@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>場合の数・確率の解き方｜順列と組み合わせの使い分け【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPIの場合の数・確率の解き方。順列（P）と組み合わせ（C）をどう使い分けるか、「少なくとも1つ」の処理、余事象の使いどころを例題つきで解説します。読んだあとすぐ練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/kakuritsu/">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>場合の数・確率の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 場合の数・確率</p>
+
+      <p class="article-lead">この分野の分かれ目は<strong>「順列と組み合わせのどちらを使うか」</strong>の一点に尽きます。ここを間違えると、そのあとの計算が正しくても答えは合いません。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#tsukaiwake">順列と組み合わせの使い分け</a></li>
+          <li><a href="#kakuritsu">確率の基本</a></li>
+          <li><a href="#yojishou">「少なくとも」は余事象で</a></li>
+          <li><a href="#mistake">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="tsukaiwake">1. 順列と組み合わせの使い分け</h2>
+      <p>判断基準はひとつだけです。<strong>並べる順番が結果に影響するかどうか。</strong></p>
+
+      <table class="compare-table">
+        <thead><tr><th></th><th>順列（P）</th><th>組み合わせ（C）</th></tr></thead>
+        <tbody>
+          <tr><th>順番</th><td><strong>区別する</strong></td><td><strong>区別しない</strong></td></tr>
+          <tr><th>典型例</th><td>並べる／順位をつける／役職を割り当てる</td><td>選ぶ／取り出す／グループを作る</td></tr>
+          <tr><th>式</th><td>nPr = n × (n−1) × …（r個分）</td><td>nCr = nPr ÷ r!</td></tr>
+        </tbody>
+      </table>
+
+      <p>「AとBを選ぶ」と「BとAを選ぶ」が同じことなら組み合わせ、「1位A・2位B」と「1位B・2位A」が違うことなら順列です。</p>
+
+      <h3>例：5人から3人を選ぶ</h3>
+      <p><strong>選ぶだけなら</strong> 5C3 = 10通り。<strong>3人に順位をつけるなら</strong> 5P3 = 60通りです。同じ「5人から3人」でも6倍違います。</p>
+
+      <h2 id="kakuritsu">2. 確率の基本</h2>
+      <p>確率は次の割り算です。</p>
+      <p><code>確率 = 該当する場合の数 ÷ 全体の場合の数</code></p>
+      <p>大切なのは、<strong>分子と分母で数え方をそろえること</strong>です。分母を組み合わせで数えたなら、分子も組み合わせで数えます。片方だけ順列で数えると答えが合いません。</p>
+
+      <h3>例題</h3>
+      <p>袋に赤玉3個、白玉2個が入っている。同時に2個取り出すとき、2個とも赤玉である確率は。</p>
+      <ol>
+        <li>全体：5個から2個を選ぶ → 5C2 = <strong>10通り</strong></li>
+        <li>赤2個：3個から2個を選ぶ → 3C2 = <strong>3通り</strong></li>
+        <li>確率 = 3 ÷ 10 = <strong>3/10</strong></li>
+      </ol>
+      <p>「同時に取り出す」は順番を問わないので、両方とも組み合わせで数えます。</p>
+
+      <h2 id="yojishou">3. 「少なくとも」は余事象で</h2>
+      <div class="callout">
+        <div class="callout-title">「少なくとも1つ」を見たら余事象</div>
+        <p>「少なくとも1つが赤」を正面から数えると、赤1個・赤2個・赤3個…と場合分けが増えます。<strong>「1 −（1つも赤でない確率）」</strong>で求めるほうが圧倒的に速く、数え漏らしも起きません。</p>
+      </div>
+      <p>同様に「隣り合わない確率」は「1 −（隣り合う確率）」で求めます。<strong>否定形が出てきたら余事象を疑う</strong>のが定石です。</p>
+
+      <h2 id="mistake">4. つまずきやすい点</h2>
+      <h3>「同じものを含む」場合</h3>
+      <p>同じ文字が複数あるときは、その重複分で割ります。たとえば「AABB」の並べ方は 4! ÷ (2! × 2!) = 6通りです。</p>
+      <h3>「隣り合う」はひとまとめにする</h3>
+      <p>隣り合う2つを1ブロックとみなして並べ、最後にブロック内の並び方（2通り）を掛けます。n個のうち特定の2つが隣り合う確率は、必ず <code>2/n</code> になります。</p>
+      <h3>答えは約分する</h3>
+      <p>確率は既約分数で答えるのが原則です。3/6 のままでは減点される可能性があります。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">場合の数・確率だけを練習する</p>
+        <p>問題は毎回自動生成されるので、何度解いても違う問題です。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=2">場合の数・確率の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおくだけで解ける</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>全10分野</span></li>
+        </ul>
+      </section>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+</body>
+</html>

@@ -47,7 +47,8 @@ for (const p of pages) {
   // 4. 内部リンクの参照先が存在するか（絶対パスと相対パスの両方）
   const dir = path.dirname(p);
   for (const m of html.matchAll(/href="(?!https?:|#|mailto:)([^"]+)"/g)) {
-    let t = m[1].split("#")[0];
+    // クエリ文字列(?cat=1)は同じページへのパラメータ付きリンクなので取り除く
+    let t = m[1].split("#")[0].split("?")[0];
     if (!t) continue;
     const abs = t.startsWith("/")
       ? path.join(ROOT, t.slice(1))
