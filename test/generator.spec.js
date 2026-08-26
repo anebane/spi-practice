@@ -362,4 +362,98 @@ if (failures.length) process.exitCode = 1;
   }
 }
 
+
+// --- 生成された日本語が壊れていないか ---
+//
+// 既存の不変条件（未展開変数・答えの存在・選択肢の重複）は、文法や論理が
+// 壊れていても素通りする。実際に目視で3件見つかった:
+//   「Pはコーヒー選んでいない」        助詞が抜けている
+//   「甲は福岡を住んでいるていない」    活用が二重になっている
+//   「駅前を通るならば駅前を通らない」  自己矛盾で誤答が機能していない
+//
+// 多様性を上げるほど、こうした破綻が出る面が増える。目視に頼ると必ず漏れるので
+// 機械で落とす。ルールは「生成物に対して確実に言えること」だけに絞り、
+// 誤検知でテストが無視されるようになる事態を避ける。
+{
+  const SAMPLES = 300;
+
+  // ルールA: 活用の二重化。「住んでいる」+「ていない」のような連結ミス。
+  const BROKEN_CONJUGATION = [
+    /(て|で)いる(て|で)いない/,
+    /(て|で)いる(て|で)いる/,
+    /していしない/,
+    /ないない/,
+    /(まし|ませ)んない/
+  ];
+
+  // ルールB: 目的語の助詞。「〜を飼っていない」「〜も選んでいない」のように、
+  // 他動詞の否定で終わる条件文には必ず目的語の助詞が要る。
+  //
+  // 対象を「他動詞の否定で終わる行」に限定しているのは誤検知を避けるため。
+  // 最初は「・で始まる全行に助詞を要求」にしたところ、
+  // 「・Aの発言:「Bは嘘つきだ」」のような別の文型を誤って落とした。
+  // 誤検知を出すルールは無視されるようになり、結果として本物を見逃す。
+  const TRANSITIVE_NEGATIVE = /(ていない|でいない|しない)$/;
+  const OBJECT_PARTICLE = /[をもがに]/;
+
+  // ルールC: 「AならばB」で A と B が同じ述語の肯定と否定＝自己矛盾。
+  //          内容を読まなくても誤りと分かるので選択肢として機能しない。
+  const stripNegation = (t) => t
+    .replace(/ではない$/, "").replace(/ないない$/, "")
+    .replace(/でない$/, "").replace(/ない$/, "")
+    .replace(/なかった$/, "").replace(/ません$/, "")
+    .replace(/だ$/, "").trim();
+
+  const problems = [];
+  const note = (tid, rule, sample) => {
+    if (problems.length < 40) problems.push({ tid, rule, sample: sample.slice(0, 60) });
+  };
+
+  for (const t of TEMPLATES) {
+    for (let i = 0; i < SAMPLES; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      const all = [q.text, String(q.explanation || "")].concat(q.choices || []);
+
+      for (const text of all) {
+        for (const re of BROKEN_CONJUGATION) {
+          if (re.test(text)) { note(t.id, "活用の二重化", text.match(re)[0] + " … " + text); break; }
+        }
+      }
+
+      // 条件文（・で始まる行）のうち、他動詞の否定で終わるものだけを見る
+      for (const line of q.text.split("\n")) {
+        if (!line.startsWith("・")) continue;
+        if (!TRANSITIVE_NEGATIVE.test(line)) continue;
+        const body = line.slice(1).replace(/^.+?は/, "");   // 「Xは」を落とした残り
+        if (!OBJECT_PARTICLE.test(body)) note(t.id, "目的語の助詞が無い", line);
+      }
+
+      // 自己矛盾
+      for (const ch of (q.choices || [])) {
+        const parts = String(ch).split("ならば");
+        if (parts.length !== 2) continue;
+        if (stripNegation(parts[0]) === stripNegation(parts[1])) {
+          note(t.id, "自己矛盾の選択肢", ch);
+        }
+      }
+    }
+  }
+
+  console.log(`\n生成文の健全性: ${TEMPLATES.length}テンプレ x ${SAMPLES}回`);
+  if (!problems.length) {
+    console.log("   ✅ 活用の二重化・助詞の欠落・自己矛盾のいずれも検出されず");
+  } else {
+    const byRule = {};
+    for (const p of problems) (byRule[p.rule] ||= []).push(p);
+    console.log(`   ❌ ${problems.length}件`);
+    for (const [rule, list] of Object.entries(byRule)) {
+      const ids = [...new Set(list.map(x => x.tid))];
+      console.log(`   【${rule}】 ${ids.join(", ")}`);
+      console.log(`      例: ${list[0].sample}`);
+    }
+    process.exitCode = 1;
+  }
+}
+
 process.exit(process.exitCode ? 1 : 0);
