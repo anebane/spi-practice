@@ -45,6 +45,14 @@ var QuestionGenerator = (function() {
 
   // --- custom変数の後処理 ---
   function resolveCustomVariables(template, vars) {
+    // テンプレートが自前の resolve を持つ場合はそれに任せる。
+    // 新しい問題を足すたびに generator.js を編集しなくて済むので、
+    // 1ファイル（src/questions/*.js）で完結して追加できる。
+    if (typeof template.resolve === "function") {
+      template.resolve(vars);
+      return;
+    }
+
     // コイン問題: kはnに依存
     if (template.id === "kakuritsu_coin_01") {
       var kOptions;
@@ -52,6 +60,19 @@ var QuestionGenerator = (function() {
       else if (vars.n === 4) kOptions = [1, 2, 3];
       else kOptions = [1, 2, 3, 4];
       vars.k = kOptions[Math.floor(Math.random() * kOptions.length)];
+    }
+
+    // 推論(直線距離): 方角の組と辺の長さ。
+    // templateText がこれらを参照するので、問題文の展開前に確定させる必要がある
+    // （computeDerivedVars は展開後に走るので間に合わない）。
+    if (template.id === "suiron_direction_01") {
+      var DIRS = [["東", "北"], ["北", "西"], ["西", "南"], ["南", "東"],
+                  ["北", "東"], ["東", "南"], ["南", "西"], ["西", "北"]];
+      var TRI = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+      vars.dir1 = DIRS[vars.pair][0];
+      vars.dir2 = DIRS[vars.pair][1];
+      vars.a = TRI[vars.triple][0] * vars.scale;
+      vars.b = TRI[vars.triple][1] * vars.scale;
     }
 
     // 並べ替え確率: 文字リストをnに合わせて作る
@@ -291,6 +312,17 @@ var QuestionGenerator = (function() {
         timeLimitSec: template.timeLimitSec
       };
 
+      // 選択肢を自前で作るテンプレート（人名など、数値の大小で誤答を作れない場合）。
+      // { choices: [...], correctIndex: n } を返す。
+      if (typeof template.buildChoices === "function") {
+        var bc = template.buildChoices(vars, answer);
+        if (!bc || !Array.isArray(bc.choices) || bc.choices.length < 2) continue;
+        if (!(bc.correctIndex >= 0 && bc.correctIndex < bc.choices.length)) continue;
+        result.choices = bc.choices.map(String);
+        result.correctAnswer = bc.correctIndex;
+        return result;
+      }
+
       // 選択式テンプレート: distractors(vars, answer) が誤答候補を返す。
       // 誤答は「よくある計算間違いの結果」にすることで、当てずっぽうで
       // 正解できないようにする（近い値をランダムに散らすだけでは意味がない）。
@@ -361,6 +393,25 @@ var QuestionGenerator = (function() {
 
   // --- 派生変数の計算 ---
   function computeDerivedVars(template, vars, answer) {
+    // 推論(順序): 解説で使う並びと答え
+    if (/^suiron_order_/.test(template.id)) {
+      return {
+        orderText: vars._order.join(" → "),
+        answerName: vars._answerName
+      };
+    }
+
+    // 推論(直線距離): 解説で使う平方
+    if (template.id === "suiron_direction_01") {
+      return {
+        sqA: vars.a * vars.a,
+        sqB: vars.b * vars.b,
+        sqC: vars.a * vars.a + vars.b * vars.b,
+        wrongSum: vars.a + vars.b,
+        answer: answer
+      };
+    }
+
     // 四則逆算: 解説で使う右辺の値と答え
     if (template.categoryId === 11) {
       var d11 = {};

@@ -1,3 +1,22 @@
+// 順序推論で使う「場面 / 条件の言い回し / 設問の言い回し」。
+// 3本のテンプレートで別々の場面を担当させ、内容が重ならないようにする。
+var ORDER_ATTRS = {
+  line: [
+    { scene: "一列に並んでいる",   rel: "前にいる",       ask: ["先頭にいる", "前から{k}番目にいる", "最後尾にいる"] },
+    { scene: "順番待ちをしている", rel: "前に並んでいる", ask: ["先頭にいる", "前から{k}番目にいる", "最後尾にいる"] }
+  ],
+  score: [
+    { scene: "テストを受けた",   rel: "点数が高い", ask: ["最も点数が高い", "点数が{k}番目に高い", "最も点数が低い"] },
+    { scene: "身長を比べた",     rel: "背が高い",   ask: ["最も背が高い", "{k}番目に背が高い", "最も背が低い"] },
+    { scene: "年齢を比べた",     rel: "年上である", ask: ["最も年上である", "{k}番目に年上である", "最も年下である"] }
+  ],
+  race: [
+    { scene: "徒競走でゴールした", rel: "先にゴールした", ask: ["1位だった", "{k}位だった", "最下位だった"] },
+    { scene: "100m走をした",     rel: "速かった",       ask: ["1位だった", "{k}位だった", "最下位だった"] },
+    { scene: "駅に到着した",     rel: "先に到着した",   ask: ["最初に到着した", "{k}番目に到着した", "最後に到着した"] }
+  ]
+};
+
 // カテゴリ1: 推論（論理・命題）
 // ============================================================
 (function() {
@@ -9,28 +28,22 @@
     category: "推論",
     categoryId: 1,
     difficulty: 1,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C, D の4人が一列に並んでいる。以下のことがわかっている。\n・AはBより前にいる\n・CはDより前にいる\n・BはCより前にいる\n\n先頭から2番目にいるのは誰か。",
-        choices: ["A", "B", "C", "D"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・A → B → C → D の順番\nよって先頭から2番目はBです。"
-      },
-      {
-        text: "P, Q, R, S の4人が一列に並んでいる。以下のことがわかっている。\n・RはPより前にいる\n・SはQより前にいる\n・PはSより前にいる\n\n最後尾にいるのは誰か。",
-        choices: ["P", "Q", "R", "S"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・R → P → S → Q の順番\nよって最後尾はQです。"
-      },
-      {
-        text: "W, X, Y, Z の4人が一列に並んでいる。以下のことがわかっている。\n・XはWより前にいる\n・ZはYより前にいる\n・WはZより前にいる\n\n先頭にいるのは誰か。",
-        choices: ["W", "X", "Y", "Z"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・X → W → Z → Y の順番\nよって先頭はXです。"
-      }
-    ],
+    templateText: "{{names}} の{{n}}人が{{scene}}。以下のことがわかっている。\n{{conds}}\n\n{{question}}",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [4, 4, 5] },
+      attr:    { type: "int", min: 0, max: 1, step: 1 },
+      askPos:  { type: "int", min: 0, max: 4, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveOrderPuzzle(v, ORDER_ATTRS.line); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._answerName); },
+    buildChoices: function(v) {
+      return { choices: v._names.slice(), correctIndex: v._names.indexOf(v._answerName) };
+    },
+    unit: "",
+    explanationTemplate: "条件を順につなぐと、並びは次のように1通りに決まります。\n\n{{orderText}}\n\nしたがって答えは {{answerName}} です。\n\n【ポイント】\n・相対的な条件は不等号でつないで1本にまとめる\n・つながった時点で全体の順序が確定する\n・条件を満たす並びが複数ある場合、その問いには答えられない",
     timeLimitSec: 120
   });
 
@@ -40,29 +53,23 @@
     category: "推論",
     categoryId: 1,
     difficulty: 2,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C, D, E の5人がテストを受けた。以下のことがわかっている。\n・AはBより高い点数だった\n・BはCより高い点数だった\n・CはDより高い点数だった\n・DはEより高い点数だった\n\n3番目に高い点数だったのは誰か。",
-        choices: ["A", "B", "C", "D", "E"],
-        correctIndex: 2,
-        explanation: "条件を整理すると:\nA > B > C > D > E\nよって3番目に高いのはCです。"
-      },
-      {
-        text: "5人の生徒 A, B, C, D, E の身長について以下のことがわかっている。\n・AはCより高い\n・CはDより高い\n・DはBより高い\n・BはEより高い\n\n身長が低い方から2番目は誰か。",
-        choices: ["A", "B", "C", "D", "E"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\nA > C > D > B > E\n低い方から: E, B, D, C, A\nよって低い方から2番目はBです。"
-      },
-      {
-        text: "P, Q, R, S, T の5人が100m走をした。以下のことがわかっている。\n・PはQより速かった\n・QはRより速かった\n・RはSより速かった\n・SはTより速かった\n\n3位は誰か。",
-        choices: ["P", "Q", "R", "S", "T"],
-        correctIndex: 2,
-        explanation: "条件を整理すると:\nP > Q > R > S > T（速い順）\nよって3位はRです。"
-      }
-    ],
+    templateText: "{{names}} の{{n}}人が{{scene}}。以下のことがわかっている。\n{{conds}}\n\n{{question}}",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [4, 5, 5] },
+      attr:    { type: "int", min: 0, max: 2, step: 1 },
+      askPos:  { type: "int", min: 0, max: 4, step: 1 }
+    },
     answerType: "choice",
-    timeLimitSec: 150
+    resolve: function(v) { resolveOrderPuzzle(v, ORDER_ATTRS.score); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._answerName); },
+    buildChoices: function(v) {
+      return { choices: v._names.slice(), correctIndex: v._names.indexOf(v._answerName) };
+    },
+    unit: "",
+    explanationTemplate: "条件を順につなぐと、並びは次のように1通りに決まります。\n\n{{orderText}}\n\nしたがって答えは {{answerName}} です。\n\n【ポイント】\n・相対的な条件は不等号でつないで1本にまとめる\n・つながった時点で全体の順序が確定する\n・条件を満たす並びが複数ある場合、その問いには答えられない",
+    timeLimitSec: 120
   });
 
   // 推論: 対応問題
@@ -258,29 +265,23 @@
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
-    difficulty: 1,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C, D の4人が100m走をした。以下のことがわかっている。\n・AはCより速かった\n・DはBより速かった\n・CはDより速かった\n\n最も遅かったのは誰か。",
-        choices: ["A", "B", "C", "D"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・A > C > D > B（速い順）\nよって最も遅かったのはBです。"
-      },
-      {
-        text: "P, Q, R, S の4人のテスト結果について以下のことがわかっている。\n・QはRより高い\n・SはPより高い\n・RはSより高い\n\n最も高い点数だったのは誰か。",
-        choices: ["P", "Q", "R", "S"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・Q > R > S > P（高い順）\nよって最も高い点数だったのはQです。"
-      },
-      {
-        text: "5つの箱 A, B, C, D, E が左から一列に並んでいる。\n以下のことがわかっている。\n・Aは Cより左にある\n・DはBより右にある\n・Bは Aより右にある\n・Eは最も右にある\n・CはBより左にある\n\n左から3番目の箱はどれか。",
-        choices: ["A", "B", "C", "D"],
-        correctIndex: 1,
-        explanation: "条件を整理すると:\n・A < C < B（AはCより左、CはBより左、BはAより右）\n・B < D（DはBより右）\n・E は最も右\n\n以上から: A, C, B, D, E の順\n\nよって左から3番目はBです。"
-      }
-    ],
+    difficulty: 2,
+    templateText: "{{names}} の{{n}}人が{{scene}}。以下のことがわかっている。\n{{conds}}\n\n{{question}}",
+    variables: {
+      nameSet: { type: "choice", options: [0, 1, 2, 3, 4] },
+      n:       { type: "choice", options: [4, 5, 5] },
+      attr:    { type: "int", min: 0, max: 2, step: 1 },
+      askPos:  { type: "int", min: 0, max: 4, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveOrderPuzzle(v, ORDER_ATTRS.race); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._answerName); },
+    buildChoices: function(v) {
+      return { choices: v._names.slice(), correctIndex: v._names.indexOf(v._answerName) };
+    },
+    unit: "",
+    explanationTemplate: "条件を順につなぐと、並びは次のように1通りに決まります。\n\n{{orderText}}\n\nしたがって答えは {{answerName}} です。\n\n【ポイント】\n・相対的な条件は不等号でつないで1本にまとめる\n・つながった時点で全体の順序が確定する\n・条件を満たす並びが複数ある場合、その問いには答えられない",
     timeLimitSec: 120
   });
 
@@ -402,22 +403,28 @@
     category: "推論",
     categoryId: 1,
     difficulty: 1,
-    type: "pattern",
-    patterns: [
-      {
-        text: "Aさんの家から東へ300m歩き、そこから北へ400m歩いた。Aさんの家からの直線距離は何mか。",
-        choices: ["500m", "600m", "700m", "350m"],
-        correctIndex: 0,
-        explanation: "東へ300m、北へ400m → 直角三角形\n\n三平方の定理:\n距離 = √(300² + 400²) = √(90000 + 160000) = √250000 = 500m"
-      },
-      {
-        text: "太郎は自宅から北へ600m歩き、次に西へ800m歩いた。自宅からの直線距離は何mか。",
-        choices: ["1000m", "1400m", "900m", "700m"],
-        correctIndex: 0,
-        explanation: "北へ600m、西へ800m → 直角三角形\n\n三平方の定理:\n距離 = √(600² + 800²) = √(360000 + 640000) = √1000000 = 1000m"
-      }
-    ],
+    // 純粋な数値問題なので、固定パターンではなく他分野と同じ変数型にする。
+    // 直角三角形の辺はピタゴラス数から選ぶ。答えが必ず整数になるので、
+    // テストセンター（電卓不可）でも計算量が過大にならない。
+    templateText: "{{person}}は自宅から{{dir1}}へ{{a}}m歩き、次に{{dir2}}へ{{b}}m歩いた。自宅からの直線距離は何mか。",
+    variables: {
+      person: { type: "choice", options: ["太郎", "花子", "Aさん", "Bさん", "健太", "美咲"] },
+      pair:   { type: "choice", options: [0, 1, 2, 3, 4, 5, 6, 7] },
+      triple: { type: "choice", options: [0, 1, 2, 3, 4] },
+      scale:  { type: "choice", options: [10, 20, 50, 100] }
+    },
     answerType: "choice",
+    unit: "m",
+    answerFormula: function(v) {
+      // v.a, v.b は resolveCustomVariables が確定させている
+      return Math.sqrt(v.a * v.a + v.b * v.b);
+    },
+    distractors: function(v, ans) {
+      // 「足しただけ」「引いただけ」が最も多い誤り。斜辺より必ず大きい/小さいので
+      // 大小の両側がそろう。
+      return [v.a + v.b, Math.abs(v.b - v.a), v.a, v.b, ans * 2, Math.round(ans / 2)];
+    },
+    explanationTemplate: "{{dir1}}へ{{a}}m、{{dir2}}へ{{b}}m進むと、進んだ2辺が直角をなします。\n\n三平方の定理:\n距離 = √({{a}}² + {{b}}²) = √({{sqA}} + {{sqB}}) = √{{sqC}} = {{answer}}m\n\n【ポイント】\n・2辺を足すのは誤り（{{a}} + {{b}} = {{wrongSum}}m にはならない）\n・直角三角形の3辺は 3:4:5 や 5:12:13 の比になることが多い",
     timeLimitSec: 90
   });
 })();

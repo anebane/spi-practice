@@ -249,8 +249,9 @@ if (failures.length) process.exitCode = 1;
 // chartConfig と答えだけが変わるため。実際 chart_bar_01 は問題文1種類だが
 // 中身は800種類ある）。
 {
-  const DIVERSITY_TARGET = 50;   // 目標。推論を作り直したらここまで引き上げる
-  const DIVERSITY_FLOOR = 1;     // 当面の下限。現状値を通す（推論の最小が1）
+  // 目標値をそのまま下限にする。低い閾値で通すと直す動機が消えるため。
+  const DIVERSITY_TARGET = 50;
+  const DIVERSITY_FLOOR = 50;
   const SAMPLES = 400;
 
   const variantKey = (q) => [
@@ -297,10 +298,67 @@ if (failures.length) process.exitCode = 1;
     for (const r of below.slice(0, 10)) console.log(`   - ${r.id} (${r.cat}): ${r.n}種類`);
     process.exitCode = 1;
   } else {
-    const short = rows.filter(r => r.n < DIVERSITY_TARGET).length;
-    console.log(`\n⚠️ 目標(${DIVERSITY_TARGET}種類)未満のテンプレート: ${short} / ${rows.length}`);
-    console.log(`   下限(${DIVERSITY_FLOOR})は満たしているのでテストは通す。`);
-    console.log(`   推論の作り直し後に DIVERSITY_FLOOR を引き上げること。`);
+    console.log(`\n✅ 全 ${rows.length} テンプレートが ${DIVERSITY_TARGET} 種類以上を満たしています`);
+  }
+}
+
+
+// --- 順序推論: 条件から導かれる解がちょうど1通りか ---
+//
+// 変数化で最も危険なのがここ。条件の組み合わせ次第で順序が一意に定まらない
+// 問題が生まれ、「正解が2つある問題」になる。固定パターンでは人間が
+// 保証していた部分なので、生成にした以上は機械で保証する必要がある。
+//
+// 生成器の内部実装を信用せず、出来上がった問題文をパースして数え直す。
+{
+  const ordered = TEMPLATES.filter(t => /^suiron_order_/.test(t.id));
+  const permutations = (a) => {
+    if (a.length <= 1) return [a];
+    const out = [];
+    a.forEach((x, i) => {
+      permutations(a.slice(0, i).concat(a.slice(i + 1))).forEach(p => out.push([x, ...p]));
+    });
+    return out;
+  };
+
+  let checked = 0, zero = 0, multi = 0, mismatch = 0, unparsed = 0;
+  for (const t of ordered) {
+    for (let i = 0; i < 400; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const names = q.choices;
+      const lines = q.text.split("\n").filter(l => l.startsWith("・"));
+      const conds = lines
+        .map(l => { const m = l.slice(1).match(/^(.+?)は(.+?)より/); return m ? [m[1], m[2]] : null; })
+        .filter(Boolean);
+      if (conds.length !== lines.length || !conds.length) { unparsed++; continue; }
+
+      const sols = permutations(names).filter(p => {
+        const pos = {};
+        p.forEach((n, k) => { pos[n] = k; });
+        return conds.every(([a, b]) => pos[a] < pos[b]);
+      });
+      checked++;
+      if (sols.length === 0) zero++;
+      else if (sols.length > 1) multi++;
+      else {
+        const askLine = q.text.split("\n").pop();
+        let idx = null;
+        if (/先頭|1位|最も点数が高い|最も背が高い/.test(askLine)) idx = 0;
+        else if (/最後尾|最下位|最も点数が低い|最も背が低い/.test(askLine)) idx = names.length - 1;
+        else { const m = askLine.match(/(\d+)/); if (m) idx = parseInt(m[1], 10) - 1; }
+        if (idx !== null && sols[0][idx] !== names[q.correctAnswer]) mismatch++;
+      }
+    }
+  }
+
+  console.log(`\n順序推論の解の一意性: ${checked.toLocaleString()}問を総当たりで検証`);
+  const bad = zero + multi + mismatch + unparsed;
+  if (bad === 0) {
+    console.log("   ✅ すべて解がちょうど1通り、答えも一致");
+  } else {
+    console.log(`   ❌ 解なし ${zero} / 解が複数 ${multi} / 答え不一致 ${mismatch} / パース不能 ${unparsed}`);
+    process.exitCode = 1;
   }
 }
 

@@ -24,6 +24,124 @@ var QUESTION_TEMPLATES = [];
 // ============================================================
 // ヘルパー関数（グローバル）
 // ============================================================
+/**
+ * 順序推論のパズルを作る。
+ *
+ * 変数化で最も危険なのは「条件から順序が一意に定まらない」問題が生まれること。
+ * 固定パターンでは人間が一意性を保証していたが、生成にすると条件の組み合わせ次第で
+ * 複数通りありうる状態が必ず出る。そのまま出題すると「正解が2つある問題」になる。
+ *
+ * そこで全順列を総当たりして、条件を満たす並びがちょうど1通りのときだけ採用する。
+ * n<=5 なら最大120通りなので総当たりで十分速い。
+ *
+ * @returns {Object|null} 一意な問題が作れたら {names, order, conds, condTexts}、無理ならnull
+ */
+function buildOrderPuzzle(names, rel) {
+  var n = names.length;
+
+  // 1) 正解となる並びを決める（前から順）
+  var order = names.slice();
+  for (var i = order.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = order[i]; order[i] = order[j]; order[j] = t;
+  }
+  var pos = {};
+  order.forEach(function (nm, idx) { pos[nm] = idx; });
+
+  // 2) 正しい並びと矛盾しない条件の候補をすべて作る
+  var cands = [];
+  for (var a = 0; a < n; a++) {
+    for (var b = 0; b < n; b++) {
+      if (a === b) continue;
+      if (pos[names[a]] < pos[names[b]]) cands.push([names[a], names[b]]);
+    }
+  }
+
+  // 3) 条件を選び、一意に定まるまで試す
+  for (var attempt = 0; attempt < 60; attempt++) {
+    var shuffled = cands.slice();
+    for (var k = shuffled.length - 1; k > 0; k--) {
+      var m = Math.floor(Math.random() * (k + 1));
+      var tmp = shuffled[k]; shuffled[k] = shuffled[m]; shuffled[m] = tmp;
+    }
+    // 条件が少なすぎると一意にならず、多すぎると考える余地が無くなる
+    var count = n - 1 + Math.floor(Math.random() * 2);
+    var conds = shuffled.slice(0, count);
+    if (countSolutions(names, conds, 2) === 1) {
+      return {
+        names: names,
+        order: order,
+        conds: conds,
+        condTexts: conds.map(function (c) { return "・" + c[0] + "は" + c[1] + "より" + rel; })
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * 順序推論テンプレートの共通 resolve。
+ * 3本のテンプレートが場面(attrs)だけ変えて同じ仕組みを使う。
+ */
+function resolveOrderPuzzle(v, attrs) {
+  var SETS = [
+    ["A", "B", "C", "D", "E"],
+    ["P", "Q", "R", "S", "T"],
+    ["W", "X", "Y", "Z", "V"],
+    ["甲", "乙", "丙", "丁", "戊"],
+    ["赤木", "青木", "黒田", "白石", "緑川"]
+  ];
+  var names = SETS[v.nameSet].slice(0, v.n);
+  var attr = attrs[v.attr % attrs.length];
+  var puz = buildOrderPuzzle(names, attr.rel);
+  if (!puz) { v._ok = false; return; }
+
+  var idx = v.askPos % v.n;
+  var askText;
+  if (idx === 0) askText = attr.ask[0];
+  else if (idx === v.n - 1) askText = attr.ask[2];
+  else askText = attr.ask[1].replace("{k}", String(idx + 1));
+
+  v._ok = true;
+  v._order = puz.order;
+  v._names = names;
+  v._answerName = puz.order[idx];
+  v.names = names.join(", ");
+  v.scene = attr.scene;
+  v.conds = puz.condTexts.join("\n");
+  v.question = askText + "のは誰か。";
+}
+
+/** 条件を満たす並びが何通りあるか数える。limitに達したら打ち切る。 */
+function countSolutions(names, conds, limit) {
+  var found = 0;
+  var perm = [];
+  var used = {};
+  function rec() {
+    if (found >= limit) return;
+    if (perm.length === names.length) {
+      var p = {};
+      perm.forEach(function (nm, i) { p[nm] = i; });
+      for (var c = 0; c < conds.length; c++) {
+        if (p[conds[c][0]] >= p[conds[c][1]]) return;
+      }
+      found++;
+      return;
+    }
+    for (var i = 0; i < names.length; i++) {
+      if (used[names[i]]) continue;
+      used[names[i]] = true;
+      perm.push(names[i]);
+      rec();
+      perm.pop();
+      used[names[i]] = false;
+      if (found >= limit) return;
+    }
+  }
+  rec();
+  return found;
+}
+
 function gcd(a, b) {
   a = Math.abs(Math.round(a));
   b = Math.abs(Math.round(b));
