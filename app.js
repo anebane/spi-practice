@@ -628,11 +628,40 @@
 
     var totalQuestions = state.questions.length;
     var percent = Math.round(totalCorrect / totalQuestions * 100);
+
+    // 分野別の正答率。「どの分野の解説記事を書くべきか」を判断する材料になるので、
+    // 全体スコアだけでなく分野ごとに送る。
+    var weakest = null, weakestRate = 101;
+    var catParams = {};
+    Object.keys(byCategory).forEach(function(cat) {
+      var c = byCategory[cat];
+      if (!c.total) return;
+      var rate = Math.round(c.correct / c.total * 100);
+      if (rate < weakestRate) { weakestRate = rate; weakest = cat; }
+      trackEvent("category_result", {
+        category: cat,
+        correct_count: c.correct,
+        question_count: c.total,
+        correct_rate: rate,
+        avg_time_sec: Math.round(c.totalTime / c.total)
+      });
+    });
+
+    // 何回目の受験か。リピート率はサイトの中核価値（無限に練習できる）の実証になる。
+    var attemptNo = 1;
+    try {
+      attemptNo = (JSON.parse(localStorage.getItem("spi_history") || "[]").length || 0) + 1;
+    } catch (e) {}
+
     trackEvent("exam_finish", {
       question_count: totalQuestions,
       correct_count: totalCorrect,
       score_percent: percent,
-      mode: state.mode
+      mode: state.mode,
+      total_time_sec: totalTime,
+      attempt_no: attemptNo,
+      weakest_category: weakest || "",
+      weakest_rate: weakest ? weakestRate : -1
     });
 
     // スコア表示
