@@ -1370,11 +1370,28 @@ button.cta-btn { border: none; font-size: 16px; cursor: pointer; font-family: in
   border-radius: 0 4px 4px 0;
   margin-bottom: 10px;
 }
-.af-note { font-size: 13px; color: #666; margin-bottom: 10px; }
+/* 対象属性の注記。リンクの下に置く（上に出すと、対象である学生にまで
+   「自分は対象外かも」と先に読ませてしまう）。否認条件の回避に必要なので
+   小さくしすぎない。 */
+.af-note { font-size: 13px; color: #666; margin-top: 10px; }
 .af-item { padding: 10px 0; border-top: 1px solid #f0f0f0; }
 .af-item:first-of-type { border-top: none; }
-.af-link { font-size: 16px; font-weight: 700; color: #1a237e; }
-.af-lead { font-size: 13px; color: #555; margin-top: 4px; }
+/* テキストリンクのままだと、すぐ上の自社CTA（紺ブロック＋白ボタン）に
+   視覚的に完敗して目線が素通りする。押せるものに見せる。
+   ⚠️ href / rel / アンカーテキスト / 1x1計測img は配布物なので変更しないこと。
+      ここで変えているのは見た目だけ。 */
+.af-link {
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  background: #1a237e;
+  padding: 12px 22px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+.af-link:hover { background: #283593; }
+.af-lead { font-size: 14px; color: #444; margin-bottom: 10px; }
 
 /* iOS向けのインストール案内。バナーにもオーバーレイにもしない。 */
 .pwa-ios-hint {

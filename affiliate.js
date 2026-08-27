@@ -77,11 +77,12 @@ var Affiliate = (function () {
     // 2) PR表記（枠の直上・本文と同等の大きさ）。ここは分岐なしで必ず出す。
     host.appendChild(el("p", "af-pr", "PR：以下はアフィリエイト広告です。"));
 
-    if (opt.note) host.appendChild(el("p", "af-note", opt.note));
-
     ids.forEach(function (id) {
       var p = PROGRAMS[id];
       var item = el("div", "af-item");
+
+      // 3) 便益の説明はリンクより先に置く。読んでから押す順序にするため。
+      if (p.lead) item.appendChild(el("p", "af-lead", p.lead));
 
       var a = document.createElement("a");
       a.href = p.href;
@@ -100,8 +101,6 @@ var Affiliate = (function () {
       });
       item.appendChild(a);
 
-      if (p.lead) item.appendChild(el("p", "af-lead", p.lead));
-
       // 計測用の1x1。落とすとASP側の計測が壊れるので必ずセットで入れる。
       var img = document.createElement("img");
       img.src = p.pixel;
@@ -111,6 +110,11 @@ var Affiliate = (function () {
 
       host.appendChild(item);
     });
+
+    // 4) 対象属性の注記はリンクの「下」。上に置くと、対象である学生にまで
+    //    「自分は対象外かも」と先に読ませてしまい、クリックを潰す。
+    //    ただし否認条件の回避に必要なので、消さない・リンクに隣接させる。
+    if (opt.note) host.appendChild(el("p", "af-note", opt.note));
 
     track("affiliate_view", {
       score_band: opt.band || "unknown",

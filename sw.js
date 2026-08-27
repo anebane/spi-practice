@@ -15,7 +15,7 @@
 // ⚠️ PR表記など景表法に関わる表示や、CSS/JSの見た目を変えたときは必ず上げること。
 // 上げないと再訪問者に旧版が1回配られる（stale-while-revalidate のため2回目で直るが、
 // 広告表示の要件を満たさない版が1回でも出るのは避ける）。
-const VERSION = "2026-08-26b";
+const VERSION = "2026-08-27a";
 const PRECACHE = `precache-${VERSION}`;
 const RUNTIME = `runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";

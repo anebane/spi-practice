@@ -339,16 +339,17 @@
         <div class="score-bar" id="score-bar"></div>
       </div>
 
-      <!-- アフィリエイト枠。中身は affiliate.js が描画する。
-           ここに直接リンクを書かないこと（PR表記が漏れる。
-           test/html.spec.js が HTML 内の a8.net URL を検出して落とす） -->
-      <div id="affiliate-result" style="display:none"></div>
-
       <h3 class="section-title">分野別成績</h3>
       <div class="cta-box" id="weak-category-cta" style="display:none"></div>
         <div class="category-results" id="category-results">
         <!-- 分野別成績がここに入る -->
       </div>
+
+      <!-- アフィリエイト枠。中身は affiliate.js が描画する。
+           ここに直接リンクを書かないこと（PR表記が漏れる。
+           test/html.spec.js が HTML 内の a8.net URL を検出して落とす）
+           位置は分野別成績のあと。利用者自身の成績と次の一手を先に見せる。 -->
+      <div id="affiliate-result" style="display:none"></div>
 
       <div class="radar-chart-container">
         <canvas id="radar-chart" width="400" height="400"></canvas>
