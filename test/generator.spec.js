@@ -773,4 +773,153 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 語ペア辞書の不変条件: 1ペアは1関係にしか属さない ---
+//
+// 言語分野で「正解がちょうど1つ」を機械的に保証しているのは、この一点だけ。
+// 非言語は答えが数学的に一意だったが、言語は誤答が偶然正解になりうる。
+// 「はさみ:切る」を用途として出したとき、誤答に「ペン:書く」を置けば
+// それも用途なので正解が2つになる。生成側の工夫では防げないので、
+// 辞書の作り方で防ぐ。ここが崩れた瞬間に全ての言語問題が信用できなくなる。
+//
+// 語順を入れ替えただけのペア（A:B と B:A）も同一とみなす。
+// 「需要:供給」と「供給:需要」が別の関係に入っていたら、やはり破綻する。
+{
+  const WORD_PAIRS = vm.runInContext("WORD_PAIRS", ctx);
+  const WORD_RELATIONS = vm.runInContext("WORD_RELATIONS", ctx);
+  const rels = Object.keys(WORD_PAIRS);
+
+  const problems = [];
+  const owner = new Map();      // 正規化キー → 最初に見つけた関係
+
+  for (const rel of rels) {
+    const pairs = WORD_PAIRS[rel];
+    if (!Array.isArray(pairs) || pairs.length < 4) {
+      problems.push(`関係「${rel}」のペアが少なすぎる: ${pairs && pairs.length}`);
+      continue;
+    }
+    for (const p of pairs) {
+      if (!Array.isArray(p) || p.length !== 2 || p.some(w => typeof w !== "string" || !w.trim())) {
+        problems.push(`関係「${rel}」に不正なペア: ${JSON.stringify(p)}`);
+        continue;
+      }
+      if (p[0] === p[1]) problems.push(`関係「${rel}」に同語のペア: ${JSON.stringify(p)}`);
+      for (const key of [p.join(" "), p.slice().sort().join(" ")]) {
+        if (owner.has(key) && owner.get(key) !== rel) {
+          problems.push(`「${p.join(" : ")}」が「${owner.get(key)}」と「${rel}」の両方に属している`);
+        }
+        owner.set(key, rel);
+      }
+    }
+  }
+
+  // 関係の説明（WORD_RELATIONS）と辞書のキーが食い違うと、
+  // 解説だけ別の関係を語る問題ができる。
+  const declared = WORD_RELATIONS.map(r => r.key).sort().join(",");
+  if (declared !== rels.slice().sort().join(",")) {
+    problems.push(`WORD_RELATIONS と WORD_PAIRS のキーが不一致: ${declared} / ${rels.join(",")}`);
+  }
+
+  const total = rels.reduce((a, r) => a + WORD_PAIRS[r].length, 0);
+  console.log(`\n語ペア辞書の不変条件: ${rels.length}関係 / ${total}ペア`);
+  if (!problems.length) {
+    console.log("   ✅ 同じペアが2つ以上の関係に現れていない（語順違いも含む）");
+  }
+
+  // 語単位の重複は正解の一意性を壊さない（ペアが違えば関係も違う）ので落とさない。
+  // ただし「職業:教師」と「教師:生徒」が同じ問題に並ぶと読み手が混乱するため、
+  // 生成側で同居しないようにガードしている。どの語が該当するかは見えるようにしておく。
+  {
+    const relOfWord = new Map(), collide = [];
+    for (const rel of rels) {
+      for (const p of WORD_PAIRS[rel] || []) {
+        for (const w of (Array.isArray(p) ? p : [])) {
+          if (relOfWord.has(w) && relOfWord.get(w) !== rel) collide.push(`${w}（${relOfWord.get(w)} / ${rel}）`);
+          else relOfWord.set(w, rel);
+        }
+      }
+    }
+    if (collide.length) {
+      console.log(`   ⚠️ 複数の関係に登場する語 ${collide.length}件: ${collide.join(", ")}`);
+      console.log("      （正解の一意性には影響しない。同じ問題には並ばないよう生成側で除外している）");
+    }
+  }
+
+  if (problems.length) {
+    console.log(`   ❌ ${problems.length}件`);
+    for (const p of problems.slice(0, 10)) console.log("   - " + p);
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 語句の関係: 例示と同じ関係の選択肢がちょうど1つか ---
+//
+// 生成器が何を正解のつもりで作ったかは見ない。問題文と選択肢に出ている
+// 語ペアを辞書から引き直し、関係が一致する選択肢を数える。
+// 1問の中で同じ語が二度出ていないかも同時に見る（「職業:教師」と
+// 「教師:生徒」が並ぶと、正解は壊れないが読み手が混乱する）。
+{
+  const WORD_PAIRS = vm.runInContext("WORD_PAIRS", ctx);
+  const relOfPair = new Map();
+  for (const rel of Object.keys(WORD_PAIRS)) {
+    for (const p of WORD_PAIRS[rel]) relOfPair.set(p.join(" : "), rel);
+  }
+  const relOf = (text) => relOfPair.get(String(text).trim());
+
+  let checked = 0, unknown = 0, notOne = 0, mismatch = 0, dupWord = 0;
+
+  const t1 = TEMPLATES.find(x => x.id === "gengo_relation_01");
+  if (t1) {
+    for (let i = 0; i < 600; i++) {
+      const q = GEN.generateQuestion(t1);
+      if (!q || !q.choices) continue;
+      const exLine = q.text.split("\n").filter(Boolean).pop();
+      const exRel = relOf(exLine);
+      const chRels = q.choices.map(relOf);
+      checked++;
+      if (!exRel || chRels.some(r => !r)) { unknown++; continue; }
+
+      const hits = chRels.map((r, idx) => r === exRel ? idx : -1).filter(idx => idx >= 0);
+      if (hits.length !== 1) notOne++;
+      else if (hits[0] !== q.correctAnswer) mismatch++;
+
+      const words = [exLine].concat(q.choices).join(" : ").split(" : ").map(s => s.trim());
+      if (new Set(words).size !== words.length) dupWord++;
+    }
+  }
+
+  let checked2 = 0, unknown2 = 0, notOne2 = 0, mismatch2 = 0, dupWord2 = 0;
+  const t2 = TEMPLATES.find(x => x.id === "gengo_relation_02");
+  if (t2) {
+    for (let i = 0; i < 600; i++) {
+      const q = GEN.generateQuestion(t2);
+      if (!q || !q.choices) continue;
+      const chRels = q.choices.map(relOf);
+      checked2++;
+      if (chRels.some(r => !r)) { unknown2++; continue; }
+
+      // 「他と異なるもの」は、その関係が1つしか無い選択肢
+      const count = {};
+      for (const r of chRels) count[r] = (count[r] || 0) + 1;
+      const odd = chRels.map((r, idx) => count[r] === 1 ? idx : -1).filter(idx => idx >= 0);
+      if (odd.length !== 1) notOne2++;
+      else if (odd[0] !== q.correctAnswer) mismatch2++;
+
+      const words = q.choices.join(" : ").split(" : ").map(s => s.trim());
+      if (new Set(words).size !== words.length) dupWord2++;
+    }
+  }
+
+  console.log(`\n語句の関係の一意性: 同じ関係を選ぶ ${checked}問 / 仲間はずれ ${checked2}問を辞書から引き直して検証`);
+  const bad = unknown + notOne + mismatch + dupWord + unknown2 + notOne2 + mismatch2 + dupWord2;
+  if (checked && checked2 && bad === 0) {
+    console.log("   ✅ 該当する選択肢が常にちょうど1つ・正解と一致・同じ語の重複なし");
+  } else {
+    console.log(`   ❌ [同じ関係] 辞書に無いペア ${unknown} / 該当が1つでない ${notOne} / 正解不一致 ${mismatch} / 語の重複 ${dupWord}`);
+    console.log(`      [仲間はずれ] 辞書に無いペア ${unknown2} / 外れが1つでない ${notOne2} / 正解不一致 ${mismatch2} / 語の重複 ${dupWord2}`);
+    process.exitCode = 1;
+  }
+}
+
+
 process.exit(process.exitCode ? 1 : 0);
