@@ -64,8 +64,23 @@
     questionStartTime: 0,
     timerInterval: null,
     isPracticeWaiting: false,  // 練習モードで解説表示中
-    isPeeking: false           // 解説プレビュー中（タイマー一時停止）
+    isPeeking: false,          // 解説プレビュー中（タイマー一時停止）
+    finished: false,           // この試験はもう終了処理を走らせたか（多重実行の防止）
+    examId: null               // exam_start と exam_finish を突き合わせるためのID
   };
+
+  /**
+   * 1回の試験を識別するID。
+   *
+   * ⚠️ GA4のカスタムディメンションに登録しないこと。
+   * 値が毎回違う高カーディナリティの項目なので、登録しても「(other)」に
+   * 丸められて集計に使えないうえ、カーディナリティの枠を食い潰す。
+   * question_id で同じ失敗を一度している（recordAnswer のコメント参照）。
+   * これは「開始と終了が1対1になっているか」を後から突き合わせるためだけの値。
+   */
+  function newExamId() {
+    return "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
 
   // --- DOM参照 ---
   var screens = {
@@ -181,12 +196,15 @@
     state.answers = [];
     state.mode = mode;
     state.isPracticeWaiting = false;
+    state.finished = false;          // 前の試験の終了フラグを必ず落とす
+    state.examId = newExamId();
 
     // 全体制限時間: 1問あたり60秒 × 問題数
     state.totalTimeSec = state.questions.length * 60;
     state.totalTimeRemaining = state.totalTimeSec;
 
     trackEvent("exam_start", {
+      exam_id: state.examId,
       question_count: state.questions.length,
       mode: state.mode,
       difficulties: selectedDifficulties.join(","),
@@ -503,6 +521,13 @@
 
   // --- 回答記録 ---
   function recordAnswer(userAnswer, skipped) {
+    // 終了後に届いた回答は捨てる。
+    // 最終問題で「回答して次へ」を連打したり Enter を押しっぱなしにすると、
+    // 結果画面に切り替わったあとも（非表示の試験画面にある）ボタンと入力欄が
+    // 生きていて、同じ回答がもう一度記録され question_answer が水増しされる。
+    // finishExam 側のガードだけだと exam_finish は止まるが解答数はズレたままになる。
+    if (state.finished) return;
+
     var q = state.questions[state.currentIndex];
     var timeSpent = Math.round((Date.now() - state.questionStartTime) / 1000);
     var isCorrect = skipped ? false : checkAnswer(userAnswer, q.correctAnswer, q.answerType);
@@ -630,7 +655,34 @@
   }
 
   // --- 試験終了 ---
+  /**
+   * 試験の終了処理。**必ず冪等**であること。
+   *
+   * 【なぜ必要か / 何が起きていたか】
+   * GA4で exam_finish (3,666) が exam_start (2,667) を上回っていた。
+   * 1試験あたりの解答数も 7.4問 と、最小の10問を下回っていた。
+   * ブラウザで再現したところ、原因は finishExam が何度でも走れたこと。
+   *
+   * moveToNext() は最終問題では finishExam() を呼ぶだけで currentIndex を
+   * 進めない。そのため「もう一度 moveToNext が呼ばれる」経路があると、
+   * そのたびに showResults() が走って exam_finish が再送されていた。
+   *
+   * 実際に再現した経路は2つ（どちらも最終問題での二重送信）:
+   *   ① 「回答して次へ」の二連打。1回目で結果画面に切り替わるが、
+   *      ボタン自体は（非表示の試験画面に）残っているため2回目も通る。
+   *   ② 数値入力での Enter 連打。結果画面へ移ったあとも
+   *      フォーカスが #answer-value に残り、値も残っているため、
+   *      Enter をもう一度押すと同じ回答がそのまま再送信される。
+   *      さらに renderAnswerArea のリスナ二重貼り（別途修正）と重なると
+   *      Enter 1回で4回まで発火することを実測した。
+   *
+   * 呼び出し元それぞれにガードを置くと、新しい経路が増えたときに漏れる。
+   * 終了処理そのものを冪等にして、ここ1か所で止める。
+   */
   function finishExam() {
+    if (state.finished) return;
+    state.finished = true;
+
     stopTimer();
 
     // 未回答の問題を処理
@@ -697,6 +749,7 @@
     } catch (e) {}
 
     trackEvent("exam_finish", {
+      exam_id: state.examId,
       question_count: totalQuestions,
       correct_count: totalCorrect,
       score_percent: percent,
@@ -1042,6 +1095,7 @@
       var answered = state.answers.filter(function(a) { return a; }).length;
       if (answered > 0 && answered < state.questions.length) {
         trackEvent("exam_abandon", {
+          exam_id: state.examId,
           questions_answered: answered,
           total_questions: state.questions.length,
           mode: state.mode

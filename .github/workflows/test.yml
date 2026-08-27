@@ -36,3 +36,8 @@ jobs:
       # インストール不能になるので機械的に落とす
       - name: PWA構成（manifest・アイコン・Service Workerのプリキャッシュ）
         run: node test/pwa.spec.js
+
+      # 計測の壊れ方は画面上が無症状なので、気づけるのは数か月後の集計になる。
+      # exam_start と exam_finish が1対1であることを機械で守る。
+      - name: 画面ロジックの計測（exam_start と exam_finish の対応）
+        run: node test/app.spec.js
