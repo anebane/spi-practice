@@ -181,6 +181,19 @@ var TF_SCENES = [
 ];
 
 // ------------------------------------------------------------
+// リーグ戦（suiron_league_01）の素材
+// ------------------------------------------------------------
+var LEAGUE_NAME_SETS = [
+  ["A", "B", "C", "D", "E"],
+  ["P", "Q", "R", "S", "T"],
+  ["甲", "乙", "丙", "丁", "戊"],
+  ["赤組", "青組", "黄組", "緑組", "白組"],
+  ["東中学", "西中学", "南中学", "北中学", "中央中学"]
+];
+
+var LEAGUE_SPORTS = ["野球", "サッカー", "バレーボール", "卓球", "バスケットボール"];
+
+// ------------------------------------------------------------
 // 円卓の席順（suiron_position_01）の素材
 // ------------------------------------------------------------
 var CIRCLE_NAME_SETS = [
@@ -391,6 +404,37 @@ var SEQ_ASKS = [
     },
     unit: "",
     explanationTemplate: "「誰が嘘つきか」を1人ずつ仮定して、全員の発言と矛盾しないかを調べます。\n\n嘘つきが {{liar}} だと仮定すると、すべての発言が整合します。\n他の人を嘘つきと仮定すると、必ずどこかで矛盾が生じます。\n\n【ポイント】\n・正直者の発言は真、嘘つきの発言は偽\n・「Xは嘘つきだ」という発言は、Xが実際に嘘つきなら真\n・整合する仮定がちょうど1つになるまで全パターンを試す",
+    timeLimitSec: 150
+  });
+
+  // 推論: 対戦（リーグ戦）
+  // SPI推論の頻出パターン。一意性は勝敗表全体ではなく答えに課している
+  // （詳細は _base.js の buildLeaguePuzzle の説明）。
+  QUESTION_TEMPLATES.push({
+    id: "suiron_league_01",
+    formats: ["webtesting", "testcenter"],
+    category: "推論",
+    categoryId: 1,
+    difficulty: 3,
+    templateText: "{{names}} の{{n}}チームが{{sport}}の総当たり戦を行った。どの試合にも引き分けはない。\n以下のことがわかっている。\n{{conds}}\n\n{{who}}の成績は何勝何敗か。",
+    variables: {
+      nSeed:      { type: "int", min: 0, max: 2, step: 1 },
+      targetSeed: { type: "int", min: 0, max: 19, step: 1 },
+      nameSet:    { type: "int", min: 0, max: 4, step: 1 },
+      sport:      { type: "int", min: 0, max: 4, step: 1 }
+    },
+    answerType: "choice",
+    resolve: function(v) { resolveLeaguePuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._correctIndex; },
+    buildChoices: function(v) {
+      return { choices: v._choices.slice(), correctIndex: v._correctIndex };
+    },
+    // 「2勝1敗」の大小は勝ち数で決まる。正解の位置が偏っていないかを
+    // 既存の検査に見てもらうために、順序の読み取り方を渡す。
+    rankOf: function(s) { return parseInt(String(s), 10); },
+    unit: "",
+    explanationTemplate: "総当たり戦なので、各チームは他の{{nm1}}チームと1試合ずつ戦います。\n試合数は C({{n}}, 2) = {{games}} です。\n\n条件を満たす勝敗の組み合わせは、次の{{solCount}}通りです。\n{{solText}}\n\nどの場合でも{{who}}は{{answerText}}です。\n\n【ポイント】\n・総当たりの試合数は C(n, 2)。1試合に必ず1勝1敗が生まれる\n・全チームの勝ち数の合計は試合数に等しい。これで数え違いを検算できる\n・勝敗表が1通りに決まらなくても、問われたチームの成績だけは決まることがある",
     timeLimitSec: 150
   });
 

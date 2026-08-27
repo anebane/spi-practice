@@ -708,6 +708,183 @@ function explainSequence(rule, s, ans) {
 }
 
 // ============================================================
+// リーグ戦（suiron_league_01）
+// ============================================================
+// SPI推論の頻出パターンだが被覆がゼロだった型。
+//
+// 総当たり・引き分けなしなら、起こりうる結果は「各試合の勝者」の
+// 組み合わせだけなので 2^(試合数) 通りしかない。
+// 4チームなら 2^6 = 64通り、5チームでも 2^10 = 1,024通り。
+// 全部作って手元に持てるので、一意性は全探索で確かめられる。
+//
+// 一意性は円卓と同じ考え方＝**勝敗表全体が1通りである必要はなく、
+// 問いの答えが1通りであればよい**。実際、開示条件を絞ると勝敗表は
+// 複数残るのが普通で、それでも特定のチームの成績だけは決まる。
+//
+// 選択肢は「勝ち数＋負け数 = n-1」の組み合わせがそのまま使えるので、
+// 誤答を作る必要がない（4チームなら 3勝0敗/2勝1敗/1勝2敗/0勝3敗）。
+// ただし放っておくと 2勝1敗 のような中央値ばかりが正解になる。
+// そこで**勝ち数を先に決めてから、その勝ち数になる問題を探す**。
+// cond_01 で使ったのと同じ手で、正解の位置を一様にしている。
+// ============================================================
+
+var _LEAGUE_CACHE = {};
+function leagueData(n) {
+  if (_LEAGUE_CACHE[n]) return _LEAGUE_CACHE[n];
+  var pairs = [], pidx = [];
+  var i, j;
+  for (i = 0; i < n; i++) { pidx.push([]); for (j = 0; j < n; j++) pidx[i].push(-1); }
+  for (i = 0; i < n; i++) {
+    for (j = i + 1; j < n; j++) { pidx[i][j] = pidx[j][i] = pairs.length; pairs.push([i, j]); }
+  }
+  var m = pairs.length, total = 1 << m;
+  var wins = [];
+  for (var mask = 0; mask < total; mask++) {
+    var w = [];
+    for (var k = 0; k < n; k++) w.push(0);
+    for (var b = 0; b < m; b++) {
+      w[((mask >> b) & 1) ? pairs[b][0] : pairs[b][1]]++;
+    }
+    wins.push(w);
+  }
+  // 勝ち数ごとに「その勝ち数のチームが存在する結果」を索引しておく。
+  // 全勝・全敗は一様に引くと出にくく（5チームだと成功率が83%まで落ちた）、
+  // 正解の位置が偏る。最初からその勝ち数を含む結果だけを引けば偏らない。
+  var byWins = [];
+  for (var w = 0; w < n; w++) byWins.push([]);
+  for (var mm = 0; mm < total; mm++) {
+    var seenW = [];
+    for (var q = 0; q < n; q++) seenW[wins[mm][q]] = true;
+    for (var w2 = 0; w2 < n; w2++) if (seenW[w2]) byWins[w2].push(mm);
+  }
+
+  _LEAGUE_CACHE[n] = { n: n, pairs: pairs, pidx: pidx, m: m, total: total, wins: wins, byWins: byWins };
+  return _LEAGUE_CACHE[n];
+}
+
+/** mask のもとで pair b の勝者を返す。 */
+function leagueWinner(data, mask, b) {
+  return ((mask >> b) & 1) ? data.pairs[b][0] : data.pairs[b][1];
+}
+
+/** mask が開示条件をすべて満たすか。 */
+function leagueSatisfies(data, mask, conds) {
+  for (var i = 0; i < conds.length; i++) {
+    var c = conds[i];
+    if (c.t === "rec") {
+      if (data.wins[mask][c.team] !== c.w) return false;
+    } else {
+      if (leagueWinner(data, mask, data.pidx[c.a][c.b]) !== c.a) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * リーグ戦のパズルを作る。
+ * @param {number} n チーム数
+ * @param {number} targetWins 問われるチームの勝ち数（正解の位置を一様にするため外から与える）
+ * @returns {Object|null} {conds, sols, who, wins}
+ */
+function buildLeaguePuzzle(n, targetWins) {
+  var data = leagueData(n);
+
+  for (var attempt = 0; attempt < 200; attempt++) {
+    // 1) 実際の結果を1つ引く。少なくとも1解あることの保証になる。
+    //    目標の勝ち数のチームがいる結果だけを引くので、ここで空振りしない
+    var pool = data.byWins[targetWins];
+    if (!pool || !pool.length) return null;
+    var trueMask = pool[Math.floor(Math.random() * pool.length)];
+
+    // 2) 目標の勝ち数を持つチームを問い先にする
+    var cands = [];
+    for (var t = 0; t < n; t++) if (data.wins[trueMask][t] === targetWins) cands.push(t);
+    if (!cands.length) continue;
+    var who = cands[Math.floor(Math.random() * cands.length)];
+
+    // 3) 開示できる条件の候補（すべて実際の結果と矛盾しない）
+    //    問い先の成績そのものは開示しない。答えが問題文に書いてあることになる
+    var discl = [];
+    for (var u = 0; u < n; u++) {
+      if (u !== who) discl.push({ t: "rec", team: u, w: data.wins[trueMask][u] });
+    }
+    for (var b = 0; b < data.m; b++) {
+      var win = leagueWinner(data, trueMask, b);
+      var lose = data.pairs[b][0] === win ? data.pairs[b][1] : data.pairs[b][0];
+      discl.push({ t: "beat", a: win, b: lose });
+    }
+    shuffleArray(discl);
+
+    // 5チームは候補が2^10=1024通りあるので、条件が少ないと解が残りすぎて
+    // 解説に書き出せない。チーム数に応じて開示数を変える。
+    var count = n === 4
+      ? 3 + Math.floor(Math.random() * 2)               // 3〜4個
+      : 5 + Math.floor(Math.random() * 3);              // 5〜7個
+    var conds = discl.slice(0, count);
+
+    // 4) 条件を満たす結果を全列挙
+    var sols = [];
+    for (var mask = 0; mask < data.total; mask++) {
+      if (leagueSatisfies(data, mask, conds)) sols.push(mask);
+    }
+    // 1通りだと「表が決まらなくても答えは出る」という型にならない。
+    // 多すぎると解説で全部書き出せない。
+    if (sols.length < 2 || sols.length > 6) continue;
+
+    // 5) 問い先の勝ち数が全解で一致するか
+    var seenW = [];
+    for (var s = 0; s < sols.length; s++) {
+      var wv = data.wins[sols[s]][who];
+      if (seenW.indexOf(wv) === -1) seenW.push(wv);
+    }
+    if (seenW.length !== 1 || seenW[0] !== targetWins) continue;
+
+    return { conds: conds, sols: sols, who: who, wins: targetWins, data: data };
+  }
+  return null;
+}
+
+/** リーグ戦テンプレートの共通 resolve。 */
+function resolveLeaguePuzzle(v) {
+  var n = v.nSeed % 3 === 2 ? 5 : 4;                 // 4チームを厚めに
+  // 0〜19 を n で割った余りにすると、n=4 でも n=5 でも勝ち数が一様になる
+  var target = v.targetSeed % n;
+
+  var names = LEAGUE_NAME_SETS[v.nameSet % LEAGUE_NAME_SETS.length].slice(0, n);
+  var sport = LEAGUE_SPORTS[v.sport % LEAGUE_SPORTS.length];
+
+  var puz = buildLeaguePuzzle(n, target);
+  if (!puz) { v._ok = false; return; }
+
+  var data = puz.data;
+  var rec = function (w) { return w + "勝" + (n - 1 - w) + "敗"; };
+
+  v._ok = true;
+  v._n = n;
+  v._wins = puz.wins;
+  v._choices = [];
+  for (var w = n - 1; w >= 0; w--) v._choices.push(rec(w));
+  v._correctIndex = (n - 1) - puz.wins;
+
+  v.names = names.join(", ");
+  v.n = n;
+  v.sport = sport;
+  v.games = data.m;
+  v.nm1 = n - 1;
+  v.who = names[puz.who];
+  v.answerText = rec(puz.wins);
+  v.conds = puz.conds.map(function (c) {
+    return c.t === "rec"
+      ? "・" + names[c.team] + "は" + rec(c.w) + "だった"
+      : "・" + names[c.a] + "は" + names[c.b] + "に勝った";
+  }).join("\n");
+  v.solCount = puz.sols.length;
+  v.solText = puz.sols.map(function (mask) {
+    return "・" + names.map(function (nm, i) { return nm + " " + rec(data.wins[mask][i]); }).join("、");
+  }).join("\n");
+}
+
+// ============================================================
 // 円卓の席順（suiron_position_01）
 // ============================================================
 // この問題が他の推論と違うのは、対称性が2種類あること。

@@ -209,23 +209,36 @@ if (failures.length) process.exitCode = 1;
 // 速度を測るテストとして成立しなくなる。新しい選択式問題を追加したときに
 // 壊れやすい性質なので機械的に守る。
 {
-  const choiceTemplates = TEMPLATES.filter(t => t.distractors);
+  // distractors を持つもの＝数値の選択肢に加え、選択肢に大小の順序がある
+  // テンプレートも対象にする。順序の読み取り方はテンプレートが rankOf で示す
+  // （例: リーグ戦の「2勝1敗」は勝ち数が大小の順序になる）。
+  // 人名や語句のように順序が無い選択肢は、そもそも「大きさ順位」が定義できない
+  // ので対象外のまま。
+  const choiceTemplates = TEMPLATES.filter(t => t.distractors || t.rankOf);
   let biased = [];
   for (const t of choiceTemplates) {
-    const rank = [0, 0, 0, 0];
-    let n = 0;
+    // 選択肢が4つとは限らない。長さ4の配列で数えると、5択のときに
+    // rank[4] が undefined++ で NaN になり、NaN > 35 が常に false になって
+    // **そのテンプレートの検査が丸ごと無効化される**（実際にそうなっていた）。
+    const rank = [];
+    let n = 0, maxLen = 0;
     for (let i = 0; i < 2000; i++) {
       const q = GEN.generateQuestion(t);
       if (!q || !q.choices) continue;
-      const nums = q.choices.map(Number);
+      const nums = q.choices.map(x => t.rankOf ? t.rankOf(x) : Number(x));
       if (nums.some(isNaN)) continue;
       const a = nums[q.correctAnswer];
-      rank[nums.slice().sort((x, y) => x - y).indexOf(a)]++;
+      const idx = nums.slice().sort((x, y) => x - y).indexOf(a);
+      rank[idx] = (rank[idx] || 0) + 1;
+      maxLen = Math.max(maxLen, q.choices.length);
       n++;
     }
     if (!n) continue;
-    const worst = Math.max(...rank) / n * 100;
-    if (worst > 35) biased.push(`${t.id}: 最頻の順位が ${worst.toFixed(0)}%（一様なら25%）`);
+    const counts = [];
+    for (let k = 0; k < Math.max(maxLen, rank.length); k++) counts.push(rank[k] || 0);
+    const worst = Math.max(...counts) / n * 100;
+    const even = (100 / maxLen).toFixed(0);
+    if (worst > 35) biased.push(`${t.id}: 最頻の順位が ${worst.toFixed(0)}%（${maxLen}択なので一様なら${even}%）`);
   }
   console.log(`\n選択式 ${choiceTemplates.length}種の正解位置の偏り: ${biased.length ? "❌" : "✅ なし"}`);
   for (const b of biased) console.log("   - " + b);
@@ -1160,6 +1173,89 @@ if (failures.length) process.exitCode = 1;
   } else {
     console.log(`   ❌ 計算の合わない式 ${bad.length}件`);
     for (const b of bad.slice(0, 10)) console.log(`   - ${b.id}: ${b.run.slice(0, 70)}  [${b.a} ≠ ${b.b}]`);
+    process.exitCode = 1;
+  }
+}
+
+
+// --- リーグ戦: 問われたチームの成績が1通りに定まるか ---
+//
+// 総当たり・引き分けなしなら、起こりうる結果は各試合の勝者の組み合わせだけ。
+// 4チームで 2^6 = 64通り、5チームでも 2^10 = 1,024通りしかないので全探索できる。
+//
+// 円卓と同じく、一意性は勝敗表全体ではなく答えに課している。
+// 開示条件を満たす結果は普通は複数残る（残らないと「表が決まらなくても
+// 答えは出る」という型にならない）。そのすべてで成績が一致するかを見る。
+//
+// ここでも生成器の内部は見ず、問題文から条件を読み直す。
+{
+  const t = TEMPLATES.find(x => x.id === "suiron_league_01");
+  let checked = 0, unparsed = 0, zero = 0, notOne = 0, mismatch = 0, single = 0;
+
+  if (t) {
+    for (let i = 0; i < 500; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const lines = q.text.split("\n");
+      const head = lines[0].match(/^(.+?) の(\d)チームが/);
+      const ask = lines[lines.length - 1].match(/^(.+?)の成績は何勝何敗か。$/);
+      if (!head || !ask) { unparsed++; continue; }
+      const names = head[1].split(", ");
+      const n = parseInt(head[2], 10);
+      if (names.length !== n) { unparsed++; continue; }
+
+      // 試合の並びと、チーム対チームの索引
+      const pairs = [], pidx = names.map(() => names.map(() => -1));
+      for (let a = 0; a < n; a++) {
+        for (let b = a + 1; b < n; b++) { pidx[a][b] = pidx[b][a] = pairs.length; pairs.push([a, b]); }
+      }
+
+      const conds = [];
+      let broken = false;
+      for (const l of lines.filter(x => x.startsWith("・"))) {
+        const mRec = l.match(/^・(.+?)は(\d+)勝(\d+)敗だった$/);
+        const mWin = l.match(/^・(.+?)は(.+?)に勝った$/);
+        if (mRec) {
+          const team = names.indexOf(mRec[1]);
+          if (team < 0 || parseInt(mRec[2], 10) + parseInt(mRec[3], 10) !== n - 1) { broken = true; break; }
+          conds.push({ t: "rec", team, w: parseInt(mRec[2], 10) });
+        } else if (mWin) {
+          const a = names.indexOf(mWin[1]), b = names.indexOf(mWin[2]);
+          if (a < 0 || b < 0 || a === b) { broken = true; break; }
+          conds.push({ t: "beat", a, b });
+        } else { broken = true; break; }
+      }
+      const who = names.indexOf(ask[1]);
+      if (broken || !conds.length || who < 0) { unparsed++; continue; }
+
+      // 全結果を総当たり
+      const sols = [];
+      for (let mask = 0; mask < (1 << pairs.length); mask++) {
+        const w = names.map(() => 0);
+        for (let b = 0; b < pairs.length; b++) w[((mask >> b) & 1) ? pairs[b][0] : pairs[b][1]]++;
+        const ok = conds.every(c => c.t === "rec"
+          ? w[c.team] === c.w
+          : (((mask >> pidx[c.a][c.b]) & 1) ? pairs[pidx[c.a][c.b]][0] : pairs[pidx[c.a][c.b]][1]) === c.a);
+        if (ok) sols.push(w);
+      }
+
+      checked++;
+      if (!sols.length) { zero++; continue; }
+      // 表が1通りに決まってしまうと、この型の狙い（表が決まらなくても答えは出る）から外れる
+      if (sols.length === 1) single++;
+
+      const set = new Set(sols.map(w => w[who]));
+      if (set.size !== 1) { notOne++; continue; }
+      const wins = [...set][0];
+      if (q.choices[q.correctAnswer] !== wins + "勝" + (n - 1 - wins) + "敗") mismatch++;
+    }
+  }
+
+  console.log(`\nリーグ戦の答えの一意性: ${checked}問を全対戦結果の総当たりで検証`);
+  if (checked && zero + notOne + mismatch + unparsed + single === 0) {
+    console.log("   ✅ すべて成績が1通りに定まり、正解と一致（勝敗表は複数残る形になっている）");
+  } else {
+    console.log(`   ❌ 解なし ${zero} / 成績が複数 ${notOne} / 正解不一致 ${mismatch} / パース不能 ${unparsed} / 表が1通りに確定 ${single} / 検証数 ${checked}`);
     process.exitCode = 1;
   }
 }
