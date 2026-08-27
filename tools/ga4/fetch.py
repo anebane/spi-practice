@@ -22,12 +22,26 @@ SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 DEFAULT_PROPERTY = "properties/526840766"   # keita_yano / SPI模擬試験β
 
 
+TOKEN = os.path.expanduser("~/.config/ga4/token.json")
+
+
 def creds():
-    path = os.environ.get("GSC_CREDENTIALS")
-    if not path or not os.path.exists(path):
-        sys.exit("エラー: 環境変数 GSC_CREDENTIALS にサービスアカウントJSONのパスを設定してください。")
-    from google.oauth2 import service_account
-    return service_account.Credentials.from_service_account_file(path, scopes=SCOPES)
+    """OAuth（矢野さん本人）で認証する。サービスアカウントは使わない。
+
+    理由: GA4のユーザー追加UIがサービスアカウントのメールを
+    「Google アカウントと一致しません」で弾く（2026-08-27に4通り試して全滅）。
+    一方 cesuac.acjl201@gmail.com は既にGA4の管理者なので、
+    この人としてOAuthすれば権限付与そのものが不要になる。
+    GSC は引き続きサービスアカウント（tools/gsc/）。認証方式が分かれるが、
+    GA4側の制約なので仕方ない。
+
+    同意画面は「本番環境」に公開済み。テスト状態のままだと
+    リフレッシュトークンが7日で失効し、週次実行が予告なく止まる。
+    """
+    if not os.path.exists(TOKEN):
+        sys.exit(f"エラー: {TOKEN} がありません。先に tools/ga4/authorize.py を実行してください。")
+    from google.oauth2.credentials import Credentials
+    return Credentials.from_authorized_user_file(TOKEN, SCOPES)
 
 
 def run(client, prop, start, end, dims, mets):
