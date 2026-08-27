@@ -1165,4 +1165,107 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 円卓: 「向かいは誰か」の答えが1人に定まるか ---
+//
+// 円卓には2種類の対称性がある。
+//   回転 … 全員を1つずつずらした並びは同じ並び。1人を席0に固定して数える。
+//   鏡像 … 「隣り合う」「向かい合う」「間に1人」はどれも左右反転で成り立つ。
+//           したがって条件を満たす座り方は必ず鏡像とペアで現れ、
+//           **座り方そのものは原理的に1通りに定まらない。**
+//
+// なので順序推論のように「解がちょうど1通り」を検査してはいけない。
+// 検査すべきは「向かいが誰か」が全解で一致すること（向かいの席は鏡像でも
+// 変わらないので、座り方が複数でも答えは定まる）。
+//
+// ここでも生成器の内部は見ず、問題文から名前と条件を読み直して
+// 6人ぶんの全席順120通りを総当たりする。
+{
+  const t = TEMPLATES.find(x => x.id === "suiron_position_01");
+  const N = 6, HALF = 3;
+
+  // 名前0を席0に固定した全席順（残り5人の順列＝120通り）
+  const SEATINGS = (() => {
+    const out = [];
+    const rec = (cur, rest) => {
+      if (!rest.length) { out.push([0].concat(cur)); return; }
+      rest.forEach((x, i) => rec(cur.concat(x), rest.slice(0, i).concat(rest.slice(i + 1))));
+    };
+    rec([], [1, 2, 3, 4, 5]);
+    return out;
+  })();
+
+  const PARSERS = [
+    { re: /^・(.+?)と(.+?)は隣り合っている$/,         t: "adj" },
+    { re: /^・(.+?)は(.+?)の隣ではない$/,             t: "notadj" },
+    { re: /^・(.+?)と(.+?)は向かい合っている$/,       t: "opp" },
+    { re: /^・(.+?)と(.+?)の間には1人が座っている$/,  t: "gap1" }
+  ];
+
+  let checked = 0, unparsed = 0, zero = 0, notOne = 0, mismatch = 0, mirrorless = 0;
+  if (t) {
+    for (let i = 0; i < 500; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const lines = q.text.split("\n");
+      const nm = lines[0].match(/^(.+?) の6人が/);
+      const askM = lines[lines.length - 1].match(/^(.+?)の向かいに座っているのは誰か。$/);
+      if (!nm || !askM) { unparsed++; continue; }
+      const names = nm[1].split(", ");
+      if (names.length !== N) { unparsed++; continue; }
+
+      const conds = [];
+      let broken = false;
+      for (const l of lines.filter(x => x.startsWith("・"))) {
+        const hit = PARSERS.map(p => ({ p, m: l.match(p.re) })).find(x => x.m);
+        if (!hit) { broken = true; break; }
+        const a = names.indexOf(hit.m[1]), b = names.indexOf(hit.m[2]);
+        if (a < 0 || b < 0) { broken = true; break; }
+        conds.push({ t: hit.p.t, a, b });
+      }
+      const who = names.indexOf(askM[1]);
+      if (broken || !conds.length || who < 0) { unparsed++; continue; }
+
+      const sols = SEATINGS.filter(seat => {
+        const pos = [];
+        seat.forEach((p, idx) => { pos[p] = idx; });
+        return conds.every(c => {
+          let d = Math.abs(pos[c.a] - pos[c.b]);
+          d = Math.min(d, N - d);
+          if (c.t === "adj") return d === 1;
+          if (c.t === "notadj") return d !== 1;
+          if (c.t === "opp") return d === HALF;
+          return d === 2;
+        });
+      });
+
+      checked++;
+      if (!sols.length) { zero++; continue; }
+
+      const facing = new Set(sols.map(seat => {
+        const pos = [];
+        seat.forEach((p, idx) => { pos[p] = idx; });
+        return seat[(pos[who] + HALF) % N];
+      }));
+      if (facing.size !== 1) { notOne++; continue; }
+      if (names[[...facing][0]] !== q.choices[q.correctAnswer]) mismatch++;
+
+      // 鏡像も必ず解になっているはず。なっていなければ、左右非対称な条件が
+      // 紛れ込んだか、列挙の作り方が間違っている。
+      const mirror = (seat) => [seat[0]].concat(seat.slice(1).reverse());
+      const key = (s) => s.join(",");
+      const set = new Set(sols.map(key));
+      if (!sols.every(s => set.has(key(mirror(s))))) mirrorless++;
+    }
+  }
+
+  console.log(`\n円卓の答えの一意性: ${checked}問を全席順120通りで検証`);
+  if (checked && zero + notOne + mismatch + unparsed + mirrorless === 0) {
+    console.log("   ✅ すべて向かいが1人に定まり、正解と一致（鏡像も必ず解になっている）");
+  } else {
+    console.log(`   ❌ 解なし ${zero} / 向かいが複数 ${notOne} / 正解不一致 ${mismatch} / パース不能 ${unparsed} / 鏡像が解でない ${mirrorless} / 検証数 ${checked}`);
+    process.exitCode = 1;
+  }
+}
+
+
 process.exit(process.exitCode ? 1 : 0);

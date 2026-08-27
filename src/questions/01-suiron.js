@@ -181,6 +181,24 @@ var TF_SCENES = [
 ];
 
 // ------------------------------------------------------------
+// 円卓の席順（suiron_position_01）の素材
+// ------------------------------------------------------------
+var CIRCLE_NAME_SETS = [
+  ["A", "B", "C", "D", "E", "F"],
+  ["P", "Q", "R", "S", "T", "U"],
+  ["甲", "乙", "丙", "丁", "戊", "己"],
+  ["赤木", "青木", "黒田", "白石", "緑川", "紫原"],
+  ["佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺"]
+];
+
+var CIRCLE_SCENES = [
+  { scene: "円形のテーブルに等間隔で座っている" },
+  { scene: "丸いテーブルを囲んで等間隔に着席している" },
+  { scene: "円卓に等間隔で座っている" },
+  { scene: "円形に並べた6つの椅子に1人ずつ座っている" }
+];
+
+// ------------------------------------------------------------
 // 数列の規則性（suiron_code_01）の言い回し
 // ------------------------------------------------------------
 var SEQ_INTROS = [
@@ -376,23 +394,36 @@ var SEQ_ASKS = [
     timeLimitSec: 150
   });
 
-  // 推論: 位置関係
+  // 推論: 位置関係（円卓）
+  // 一意性は「座り方」ではなく「向かいが誰か」に課している。
+  // 理由は _base.js の buildCirclePuzzle の説明を参照（鏡像が必ず解になるため、
+  // 座り方の一意性を要求すると1問も作れない）。
   QUESTION_TEMPLATES.push({
     id: "suiron_position_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 3,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C, D, E, F の6人が円形のテーブルに等間隔に座っている。\n以下のことがわかっている。\n・AとBは隣り合っている\n・CとDは向かい合っている（真向かい）\n・EはAの隣ではない\n・FはCの隣に座っている\n・BはDの隣に座っている\n\nAの向かいに座っているのは誰か。",
-        choices: ["C", "D", "E", "F"],
-        correctIndex: 2,
-        explanation: "6人の円卓では「向かい合い」= 3つ離れた位置（真向かい）。\n\n位置を1〜6として、CとDが向かい合う配置を決める:\nC=1, D=4 と固定。\n\nFはCの隣 → F=2 or F=6。\nBはDの隣 → B=3 or B=5。\nAとBは隣り合う。EはAの隣ではない。\n\nF=6, B=5の場合:\n残り位置2,3にA,Eを配置。\nA=2: Aの隣は1(C)と3 → AとB(5)は隣り合わない ✗\nA=3: Aの隣は2と4(D) → AとB(5)は隣り合わない ✗\n\nF=6, B=3の場合:\n残り位置2,5にA,Eを配置。\nA=2: Aの隣は1(C)と3(B) → AとBが隣り合う ○\n  E=5 → Eの隣は4(D)と6(F) → EはAの隣ではない ○\n  Aの向かい = 位置5 = E ✓\n\nよってAの向かいに座っているのはEです。"
-      }
-    ],
+    templateText: "{{names}} の{{n}}人が{{scene}}。\n以下のことがわかっている。\n{{conds}}\n\n{{who}}の向かいに座っているのは誰か。",
+    variables: {
+      nameSet: { type: "int", min: 0, max: 4, step: 1 },
+      scene:   { type: "int", min: 0, max: 3, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveCirclePuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._answerName); },
+    buildChoices: function(v) {
+      // 選択肢は本人以外から4人。正解を必ず含める。
+      var others = v._names.filter(function (nm) { return nm !== v._whoName; });
+      var pool = others.filter(function (nm) { return nm !== v._answerName; });
+      shuffleArray(pool);
+      var picks = [v._answerName].concat(pool.slice(0, 3));
+      shuffleArray(picks);
+      return { choices: picks, correctIndex: picks.indexOf(v._answerName) };
+    },
+    unit: "",
+    explanationTemplate: "円卓は回転させても同じ並びなので、まず{{anchor}}の位置を固定して考えます。\n{{n}}人の円卓では「向かい合う」= {{half}}つ離れた席です。\n\n条件をすべて満たす座り方は、次の{{solCount}}通りです。\n{{solText}}\n\nどの場合でも{{who}}の向かいは{{answerName}}です。\n\n【ポイント】\n・円卓は誰か1人を固定してから考える（回転した並びを別と数えない）\n・「隣り合う」「向かい合う」は左右を入れ替えても成り立つので、\n  座り方そのものは1通りに決まらないことが多い\n・それでも「向かいは誰か」は左右を入れ替えても変わらないので答えは定まる",
     timeLimitSec: 150
   });
 

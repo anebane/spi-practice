@@ -474,6 +474,8 @@ function resolveCondPuzzle(v) {
     return c.kind === "gt" ? sc.gt(names[c.a], names[c.b]) : sc.eq(names[c.a], c.k);
   }).join("\n");
   v.question = sc.ask(names[puz.ask]);
+  v.anchor = names[0];
+  v.answerName = names[puz.answer];
   v.solCount = puz.sols.length;
   v.solText = puz.sols.map(function (s) {
     return "・" + names.map(function (nm, i) { return sc.sol(nm, s[i]); }).join("、");
@@ -706,6 +708,183 @@ function explainSequence(rule, s, ans) {
     + s[0] + " × " + rule.m + " + " + rule.c + " = " + s[1] + "、"
     + s[1] + " × " + rule.m + " + " + rule.c + " = " + s[2] + " …\n\n"
     + "? = " + last + " × " + rule.m + " + " + rule.c + " = " + ans + " です。";
+}
+
+// ============================================================
+// 円卓の席順（suiron_position_01）
+// ============================================================
+// この問題が他の推論と違うのは、対称性が2種類あること。
+//
+// ① 回転対称 … 円卓には決まった「1番の席」が無いので、全員を1つずつ
+//    ずらした並びは同じ並びとみなす。そこで1人を席0に固定して数える。
+//    こうすると数えるべき並びは n! ではなく (n-1)! になる。
+//
+// ② 鏡像対称 … 「隣り合う」「向かい合う」「間に1人いる」はどれも
+//    左右を入れ替えても成り立つ関係なので、ある並びが条件を満たすなら
+//    その鏡像も必ず満たす。**つまり座り方は原理的に1通りに定まらない。**
+//    順序推論と同じ「解がちょうど1通り」を要求すると、ほぼ全ての問題が
+//    捨てられてしまう。
+//
+//    ただし「Xの向かいは誰か」の答えは鏡像で変わらない（向かいの席は
+//    鏡像でも同じ人）。so 一意性は「座り方」ではなく「答え」に課す。
+//    ここを取り違えると、正解が2つある問題を出すか、1問も作れないかの
+//    どちらかになる。
+// ============================================================
+
+// 1人を席0に固定した全席順。n=6 なら 120通り。
+// 生成のたびに作り直すと重いので n ごとにキャッシュする。
+var _SEATINGS_CACHE = {};
+function circleSeatings(n) {
+  if (_SEATINGS_CACHE[n]) return _SEATINGS_CACHE[n];
+  var rest = [];
+  for (var i = 1; i < n; i++) rest.push(i);
+  var seats = [];
+  (function rec(cur, remain) {
+    if (remain.length === 0) { seats.push([0].concat(cur)); return; }
+    for (var k = 0; k < remain.length; k++) {
+      rec(cur.concat([remain[k]]), remain.slice(0, k).concat(remain.slice(k + 1)));
+    }
+  })([], rest);
+  // pos[人] = その人が座っている席番号
+  var poss = seats.map(function (s) {
+    var p = [];
+    for (var j = 0; j < s.length; j++) p[s[j]] = j;
+    return p;
+  });
+  _SEATINGS_CACHE[n] = { seats: seats, poss: poss };
+  return _SEATINGS_CACHE[n];
+}
+
+/** 円卓上の2人の距離（時計回り・反時計回りの短いほう）。 */
+function circleDist(pos, a, b, n) {
+  var d = Math.abs(pos[a] - pos[b]);
+  return Math.min(d, n - d);
+}
+
+/** 席順が条件をすべて満たすか。 */
+function circleSatisfies(pos, conds, n) {
+  var half = n / 2;
+  for (var i = 0; i < conds.length; i++) {
+    var c = conds[i];
+    var d = circleDist(pos, c.a, c.b, n);
+    if (c.t === "adj"    && d !== 1)    return false;
+    if (c.t === "notadj" && d === 1)    return false;
+    if (c.t === "opp"    && d !== half) return false;
+    if (c.t === "gap1"   && d !== 2)    return false;
+  }
+  return true;
+}
+
+/**
+ * 円卓の席順パズルを作る。
+ *
+ * @returns {Object|null} {conds, sols, who, answer}
+ *   sols は条件を満たす席順すべて（鏡像を含むので普通は2通り以上ある）。
+ *   who の向かいが sols 全体で1人に定まるときだけ採用する。
+ */
+function buildCirclePuzzle(n) {
+  var cache = circleSeatings(n);
+  var seats = cache.seats, poss = cache.poss;
+  var half = n / 2;
+
+  for (var attempt = 0; attempt < 80; attempt++) {
+    // 1) 正解に含まれる席順を1つ決める（解が必ず1つ以上あることの保証）
+    var ti = Math.floor(Math.random() * seats.length);
+    var tpos = poss[ti];
+
+    // 2) その席順と矛盾しない条件候補を、ペアごとに1つだけ作る。
+    //    同じペアに2つ条件を付けると冗長で読みにくい。
+    var pairs = [];
+    for (var a = 0; a < n; a++) {
+      for (var b = a + 1; b < n; b++) {
+        var d = circleDist(tpos, a, b, n);
+        var opts = [];
+        if (d === 1) opts.push("adj"); else opts.push("notadj");
+        if (d === half) opts.push("opp");
+        if (d === 2) opts.push("gap1");
+        pairs.push({ a: a, b: b, opts: opts });
+      }
+    }
+    shuffleArray(pairs);
+
+    var count = 3 + Math.floor(Math.random() * 3);   // 3〜5個
+    var conds = pairs.slice(0, count).map(function (p) {
+      return { t: p.opts[Math.floor(Math.random() * p.opts.length)], a: p.a, b: p.b };
+    });
+
+    // 3) 条件を満たす席順を全列挙
+    var sols = [];
+    for (var s = 0; s < seats.length; s++) {
+      if (circleSatisfies(poss[s], conds, n)) sols.push(s);
+    }
+    // 解説で全部書き出せる範囲に収める（書き出せない解説は解説にならない）
+    if (sols.length < 1 || sols.length > 6) continue;
+
+    // 4) 「向かいが1人に定まる」人を探す
+    var order = [];
+    for (var w = 0; w < n; w++) order.push(w);
+    shuffleArray(order);
+
+    for (var oi = 0; oi < order.length; oi++) {
+      var who = order[oi];
+      // 向かいが条件でそのまま与えられていたら問題として成立しない
+      var given = conds.some(function (c) {
+        return c.t === "opp" && (c.a === who || c.b === who);
+      });
+      if (given) continue;
+
+      var opps = [];
+      for (var k = 0; k < sols.length; k++) {
+        var si = sols[k];
+        var facing = seats[si][(poss[si][who] + half) % n];
+        if (opps.indexOf(facing) === -1) opps.push(facing);
+      }
+      if (opps.length !== 1) continue;
+
+      return { conds: conds, sols: sols, who: who, answer: opps[0] };
+    }
+  }
+  return null;
+}
+
+/** 円卓テンプレートの共通 resolve。 */
+function resolveCirclePuzzle(v) {
+  var n = 6;                                  // 「向かい」を使うので偶数。6人が定番
+  var names = CIRCLE_NAME_SETS[v.nameSet % CIRCLE_NAME_SETS.length].slice(0, n);
+  var sc = CIRCLE_SCENES[v.scene % CIRCLE_SCENES.length];
+
+  var puz = buildCirclePuzzle(n);
+  if (!puz) { v._ok = false; return; }
+
+  var cache = circleSeatings(n);
+  var nm = function (i) { return names[i]; };
+
+  v._ok = true;
+  v._names = names;
+  v._answerName = names[puz.answer];
+  v._whoName = names[puz.who];
+
+  v.names = names.join(", ");
+  v.n = n;
+  v.scene = sc.scene;
+  v.who = names[puz.who];
+  v.conds = puz.conds.map(function (c) {
+    if (c.t === "adj")    return "・" + nm(c.a) + "と" + nm(c.b) + "は隣り合っている";
+    // 「隣り合っていない」は他動詞の否定形と同じ語尾なので、
+    // 日本語の健全性検査（目的語の助詞）に引っかかる。既存の固定問題と
+    // 同じ「XはYの隣ではない」の形にする。
+    if (c.t === "notadj") return "・" + nm(c.a) + "は" + nm(c.b) + "の隣ではない";
+    if (c.t === "opp")    return "・" + nm(c.a) + "と" + nm(c.b) + "は向かい合っている";
+    return "・" + nm(c.a) + "と" + nm(c.b) + "の間には1人が座っている";
+  }).join("\n");
+
+  v.anchor = names[0];
+  v.answerName = names[puz.answer];
+  v.solCount = puz.sols.length;
+  v.solText = puz.sols.map(function (si) {
+    return "・" + cache.seats[si].map(nm).join(" → ") + " →（" + names[0] + "に戻る）";
+  }).join("\n");
+  v.half = n / 2;
 }
 
 function gcd(a, b) {
@@ -1374,6 +1553,24 @@ var TF_SCENES = [
 ];
 
 // ------------------------------------------------------------
+// 円卓の席順（suiron_position_01）の素材
+// ------------------------------------------------------------
+var CIRCLE_NAME_SETS = [
+  ["A", "B", "C", "D", "E", "F"],
+  ["P", "Q", "R", "S", "T", "U"],
+  ["甲", "乙", "丙", "丁", "戊", "己"],
+  ["赤木", "青木", "黒田", "白石", "緑川", "紫原"],
+  ["佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺"]
+];
+
+var CIRCLE_SCENES = [
+  { scene: "円形のテーブルに等間隔で座っている" },
+  { scene: "丸いテーブルを囲んで等間隔に着席している" },
+  { scene: "円卓に等間隔で座っている" },
+  { scene: "円形に並べた6つの椅子に1人ずつ座っている" }
+];
+
+// ------------------------------------------------------------
 // 数列の規則性（suiron_code_01）の言い回し
 // ------------------------------------------------------------
 var SEQ_INTROS = [
@@ -1569,23 +1766,36 @@ var SEQ_ASKS = [
     timeLimitSec: 150
   });
 
-  // 推論: 位置関係
+  // 推論: 位置関係（円卓）
+  // 一意性は「座り方」ではなく「向かいが誰か」に課している。
+  // 理由は _base.js の buildCirclePuzzle の説明を参照（鏡像が必ず解になるため、
+  // 座り方の一意性を要求すると1問も作れない）。
   QUESTION_TEMPLATES.push({
     id: "suiron_position_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 3,
-    type: "pattern",
-    patterns: [
-      {
-        text: "A, B, C, D, E, F の6人が円形のテーブルに等間隔に座っている。\n以下のことがわかっている。\n・AとBは隣り合っている\n・CとDは向かい合っている（真向かい）\n・EはAの隣ではない\n・FはCの隣に座っている\n・BはDの隣に座っている\n\nAの向かいに座っているのは誰か。",
-        choices: ["C", "D", "E", "F"],
-        correctIndex: 2,
-        explanation: "6人の円卓では「向かい合い」= 3つ離れた位置（真向かい）。\n\n位置を1〜6として、CとDが向かい合う配置を決める:\nC=1, D=4 と固定。\n\nFはCの隣 → F=2 or F=6。\nBはDの隣 → B=3 or B=5。\nAとBは隣り合う。EはAの隣ではない。\n\nF=6, B=5の場合:\n残り位置2,3にA,Eを配置。\nA=2: Aの隣は1(C)と3 → AとB(5)は隣り合わない ✗\nA=3: Aの隣は2と4(D) → AとB(5)は隣り合わない ✗\n\nF=6, B=3の場合:\n残り位置2,5にA,Eを配置。\nA=2: Aの隣は1(C)と3(B) → AとBが隣り合う ○\n  E=5 → Eの隣は4(D)と6(F) → EはAの隣ではない ○\n  Aの向かい = 位置5 = E ✓\n\nよってAの向かいに座っているのはEです。"
-      }
-    ],
+    templateText: "{{names}} の{{n}}人が{{scene}}。\n以下のことがわかっている。\n{{conds}}\n\n{{who}}の向かいに座っているのは誰か。",
+    variables: {
+      nameSet: { type: "int", min: 0, max: 4, step: 1 },
+      scene:   { type: "int", min: 0, max: 3, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveCirclePuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._names.indexOf(v._answerName); },
+    buildChoices: function(v) {
+      // 選択肢は本人以外から4人。正解を必ず含める。
+      var others = v._names.filter(function (nm) { return nm !== v._whoName; });
+      var pool = others.filter(function (nm) { return nm !== v._answerName; });
+      shuffleArray(pool);
+      var picks = [v._answerName].concat(pool.slice(0, 3));
+      shuffleArray(picks);
+      return { choices: picks, correctIndex: picks.indexOf(v._answerName) };
+    },
+    unit: "",
+    explanationTemplate: "円卓は回転させても同じ並びなので、まず{{anchor}}の位置を固定して考えます。\n{{n}}人の円卓では「向かい合う」= {{half}}つ離れた席です。\n\n条件をすべて満たす座り方は、次の{{solCount}}通りです。\n{{solText}}\n\nどの場合でも{{who}}の向かいは{{answerName}}です。\n\n【ポイント】\n・円卓は誰か1人を固定してから考える（回転した並びを別と数えない）\n・「隣り合う」「向かい合う」は左右を入れ替えても成り立つので、\n  座り方そのものは1通りに決まらないことが多い\n・それでも「向かいは誰か」は左右を入れ替えても変わらないので答えは定まる",
     timeLimitSec: 150
   });
 
