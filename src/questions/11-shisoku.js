@@ -141,13 +141,16 @@
       b: { type: "int", min: 6, max: 90, step: 3 }
     },
     answerType: "choice",
+    // {{a}}% を小数で書くと 5% は 0.05。"0." + a と機械的に繋ぐと
+    // 1桁のパーセントで 0.5 になり、解説だけ10倍ずれる（実際に出ていた）。
+    resolve: function(v) { v.aDecimal = v.a / 100; },
     validate: function(v) { return (v.b * 100) % v.a === 0; },
     answerFormula: function(v) { return v.b * 100 / v.a; },
     distractors: function(v, ans) {
       return [Math.round(v.b * v.a / 100), v.b, Math.round(ans / 2), v.b * v.a, ans * 2, ans + v.b];
     },
     unit: "",
-    explanationTemplate: "「□の{{a}}%が{{b}}」なので、{{b}} を {{a}}% で割ります。\n\n□ = {{b}} ÷ 0.{{a}} = {{b}} × 100 ÷ {{a}} = {{answer}}",
+    explanationTemplate: "「□の{{a}}%が{{b}}」なので、{{b}} を {{a}}% で割ります。\n\n□ = {{b}} ÷ {{aDecimal}} = {{b}} × 100 ÷ {{a}} = {{answer}}",
     timeLimitSec: 25
   });
 

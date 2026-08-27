@@ -295,7 +295,7 @@ var SEQ_ASKS = [
       return { choices: v._choices.slice(), correctIndex: v._correctIndex };
     },
     unit: "",
-    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶です。",
+    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶「{{contra}}」です。",
     timeLimitSec: 90
   });
 
@@ -321,7 +321,7 @@ var SEQ_ASKS = [
       return { choices: v._choices.slice(), correctIndex: v._correctIndex };
     },
     unit: "",
-    explanationTemplate: "与えられているのは「{{subNoun}} ならば {{attrAff}}」という一方向の関係だけです。\n\nここから確実に言えるのは対偶だけです。\n対偶: 「{{attrNegPred}} ならば {{subNegPred}}」\n\n{{person}}が{{attrAff}}ことは分かっていますが、\n{{subNoun}}以外にも{{attrAff}}者はいるかもしれないので、\n{{person}}が{{subNoun}}かどうかは判断できません。\n\n【ポイント】\n・「AならばB」から確実に言えるのは対偶「BでないならばAでない」だけ\n・逆「BならばA」と裏「AでないならばBでない」は必ずしも成り立たない\n・「全員〜である」は片方向。反対向きに読み替えた瞬間に誤り",
+    explanationTemplate: "与えられているのは「{{subNoun}} ならば {{attrAff}}」という一方向の関係だけです。\n\nここから確実に言えるのは対偶だけです。\n対偶: 「{{attrNegPred}} ならば {{subNegPred}}」\nしたがって答えは「{{correctText}}」です。\n\n{{person}}が{{attrAff}}ことは分かっていますが、\n{{subNoun}}以外にも{{attrAff}}者はいるかもしれないので、\n{{person}}が{{subNoun}}かどうかは判断できません。\n\n【ポイント】\n・「AならばB」から確実に言えるのは対偶「BでないならばAでない」だけ\n・逆「BならばA」と裏「AでないならばBでない」は必ずしも成り立たない\n・「全員〜である」は片方向。反対向きに読み替えた瞬間に誤り",
     timeLimitSec: 120
   });
 
@@ -345,10 +345,10 @@ var SEQ_ASKS = [
     validate: function(v) { return v._ok === true; },
     answerFormula: function(v) { return v._count; },
     buildChoices: function(v) {
-      return { choices: ["1つ", "2つ", "3つ", "4つ"], correctIndex: v._count - 1 };
+      return { choices: ["1通り", "2通り", "3通り", "4通り"], correctIndex: v._count - 1 };
     },
     unit: "",
-    explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは1つに決まらないことがある\n・全体が1通りに決まらなくても、問われている値の候補は数え上げられる",
+    explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは並びが確定しないことがある\n・全体の並びが決まらなくても、問われている値の候補は数え上げられる",
     timeLimitSec: 150
   });
 
@@ -467,7 +467,7 @@ var SEQ_ASKS = [
       return { choices: v._choices.slice(), correctIndex: v._correctIndex };
     },
     unit: "",
-    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶です。",
+    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶「{{contra}}」です。",
     timeLimitSec: 120
   });
 

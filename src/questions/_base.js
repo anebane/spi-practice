@@ -265,6 +265,9 @@ function resolvePropPuzzle(v) {
   v._correctIndex = opts.findIndex(function (o) { return o.ok; });
   v.premise = pr.p + "ならば" + pr.q;
   v.p = pr.p; v.q = pr.q; v.np = pr.np; v.nq = pr.nq;
+  // 解説が正解の選択肢をそのまま書き下すようにする。
+  // 「答えは対偶です」だけだと、どれを選べばよいかが解説から読み取れない。
+  v.contra = contrapositive;
 }
 
 /** 対応関係テンプレートの共通 resolve。 */
@@ -507,6 +510,8 @@ function resolveTfPuzzle(v) {
   v._ok = true;
   v._choices = texts;
   v._correctIndex = opts.findIndex(function (o) { return o.ok; });
+  // 解説が正解の選択肢をそのまま書き下すようにする
+  v.correctText = correct;
   v.group = sc.group;
   v.subNoun = sc.subNoun;
   v.subNegPred = sc.subNegPred;

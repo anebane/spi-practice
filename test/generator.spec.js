@@ -627,7 +627,7 @@ if (failures.length) process.exitCode = 1;
       if (!sols.length) { zero++; continue; }
       const vals = new Set(sols.map(p => p[ask]));
       // 選択肢は「1つ」〜「4つ」。正解indexの+1が候補の個数と一致するはず
-      const declared = parseInt(String(q.choices[q.correctAnswer]).replace("つ", ""), 10);
+      const declared = parseInt(String(q.choices[q.correctAnswer]).replace("通り", ""), 10);
       if (vals.size !== declared) mismatch++;
     }
   }
@@ -943,6 +943,223 @@ if (failures.length) process.exitCode = 1;
   } else {
     console.log(`   ❌ ${ng.length}件`);
     for (const c of ng) console.log(`   - ${c.name}: 期待 ${c.want} / 実際 ${guard(c.in)}`);
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 解説と正解が食い違っていないか ---
+//
+// 既存の検査はすべて「問題文と正解」を見るもので、解説は誰も見ていなかった。
+// 解説は generator.js の computeDerivedVars とテンプレート側の resolve が
+// 別々に値を作って合流するので、片方だけ古い式が残ると
+// 「問題と正解は正しいのに解説の数値だけ違う」状態になる。
+// 利用者から見れば、解けなかった問題の答え合わせができないという実害が出る。
+//
+// 検査は単純に、正解として画面に出る文字列が解説の本文にも現れること。
+// サンプリングの当たり外れに左右されないよう、全テンプレートを回す。
+//
+// 除外リストは今のところ空。解説が答えを書き下さない設計にするくらいなら、
+// 解説のほうを直すべきなので、安易に足さないこと。
+{
+  const SKIP = new Set([]);
+  const N = 120;
+  const norm = (s) => String(s).replace(/\s+/g, "");
+
+  /** 画面に出る「正解」の文字列。選択式は選択肢そのもの、分数は num/den。 */
+  const shownAnswer = (q) => {
+    if (Array.isArray(q.choices)) return String(q.choices[q.correctAnswer]);
+    const a = q.correctAnswer;
+    if (a && typeof a === "object" && "numerator" in a) return a.numerator + "/" + a.denominator;
+    return String(a);
+  };
+
+  const bad = [];
+  for (const t of TEMPLATES) {
+    if (SKIP.has(t.id)) continue;
+    let miss = 0, sample = null;
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      const exp = norm(q.explanation || "");
+      const want = norm(shownAnswer(q));
+      let ok = exp.includes(want);
+      // 数値入力の問題だけは桁区切り表記の可能性がある（図表の解説など）。
+      // 選択式では correctAnswer が選択肢の番号なので、この救済を使ってはいけない
+      // （どの数字にも当たってしまい、検査が素通りする）。
+      if (!ok && !Array.isArray(q.choices) && typeof q.correctAnswer === "number") {
+        ok = exp.includes(norm(q.correctAnswer.toLocaleString("en-US")));
+      }
+      if (!ok) { miss++; if (!sample) sample = { want: shownAnswer(q), exp: q.explanation }; }
+    }
+    if (miss) bad.push({ id: t.id, miss, sample });
+  }
+
+  console.log(`\n解説と正解の整合: ${TEMPLATES.length - SKIP.size}テンプレ x ${N}回（除外 ${SKIP.size}件）`);
+  if (!bad.length) {
+    console.log("   ✅ すべてのテンプレートで、正解の表示文字列が解説本文に現れる");
+  } else {
+    console.log(`   ❌ ${bad.length}件のテンプレートで解説に正解が現れない`);
+    for (const b of bad.slice(0, 10)) {
+      console.log(`   - ${b.id}: ${b.miss}/${N}回  正解「${String(b.sample.want).slice(0, 40)}」`);
+    }
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 解説の中の計算式が合っているか ---
+//
+// 上の「正解が解説に現れるか」は、解説の最後の行しか実質見ていない。
+// 実際に起きるのは「答えは正しいのに途中式だけ古い」という壊れ方で、
+// それはすり抜ける。実測でも、意図的に古い派生変数を戻したとき
+// 上の検査は素通りした。
+//
+// そこで解説から数式のチェーン（a = b = c）を取り出して構文解析し、
+// すべての辺が同じ値になることを確かめる。数値の対を正規表現で拾う方式は
+// 「C(6, 2) = 6 × 5 / 2 = 15」から「C(6,2) = 6」を切り出すなど誤検知が
+// 大量に出て使い物にならなかった（実測13,200問中4,012問が誤検知）。
+// 式全体を評価する方式にしたら誤検知は0になった。
+//
+// 解析できない断片（√ や ^ で切れたもの、文字を含むもの）は黙って飛ばす。
+// 検査できないことより、誤検知でテストが信用されなくなるほうが害が大きい。
+{
+  const N = 100;
+  const COMB = (n, r) => { if (r > n || r < 0) return 0; if (r === 0 || r === n) return 1; if (r > n - r) r = n - r; let x = 1; for (let i = 0; i < r; i++) x = x * (n - i) / (i + 1); return Math.round(x); };
+  const PERM = (n, r) => { let x = 1; for (let i = 0; i < r; i++) x *= (n - i); return x; };
+  const FACT = (n) => { if (n < 0 || n > 170 || n !== Math.round(n)) throw 0; let x = 1; for (let i = 2; i <= n; i++) x *= i; return x; };
+
+  /** 数式を評価する。解析できなければ例外。 */
+  function evalExpr(s) {
+    let i = 0;
+    const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+    const peek = () => { ws(); return s[i]; };
+    function primary() {
+      ws();
+      const ch = s[i];
+      if (ch === "(") { i++; const v = expr(); ws(); if (s[i] !== ")") throw 0; i++; return v; }
+      if (ch === "-") { i++; return -primary(); }
+      if (ch === "C" || ch === "P") {
+        const fn = ch; i++; ws();
+        if (s[i] !== "(") throw 0; i++;
+        const a = expr(); ws();
+        if (s[i] !== ",") throw 0; i++;
+        const b = expr(); ws();
+        if (s[i] !== ")") throw 0; i++;
+        return fn === "C" ? COMB(a, b) : PERM(a, b);
+      }
+      // カンマは桁区切りにも C(11, 4) の区切りにも使われる。
+      // [\d,]+ にすると "11," まで飲み込んで引数の区切りを失い、
+      // C()/P() の式が1本も検算されなくなる（実際にそうなっていた）。
+      // 桁区切りは「3桁ずつ」の形のときだけ数値の一部とみなす。
+      const m = /^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/.exec(s.slice(i));
+      if (!m) throw 0;
+      i += m[0].length;
+      const v = parseFloat(m[0].replace(/,/g, ""));
+      if (!isFinite(v)) throw 0;
+      return v;
+    }
+    function postfix() { let v = primary(); while (peek() === "!") { i++; v = FACT(v); } return v; }
+    function term() {
+      let v = postfix();
+      for (;;) {
+        const c = peek();
+        if (c === "×" || c === "*") { i++; v *= postfix(); }
+        else if (c === "÷" || c === "/") { i++; const d = postfix(); if (d === 0) throw 0; v /= d; }
+        else return v;
+      }
+    }
+    function expr() {
+      let v = term();
+      for (;;) {
+        const c = peek();
+        if (c === "+") { i++; v += term(); }
+        else if (c === "-") { i++; v -= term(); }
+        else return v;
+      }
+    }
+    const v = expr();
+    ws();
+    if (i !== s.length) throw 0;
+    return v;
+  }
+
+  // 解説は途中経過を丸めて書くことがある（8.33 など）。
+  // 小数d桁で書かれていれば ±0.5*10^-d まで許す。式そのものは厳密に見る。
+  const tolOf = (t) => {
+    const x = t.trim();
+    if (/^-?[\d,]+\.(\d+)$/.test(x)) return 0.5 * Math.pow(10, -(/\.(\d+)$/.exec(x)[1].length));
+    if (/^-?[\d,]+$/.test(x)) return 0.5;
+    return 1e-6;
+  };
+
+  // √ や ^ に接している式は、扱えない記号で切り取られた断片なので見ない
+  const BLOCK = "√^²³%";
+  const CHAIN = /[0-9CP().,!+\-×÷/*=\s]+/g;
+
+  const checked = new Map();     // テンプレートID → 検算できたチェーン数
+  const bad = [];
+
+  for (const t of TEMPLATES) {
+    checked.set(t.id, 0);
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.explanation) continue;
+
+      // 「= 700 × 1.25」のように行頭の = で続く解説があるので、前の行に繋ぐ
+      const lines = [];
+      for (const raw of String(q.explanation).split("\n")) {
+        if (/^\s*=/.test(raw) && lines.length) lines[lines.length - 1] += " " + raw.trim();
+        else lines.push(raw);
+      }
+
+      for (const line of lines) {
+        CHAIN.lastIndex = 0;
+        let m;
+        while ((m = CHAIN.exec(line))) {
+          const run = m[0];
+          if (!run.includes("=")) continue;
+          const before = line[m.index - 1], after = line[m.index + run.length];
+          if ((before && BLOCK.includes(before)) || (after && BLOCK.includes(after))) continue;
+          const parts = run.split("=").map(x => x.trim()).filter(x => x.length);
+          if (parts.length < 2) continue;
+
+          // 解析できない辺は捨てて、残った辺だけを突き合わせる。
+          // 「定価 = 原価 × (1+利益率/100) = 700 × 1.25 = 875」のように
+          // 日本語混じりの辺が先頭に来る解説があり、そこで諦めると
+          // 損益算がまるごと検査対象外になってしまう。
+          // 等号でつながれている以上、解析できた辺どうしは必ず一致するはず。
+          const vals = [];
+          for (const p of parts) {
+            try { vals.push({ v: evalExpr(p), t: p }); } catch (e) { /* この辺は見ない */ }
+          }
+          if (vals.length < 2) continue;
+          checked.set(t.id, checked.get(t.id) + 1);
+
+          for (let k = 1; k < vals.length; k++) {
+            const tol = Math.max(tolOf(vals[0].t), tolOf(vals[k].t));
+            if (Math.abs(vals[k].v - vals[0].v) > tol + 1e-9) {
+              if (bad.length < 20) bad.push({ id: t.id, run: run.trim(), a: vals[0].v, b: vals[k].v });
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const totalChains = [...checked.values()].reduce((a, b) => a + b, 0);
+  const uncovered = [...checked.entries()].filter(([, n]) => n === 0).map(([id]) => id);
+  console.log(`\n解説の計算式の検算: ${TEMPLATES.length}テンプレ x ${N}回 / 式チェーン ${totalChains.toLocaleString()}本`);
+  if (uncovered.length) {
+    console.log(`   ℹ️ 式が1本も取り出せなかったテンプレート ${uncovered.length}件: ${uncovered.join(", ")}`);
+    console.log("      （解説に数式が無いか、記号が扱えない形。この検査の対象外）");
+  }
+  if (!bad.length) {
+    console.log("   ✅ 取り出せた式はすべて左辺と右辺が一致");
+  } else {
+    console.log(`   ❌ 計算の合わない式 ${bad.length}件`);
+    for (const b of bad.slice(0, 10)) console.log(`   - ${b.id}: ${b.run.slice(0, 70)}  [${b.a} ≠ ${b.b}]`);
     process.exitCode = 1;
   }
 }

@@ -662,10 +662,9 @@ var QuestionGenerator = (function() {
       d.newSalt = d.origSalt - d.removedSalt;
     }
 
-    // 割合: 連続増減
-    if (template.id === "wariai_consecutive_01") {
-      d.after1 = Math.round((1 + vars.percent1/100) * 100);
-    }
+    // 割合: 連続増減の after1 はテンプレート側の resolve が作る。
+    // 増減の向きを可変にしたので、常に増加とみなす式をここに残すと
+    // 「減少」の問題で解説の途中経過だけが誤る。
 
     // 割合: 3つの比
     if (template.id === "wariai_ratio3_01") {

@@ -268,6 +268,9 @@ function resolvePropPuzzle(v) {
   v._correctIndex = opts.findIndex(function (o) { return o.ok; });
   v.premise = pr.p + "ならば" + pr.q;
   v.p = pr.p; v.q = pr.q; v.np = pr.np; v.nq = pr.nq;
+  // 解説が正解の選択肢をそのまま書き下すようにする。
+  // 「答えは対偶です」だけだと、どれを選べばよいかが解説から読み取れない。
+  v.contra = contrapositive;
 }
 
 /** 対応関係テンプレートの共通 resolve。 */
@@ -510,6 +513,8 @@ function resolveTfPuzzle(v) {
   v._ok = true;
   v._choices = texts;
   v._correctIndex = opts.findIndex(function (o) { return o.ok; });
+  // 解説が正解の選択肢をそのまま書き下すようにする
+  v.correctText = correct;
   v.group = sc.group;
   v.subNoun = sc.subNoun;
   v.subNegPred = sc.subNegPred;
@@ -1483,7 +1488,7 @@ var SEQ_ASKS = [
       return { choices: v._choices.slice(), correctIndex: v._correctIndex };
     },
     unit: "",
-    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶です。",
+    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶「{{contra}}」です。",
     timeLimitSec: 90
   });
 
@@ -1509,7 +1514,7 @@ var SEQ_ASKS = [
       return { choices: v._choices.slice(), correctIndex: v._correctIndex };
     },
     unit: "",
-    explanationTemplate: "与えられているのは「{{subNoun}} ならば {{attrAff}}」という一方向の関係だけです。\n\nここから確実に言えるのは対偶だけです。\n対偶: 「{{attrNegPred}} ならば {{subNegPred}}」\n\n{{person}}が{{attrAff}}ことは分かっていますが、\n{{subNoun}}以外にも{{attrAff}}者はいるかもしれないので、\n{{person}}が{{subNoun}}かどうかは判断できません。\n\n【ポイント】\n・「AならばB」から確実に言えるのは対偶「BでないならばAでない」だけ\n・逆「BならばA」と裏「AでないならばBでない」は必ずしも成り立たない\n・「全員〜である」は片方向。反対向きに読み替えた瞬間に誤り",
+    explanationTemplate: "与えられているのは「{{subNoun}} ならば {{attrAff}}」という一方向の関係だけです。\n\nここから確実に言えるのは対偶だけです。\n対偶: 「{{attrNegPred}} ならば {{subNegPred}}」\nしたがって答えは「{{correctText}}」です。\n\n{{person}}が{{attrAff}}ことは分かっていますが、\n{{subNoun}}以外にも{{attrAff}}者はいるかもしれないので、\n{{person}}が{{subNoun}}かどうかは判断できません。\n\n【ポイント】\n・「AならばB」から確実に言えるのは対偶「BでないならばAでない」だけ\n・逆「BならばA」と裏「AでないならばBでない」は必ずしも成り立たない\n・「全員〜である」は片方向。反対向きに読み替えた瞬間に誤り",
     timeLimitSec: 120
   });
 
@@ -1533,10 +1538,10 @@ var SEQ_ASKS = [
     validate: function(v) { return v._ok === true; },
     answerFormula: function(v) { return v._count; },
     buildChoices: function(v) {
-      return { choices: ["1つ", "2つ", "3つ", "4つ"], correctIndex: v._count - 1 };
+      return { choices: ["1通り", "2通り", "3通り", "4通り"], correctIndex: v._count - 1 };
     },
     unit: "",
-    explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは1つに決まらないことがある\n・全体が1通りに決まらなくても、問われている値の候補は数え上げられる",
+    explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは並びが確定しないことがある\n・全体の並びが決まらなくても、問われている値の候補は数え上げられる",
     timeLimitSec: 150
   });
 
@@ -1655,7 +1660,7 @@ var SEQ_ASKS = [
       return { choices: v._choices.slice(), correctIndex: v._correctIndex };
     },
     unit: "",
-    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶です。",
+    explanationTemplate: "「A ならば B」から必ず言えるのは**対偶**「B でない ならば A でない」だけです。\n\n前提: {{p}} → {{q}}\n対偶: {{nq}} → {{np}}\n\n【必ずしも成り立たないもの】\n・逆「B ならば A」… {{q}}からといって{{p}}とは限らない\n・裏「A でない ならば B でない」… 逆と同じ内容なので同様\n\nしたがって答えは対偶「{{contra}}」です。",
     timeLimitSec: 120
   });
 
@@ -2971,7 +2976,7 @@ var WORK_SCENES_3 = [
       return v.daysA * v.daysB / (v.daysA + v.daysB);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n仕事算の基本: {{job}}全体を「1」として、1日あたりの仕事量を分数で表します。\n2人で同時にやれば仕事量が足し算になります。\n\n【解法】\n① {{job}}全体を1とする\n\n② 1日あたりの仕事量:\n  {{a}}: 1/{{daysA}}\n  {{b}}: 1/{{daysB}}\n\n③ 2人の1日の合計仕事量:\n  1/{{daysA}} + 1/{{daysB}} = {{combined}}\n\n④ かかる日数 = 全体÷1日の仕事量:\n  1 / {{combined}} = {{answer}}日\n\n【ポイント】\n・全体を1とおく → 「○日で完了」= 1日に1/○ずつ進む\n・公式: A×B/(A+B) 日で一発計算も可能\n・仕事算は「速さ」の問題と同じ構造（仕事量=速さ×時間）",
+    explanationTemplate: "【考え方】\n仕事算の基本: {{job}}全体を「1」として、1日あたりの仕事量を分数で表します。\n2人で同時にやれば仕事量が足し算になります。\n\n【解法】\n① {{job}}全体を1とする\n\n② 1日あたりの仕事量:\n  {{a}}: 1/{{daysA}}\n  {{b}}: 1/{{daysB}}\n\n③ 2人の1日の合計仕事量:\n  1/{{daysA}} + 1/{{daysB}} = {{combined}}\n\n④ かかる日数 = 全体÷1日の仕事量:\n  1 ÷ ({{combined}}) = {{answer}}日\n\n【ポイント】\n・全体を1とおく → 「○日で完了」= 1日に1/○ずつ進む\n・公式: A×B/(A+B) 日で一発計算も可能\n・仕事算は「速さ」の問題と同じ構造（仕事量=速さ×時間）",
     timeLimitSec: 90
   });
 
@@ -2993,7 +2998,7 @@ var WORK_SCENES_3 = [
       return Math.round(remaining * v.daysB);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n途中で作業者が交代する問題。\nまずAが進めた分を計算し、残りをBが仕上げる日数を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  1日の仕事量: 1/{{daysA}}\n  {{daysAlone}}日分: {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ Bが残りを仕上げる日数:\n  Bの1日の仕事量: 1/{{daysB}}\n  日数 = {{remaining}} ÷ (1/{{daysB}}) = {{remaining}} × {{daysB}} = {{answer}}日\n\n【ポイント】\n・「途中交代」→ まず先の人の進捗を計算 → 残りを後の人で\n・残り = 1 - (先の人の日数/全体日数)",
+    explanationTemplate: "【考え方】\n途中で作業者が交代する問題。\nまずAが進めた分を計算し、残りをBが仕上げる日数を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  1日の仕事量: 1/{{daysA}}\n  {{daysAlone}}日分: {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ Bが残りを仕上げる日数:\n  Bの1日の仕事量: 1/{{daysB}}\n  日数 = ({{remaining}}) ÷ (1/{{daysB}}) = ({{remaining}}) × {{daysB}} = {{answer}}日\n\n【ポイント】\n・「途中交代」→ まず先の人の進捗を計算 → 残りを後の人で\n・残り = 1 - (先の人の日数/全体日数)",
     timeLimitSec: 120,
     validate: function(v) {
       var remaining = 1 - v.daysAlone / v.daysA;
@@ -3030,7 +3035,7 @@ var WORK_SCENES_3 = [
       return Math.round(1 / rate);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n2人の仕事算と同じ考え方を3人に拡張します。\n3人の1日の仕事量をすべて足し算します。\n\n【解法】\n① {{job}}全体を1とする\n\n② 1日あたりの仕事量:\n  1人目: 1/{{daysA}}\n  2人目: 1/{{daysB}}\n  3人目: 1/{{daysC}}\n\n③ 3人合計の1日の仕事量:\n  1/{{daysA}} + 1/{{daysB}} + 1/{{daysC}} = {{combined}}\n\n④ かかる日数:\n  1 / {{combined}} = {{answer}}日\n\n【ポイント】\n・何人でも同じ方法: 全員の1日の仕事量を合計 → 逆数が日数\n・通分して計算する → 最小公倍数を使うと楽",
+    explanationTemplate: "【考え方】\n2人の仕事算と同じ考え方を3人に拡張します。\n3人の1日の仕事量をすべて足し算します。\n\n【解法】\n① {{job}}全体を1とする\n\n② 1日あたりの仕事量:\n  1人目: 1/{{daysA}}\n  2人目: 1/{{daysB}}\n  3人目: 1/{{daysC}}\n\n③ 3人合計の1日の仕事量:\n  1/{{daysA}} + 1/{{daysB}} + 1/{{daysC}} = {{combined}}\n\n④ かかる日数:\n  1 ÷ ({{combined}}) = {{answer}}日\n\n【ポイント】\n・何人でも同じ方法: 全員の1日の仕事量を合計 → 逆数が日数\n・通分して計算する → 最小公倍数を使うと楽",
     timeLimitSec: 120
   });
 
@@ -4595,13 +4600,16 @@ var PERM_EXCLUDE_SCENES = [
       b: { type: "int", min: 6, max: 90, step: 3 }
     },
     answerType: "choice",
+    // {{a}}% を小数で書くと 5% は 0.05。"0." + a と機械的に繋ぐと
+    // 1桁のパーセントで 0.5 になり、解説だけ10倍ずれる（実際に出ていた）。
+    resolve: function(v) { v.aDecimal = v.a / 100; },
     validate: function(v) { return (v.b * 100) % v.a === 0; },
     answerFormula: function(v) { return v.b * 100 / v.a; },
     distractors: function(v, ans) {
       return [Math.round(v.b * v.a / 100), v.b, Math.round(ans / 2), v.b * v.a, ans * 2, ans + v.b];
     },
     unit: "",
-    explanationTemplate: "「□の{{a}}%が{{b}}」なので、{{b}} を {{a}}% で割ります。\n\n□ = {{b}} ÷ 0.{{a}} = {{b}} × 100 ÷ {{a}} = {{answer}}",
+    explanationTemplate: "「□の{{a}}%が{{b}}」なので、{{b}} を {{a}}% で割ります。\n\n□ = {{b}} ÷ {{aDecimal}} = {{b}} × 100 ÷ {{a}} = {{answer}}",
     timeLimitSec: 25
   });
 
