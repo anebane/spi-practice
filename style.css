@@ -673,6 +673,18 @@ body {
   max-width: 100%;
 }
 
+/* 再挑戦ボタンの直前に置く一文。
+   「次も同じ問題ではない」ことが伝わっていないのでは、という仮説への手当て。
+   主張ではなく事実の説明なので、控えめな見た目にする。 */
+.retry-note {
+  max-width: 640px;
+  margin: 24px auto 8px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #555;
+}
+
 .result-actions {
   display: flex;
   justify-content: center;

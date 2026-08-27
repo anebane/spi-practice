@@ -150,14 +150,27 @@
       trackEvent("category_practice_start", { category_id: want });
     })();
 
-    document.getElementById("btn-start").addEventListener("click", startExam);
+    // startExam を直接渡すと click イベントが options として入ってくる。
+    // いまは害が無いが、options を見るようになったので明示的に包む。
+    document.getElementById("btn-start").addEventListener("click", function() { startExam(); });
   }
 
   // --- 試験開始 ---
-  function startExam() {
+  // 「10問だけもう一度」で使う問題数。
+  // 20問を解き終えた直後にもう20問は重い、という仮説に対する軽い口。
+  var SHORT_RETRY_COUNT = 10;
+
+  /**
+   * @param {Object} [options] questionCount を渡すと画面の設定より優先する。
+   *   「10問だけもう一度」用。設定そのものは変えないので、
+   *   次に「もう一度挑戦する」を押せば元の問題数に戻る。
+   */
+  function startExam(options) {
+    options = options || {};
     try {
     // 設定の読み取り
-    var questionCount = parseInt(document.querySelector("#question-count .config-btn.active").dataset.value);
+    var questionCount = options.questionCount
+      || parseInt(document.querySelector("#question-count .config-btn.active").dataset.value);
     var mode = document.querySelector("#exam-mode .config-btn.active").dataset.value;
 
     var selectedDifficulties = [];
@@ -773,6 +786,12 @@
       weakest_rate: weakest ? weakestRate : -1
     });
 
+    // 「10問だけもう一度」は、直前が10問だと「もう一度挑戦する」と同じ意味に
+    // なってしまう。同じ働きのボタンを2つ並べると迷わせるだけなので隠す。
+    // 計測上も、短縮版が選ばれた回数の意味が曖昧にならずに済む。
+    var shortBtn = document.getElementById("btn-retry-short");
+    if (shortBtn) shortBtn.style.display = totalQuestions > SHORT_RETRY_COUNT ? "" : "none";
+
     // スコア表示
     document.getElementById("result-score").textContent = percent + "%";
     document.getElementById("result-detail").textContent = totalCorrect + " / " + totalQuestions + " 問正解";
@@ -1099,9 +1118,23 @@
     // 結果画面ボタン
     document.getElementById("btn-review").addEventListener("click", showReview);
 
+    // 再挑戦は2種類ある。どちらが押されたかを variant で区別する。
+    // これを付けずに両方足すと、再挑戦率が動いたときに
+    // 「文言が効いたのか、軽い口が効いたのか」を後から言えなくなる。
     document.getElementById("btn-retry").addEventListener("click", function() {
-      trackEvent("retry_exam");
+      trackEvent("retry_exam", {
+        variant: "same",
+        question_count: state.questions.length
+      });
       startExam();
+    });
+
+    document.getElementById("btn-retry-short").addEventListener("click", function() {
+      trackEvent("retry_exam", {
+        variant: "short",
+        question_count: SHORT_RETRY_COUNT
+      });
+      startExam({ questionCount: SHORT_RETRY_COUNT });
     });
 
     document.getElementById("btn-back").addEventListener("click", function() {

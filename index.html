@@ -362,9 +362,17 @@
         <canvas id="radar-chart" width="400" height="400"></canvas>
       </div>
 
+      <!-- 再挑戦の前に「次も同じ問題ではない」ことを事実として伝える。
+           断言はしない（テンプレートによっては組み合わせが有限）。
+           トップの説明文（出題のたびに数値を決めている）と表現を揃える。 -->
+      <p class="retry-note">問題は出題のたびに数値を決めています。次の試験も同じ問題の繰り返しにはなりません。</p>
+
       <div class="result-actions">
         <button class="btn-primary" id="btn-review">解説を確認する</button>
         <button class="btn-secondary" id="btn-retry">もう一度挑戦する</button>
+        <!-- 直前と同じ問題数がしんどい人向けの軽い口。
+             10問の試験の直後は「もう一度挑戦する」と同じ意味になるので隠す（app.js） -->
+        <button class="btn-secondary" id="btn-retry-short" style="display:none">10問だけもう一度</button>
         <button class="btn-secondary" id="btn-back">設定に戻る</button>
       </div>
 

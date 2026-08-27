@@ -268,10 +268,68 @@ run("再挑戦", () => {
   if (h.count("retry_exam") !== 1) fail("再挑戦", `retry_exam が ${h.count("retry_exam")}回`);
 });
 
+// --- 7. 再挑戦2種類が variant で区別でき、短縮版は10問になる ---
+//
+//     どちらが押されたか分からないまま両方を足すと、再挑戦率が動いたときに
+//     「文言が効いたのか、軽い口が効いたのか」を後から言えなくなる。
+run("再挑戦の2種類", () => {
+  const h = createHarness({ questionCount: 20 });
+  h.start();
+  for (let i = 0; i < 60 && !h.onResult(); i++) h.answerOne();
+  if (h.count("question_answer") !== 20) fail("再挑戦の2種類", `1試験目が20問になっていない: ${h.count("question_answer")}`);
+
+  // 同じ設定での再挑戦 → variant=same, 20問
+  h.reset();
+  h.byId("btn-retry").click();
+  for (let i = 0; i < 60 && !h.onResult(); i++) h.answerOne();
+  let r = h.find("retry_exam");
+  if (!r) fail("再挑戦の2種類", "retry_exam が出ていない（same）");
+  else {
+    if (r.params.variant !== "same") fail("再挑戦の2種類", `variant が same でない: ${r.params.variant}`);
+    if (r.params.question_count !== 20) fail("再挑戦の2種類", `question_count が 20 でない: ${r.params.question_count}`);
+  }
+  if (h.count("question_answer") !== 20) fail("再挑戦の2種類", `same の再挑戦が20問でない: ${h.count("question_answer")}`);
+
+  // 10問だけもう一度 → variant=short, 画面の設定(20問)を上書きして10問
+  h.reset();
+  h.byId("btn-retry-short").click();
+  for (let i = 0; i < 60 && !h.onResult(); i++) h.answerOne();
+  r = h.find("retry_exam");
+  if (!r) fail("再挑戦の2種類", "retry_exam が出ていない（short）");
+  else {
+    if (r.params.variant !== "short") fail("再挑戦の2種類", `variant が short でない: ${r.params.variant}`);
+    if (r.params.question_count !== 10) fail("再挑戦の2種類", `question_count が 10 でない: ${r.params.question_count}`);
+  }
+  if (h.count("question_answer") !== 10) fail("再挑戦の2種類", `short の再挑戦が10問でない: ${h.count("question_answer")}`);
+  if (h.count("exam_finish") !== 1) fail("再挑戦の2種類", `short の exam_finish が ${h.count("exam_finish")}回`);
+
+  // 短縮版でも exam_start と exam_finish は対応する
+  const s = h.find("exam_start"), f = h.find("exam_finish");
+  if (!s || !f || s.params.exam_id !== f.params.exam_id) fail("再挑戦の2種類", "短縮版で exam_id が対応していない");
+  if (s.params.question_count !== 10) fail("再挑戦の2種類", `exam_start の question_count が 10 でない: ${s.params.question_count}`);
+});
+
+// --- 8. 「10問だけもう一度」は10問の試験の直後には出さない ---
+run("短縮版の出し分け", () => {
+  const long = createHarness({ questionCount: 20 });
+  long.start();
+  for (let i = 0; i < 60 && !long.onResult(); i++) long.answerOne();
+  if (long.byId("btn-retry-short").style.display === "none") {
+    fail("短縮版の出し分け", "20問の直後なのに短縮版が隠れている");
+  }
+
+  const short = createHarness({ questionCount: 10 });
+  short.start();
+  for (let i = 0; i < 30 && !short.onResult(); i++) short.answerOne();
+  if (short.byId("btn-retry-short").style.display !== "none") {
+    fail("短縮版の出し分け", "10問の直後なのに短縮版が出ている（同じ働きのボタンが2つ並ぶ）");
+  }
+});
+
 // ============================================================
 // 出力
 // ============================================================
-console.log("app.js の計測: 6項目を検査（DOMをスタブして本物の app.js を駆動）");
+console.log("app.js の計測: 8項目を検査（DOMをスタブして本物の app.js を駆動）");
 if (!failures.length) {
   console.log("   ✅ exam_start と exam_finish は必ず1対1。連打しても増えない。exam_id も対応する");
 } else {
