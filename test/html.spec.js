@@ -116,6 +116,22 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   }
 }
 
+// --- AdSense の審査用スニペットが全ページの <head> に入っているか ---
+// 審査はサイト単位なので、1ページでも欠けると「コードが見つかりません」で
+// 弾かれる。手で貼ると必ず漏れるので機械的に守る。新しいページを足したとき
+// これが落ちれば、貼り忘れたまま公開することはない。
+{
+  const PUB = "ca-pub-5409685648363967";
+  for (const p of pages) {
+    const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+    const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/);
+    if (!head) { fail(p, "head が見つからない", ""); continue; }
+    if (!head[1].includes(PUB)) {
+      fail(p, "AdSenseスニペットが head に無い", `${PUB} を含む <script> が必要`);
+    }
+  }
+}
+
 console.log(`HTML ${pages.length}ページを検査`);
 if (!failures.length) {
   console.log("✅ 問題なし");
