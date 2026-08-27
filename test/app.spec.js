@@ -34,6 +34,10 @@ const fail = (rule, detail) => failures.push({ rule, detail });
 function createHarness(opts) {
   opts = opts || {};
   const questionCount = String(opts.questionCount || 10);
+  // 画面の出題分野チェックボックスに載っている分野。既定は推論だけ。
+  // 語句の関係(12)のように「載せていない分野」を作れるようにしてある。
+  const visibleCategories = opts.visibleCategories || [1];
+  const search = opts.search || "";
   const events = [];
   const timeouts = [];
 
@@ -58,7 +62,7 @@ function createHarness(opts) {
       },
       addEventListener(t, f) { (this._handlers[t] = this._handlers[t] || []).push(f); },
       removeEventListener() {},
-      dispatchEvent() { return true; },
+      dispatchEvent(ev) { (this._handlers[ev && ev.type] || []).forEach(f => f.call(this, ev)); return true; },
       click() { (this._handlers.click || []).forEach(f => f.call(this, { preventDefault: noop })); },
       focus: noop, blur: noop, scrollIntoView: noop, remove: noop,
       appendChild(c) { this.children.push(c); return c; },
@@ -83,6 +87,9 @@ function createHarness(opts) {
   const mkInputs = (values) => values.map(v => {
     const e = makeEl(""); e.value = String(v); e.checked = true; return e;
   });
+  // チェックボックスは毎回作り直すと checked の変更が消えてしまい、
+  // applyCategoryParam が箱を絞る動きを再現できない。1組だけ作って使い回す。
+  const categoryBoxes = mkInputs(visibleCategories);
 
   const doc = {
     readyState: "complete",
@@ -104,8 +111,9 @@ function createHarness(opts) {
       if (sel === ".config-options") return [makeEl(""), makeEl("")];
       if (sel === ".config-btn") return [makeEl(""), makeEl(""), makeEl("")];
       if (sel === "#difficulty-select input:checked") return mkInputs([1, 2, 3]);
-      // 推論だけに絞る。図表・グラフを避けて選択式のみにし、判定を単純に保つ
-      if (sel.indexOf("#category-select input") === 0) return mkInputs([1]);
+      // 図表・グラフを避けて選択式のみにし、判定を単純に保つ
+      if (sel === "#category-select input:checked") return categoryBoxes.filter(cb => cb.checked);
+      if (sel.indexOf("#category-select input") === 0) return categoryBoxes;
       if (sel === ".faq-item") return [];
       if (sel.indexOf("choice-item") !== -1) {
         const n = ((scope && scope.innerHTML) || "").split("choice-item").length - 1;
@@ -145,7 +153,7 @@ function createHarness(opts) {
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
-  sandbox.location = { search: "", pathname: "/", href: "http://localhost/" };
+  sandbox.location = { search: search, pathname: "/", href: "http://localhost/" + search };
   sandbox.window.scrollTo = noop;
   sandbox.window.open = noop;
   sandbox.window.devicePixelRatio = 1;
@@ -166,6 +174,8 @@ function createHarness(opts) {
       return m && m[1] === m[2];
     },
     answerOne() { user.selectedChoice = 0; byId("btn-answer").click(); },
+    // 利用者が出題分野のチェックを触ったことにする
+    touchCategory() { categoryBoxes[0].dispatchEvent({ type: "change" }); },
     start() { byId("btn-start").click(); }
   };
 }
@@ -326,10 +336,81 @@ run("短縮版の出し分け", () => {
   }
 });
 
+// --- 9. ?cat= で、トップの選択欄に無い分野を指定できる ---
+//
+//     語句の関係(12)は独立ページ /language/ から来るので、
+//     トップの出題分野チェックボックスには載せていない（言語を非言語の
+//     模擬試験に混ぜないため）。
+//
+//     applyCategoryParam は元々「value が一致する箱」を探す実装だったので、
+//     箱が無いと全分野を選び直して終わっていた。つまり
+//     「語句の関係の練習を始める」を押した人が非言語の模試を受けていた。
+//     画面はエラーも出さず正常に見えるので、誰も気づけない壊れ方。
+run("選択欄に無い分野を ?cat= で指定", () => {
+  const h = createHarness({ questionCount: 10, visibleCategories: [1, 2, 3], search: "?cat=12" });
+  h.start();
+  for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+
+  const cats = [...new Set(h.events.filter(e => e.name === "question_answer").map(e => e.params.category))];
+  if (cats.length !== 1 || cats[0] !== "語句の関係") {
+    fail("選択欄に無い分野を ?cat= で指定", `出題された分野が「語句の関係」だけになっていない: ${cats.join(", ") || "(出題なし)"}`);
+  }
+  const note = h.byId("category-param-note");
+  if (String(note.textContent).indexOf("語句の関係") === -1) {
+    fail("選択欄に無い分野を ?cat= で指定", `案内文に分野名が出ていない: ${note.textContent}`);
+  }
+  const ev = h.find("category_practice_start");
+  if (!ev || ev.params.category_id !== "12") {
+    fail("選択欄に無い分野を ?cat= で指定", `category_practice_start が出ていない/IDが違う: ${ev && ev.params.category_id}`);
+  }
+});
+
+// --- 10. 選択欄にある分野の ?cat= は今までどおり動く ---
+run("選択欄にある分野の ?cat=", () => {
+  const h = createHarness({ questionCount: 10, visibleCategories: [1, 2, 3], search: "?cat=2" });
+  h.start();
+  for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+  const cats = [...new Set(h.events.filter(e => e.name === "question_answer").map(e => e.params.category))];
+  if (cats.length !== 1 || cats[0] !== "場合の数・確率") {
+    fail("選択欄にある分野の ?cat=", `「場合の数・確率」だけになっていない: ${cats.join(", ") || "(出題なし)"}`);
+  }
+});
+
+// --- 11. 実在しない分野IDは無視して全分野に戻る ---
+run("実在しない ?cat=", () => {
+  const h = createHarness({ questionCount: 10, visibleCategories: [1, 2, 3], search: "?cat=999" });
+  h.start();
+  for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+  const cats = [...new Set(h.events.filter(e => e.name === "question_answer").map(e => e.params.category))];
+  if (cats.length < 2) {
+    fail("実在しない ?cat=", `全分野に戻っていない（出題分野 ${cats.length}種）: ${cats.join(", ")}`);
+  }
+  const note = h.byId("category-param-note");
+  if (note.style.display === "") {
+    fail("実在しない ?cat=", "実在しないIDなのに案内文を出している");
+  }
+});
+
+// --- 12. 利用者が分野の選択を触ったら ?cat= の指定は解除される ---
+//
+//     指定が居座ると、選択欄を操作しても出題が変わらないという
+//     「触っても効かない」状態になる。画面上は選択が変わって見えるので厄介。
+run("?cat= の解除", () => {
+  const h = createHarness({ questionCount: 10, visibleCategories: [1, 2, 3], search: "?cat=12" });
+  h.touchCategory();                       // 利用者が出題分野を触った
+  h.start();
+  for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+  const cats = [...new Set(h.events.filter(e => e.name === "question_answer").map(e => e.params.category))];
+  if (cats.length === 1 && cats[0] === "語句の関係") {
+    fail("?cat= の解除", "選択を触ったのに語句の関係に固定されたまま");
+  }
+  if (!cats.length) fail("?cat= の解除", "出題されていない");
+});
+
 // ============================================================
 // 出力
 // ============================================================
-console.log("app.js の計測: 8項目を検査（DOMをスタブして本物の app.js を駆動）");
+console.log("app.js の計測: 12項目を検査（DOMをスタブして本物の app.js を駆動）");
 if (!failures.length) {
   console.log("   ✅ exam_start と exam_finish は必ず1対1。連打しても増えない。exam_id も対応する");
 } else {

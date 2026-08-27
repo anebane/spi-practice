@@ -125,6 +125,11 @@
       });
     });
 
+    // 分野の選択が変わったら、?cat= の指定は利用者の意思で上書きされたとみなす
+    document.querySelectorAll("#category-select input").forEach(function(cb) {
+      cb.addEventListener("change", function() { paramCategoryId = null; });
+    });
+
     // 開始ボタン
     // 分野別ページから「この分野だけ練習」で来たときに、
     // 対象分野だけを選択した状態で開始画面を出す。
@@ -139,11 +144,27 @@
         cb.checked = on;
         if (on) hit = true;
       });
-      if (!hit) { boxes.forEach(function(cb) { cb.checked = true; }); return; }
+      // チェックボックスに無い分野が指定されることがある。
+      // 語句の関係(12)は独立ページ /language/ から来るので、トップの選択欄には
+      // 載せていない。ここで「全部チェックし直して終わり」にすると、
+      // 利用者は「語句の関係の練習を始める」を押したのに非言語の模試を受ける
+      // ことになる。画面上は正常に見えるので誰も気づけない（実際にそうなっていた）。
+      //
+      // 出題そのものはカテゴリIDで動くので、チェックボックスの有無とは関係なく
+      // 指定を通せる。paramCategoryId に持って startExam で使う。
+      var name;
+      if (!hit) {
+        boxes.forEach(function(cb) { cb.checked = true; });
+        paramCategoryId = parseInt(want, 10);
+        name = categoryNameById(paramCategoryId);
+        if (!name) { paramCategoryId = null; return; }   // 実在しないIDは無視する
+      } else {
+        var box = document.querySelector("#category-select input[value='" + want + "']");
+        name = box && box.parentElement ? box.parentElement.textContent.trim() : "";
+      }
+
       var note = document.getElementById("category-param-note");
       if (note) {
-        var box = document.querySelector("#category-select input[value='" + want + "']");
-        var name = box && box.parentElement ? box.parentElement.textContent.trim() : "";
         note.textContent = "「" + name + "」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。";
         note.style.display = "";
       }
@@ -153,6 +174,19 @@
     // startExam を直接渡すと click イベントが options として入ってくる。
     // いまは害が無いが、options を見るようになったので明示的に包む。
     document.getElementById("btn-start").addEventListener("click", function() { startExam(); });
+  }
+
+  // ?cat= で指定されたが、トップの出題分野チェックボックスには載せていない分野。
+  // （語句の関係のように、独立ページから来るもの）
+  // 利用者が分野の選択を触った時点で null に戻す。
+  var paramCategoryId = null;
+
+  /** カテゴリIDから分野名を引く。案内文の表示に使う。 */
+  function categoryNameById(id) {
+    for (var i = 0; i < QUESTION_TEMPLATES.length; i++) {
+      if (QUESTION_TEMPLATES[i].categoryId === id) return QUESTION_TEMPLATES[i].category;
+    }
+    return "";
   }
 
   // --- 試験開始 ---
@@ -179,9 +213,16 @@
     });
 
     var selectedCategories = [];
-    document.querySelectorAll("#category-select input:checked").forEach(function(cb) {
-      selectedCategories.push(parseInt(cb.value));
-    });
+    if (paramCategoryId !== null) {
+      // チェックボックスに無い分野を ?cat= で指定されている場合。
+      // 画面の選択欄は全選択のまま（この分野の項目が無いので表現できない）だが、
+      // 出題はこの分野だけにする。
+      selectedCategories = [paramCategoryId];
+    } else {
+      document.querySelectorAll("#category-select input:checked").forEach(function(cb) {
+        selectedCategories.push(parseInt(cb.value));
+      });
+    }
 
     if (selectedCategories.length === 0) {
       alert("少なくとも1つの分野を選択してください。");
