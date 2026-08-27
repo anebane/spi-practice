@@ -62,19 +62,6 @@ var QuestionGenerator = (function() {
       vars.k = kOptions[Math.floor(Math.random() * kOptions.length)];
     }
 
-    // 推論(直線距離): 方角の組と辺の長さ。
-    // templateText がこれらを参照するので、問題文の展開前に確定させる必要がある
-    // （computeDerivedVars は展開後に走るので間に合わない）。
-    if (template.id === "suiron_direction_01") {
-      var DIRS = [["東", "北"], ["北", "西"], ["西", "南"], ["南", "東"],
-                  ["北", "東"], ["東", "南"], ["南", "西"], ["西", "北"]];
-      var TRI = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
-      vars.dir1 = DIRS[vars.pair][0];
-      vars.dir2 = DIRS[vars.pair][1];
-      vars.a = TRI[vars.triple][0] * vars.scale;
-      vars.b = TRI[vars.triple][1] * vars.scale;
-    }
-
     // 損益算: 原価逆算問題 listPriceはmarkupRateに合わせて設定
     if (template.id === "soneki_loss_01") {
       var baseCost = randomInt(500, 3000, 100);

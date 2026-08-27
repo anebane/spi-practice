@@ -80,6 +80,42 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   if (!fs.existsSync(path.join(ROOT, rel))) fail("sitemap.xml", "存在しないURLを登録", m[1]);
 }
 
+// 7. 出題分野のチェックボックスが、実在するカテゴリと一致しているか
+//
+// 分野の追加・付け替えのときに揃える箇所が複数ある（テンプレート定義と
+// index.html のチェックボックス）。片方だけ直すと、選んでも1問も出ない
+// 分野ができたり、分野別成績の名前だけ古いまま残ったりする。
+// どちらも例外にならず、画面上も一見それらしく見えるので気づけない。
+//
+// チェックボックスは「出題される分野の一部」でよい（四則逆算と語句の関係は
+// 別ページ扱いで意図的に載せていない）ので、検査は一方向にする＝
+// 載っているものが実在し、名前が一致していること。
+{
+  const vm = require("vm");
+  const ctx = vm.createContext({ console, Math, Date, JSON, parseInt, parseFloat, isNaN, isFinite });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, "questions.js"), "utf8"), ctx, { filename: "questions.js" });
+  const templates = vm.runInContext("QUESTION_TEMPLATES", ctx);
+
+  const nameById = new Map();
+  for (const t of templates) nameById.set(String(t.categoryId), t.category);
+
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const block = html.match(/<div class="category-grid" id="category-select">([\s\S]*?)<\/div>/);
+  if (!block) {
+    fail("index.html", "出題分野の選択欄が見つからない", "category-select");
+  } else {
+    const boxes = [...block[1].matchAll(/<input type="checkbox" value="(\d+)"[^>]*><span>([^<]+)<\/span>/g)];
+    if (!boxes.length) fail("index.html", "出題分野のチェックボックスが0件", "");
+    for (const [, id, label] of boxes) {
+      if (!nameById.has(id)) {
+        fail("index.html", "存在しない分野が選択欄にある", `value=${id} (${label}) … その categoryId の問題が1問も無い`);
+      } else if (nameById.get(id) !== label) {
+        fail("index.html", "分野名がテンプレートと不一致", `value=${id}: 画面「${label}」 ≠ 問題側「${nameById.get(id)}」`);
+      }
+    }
+  }
+}
+
 console.log(`HTML ${pages.length}ページを検査`);
 if (!failures.length) {
   console.log("✅ 問題なし");
