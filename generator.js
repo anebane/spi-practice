@@ -75,12 +75,6 @@ var QuestionGenerator = (function() {
       vars.b = TRI[vars.triple][1] * vars.scale;
     }
 
-    // 並べ替え確率: 文字リストをnに合わせて作る
-    if (template.id === "kakuritsu_arrange_01") {
-      var alpha = ["A", "B", "C", "D", "E", "F", "G"];
-      vars.letters = alpha.slice(0, vars.n).join(", ");
-    }
-
     // 損益算: 原価逆算問題 listPriceはmarkupRateに合わせて設定
     if (template.id === "soneki_loss_01") {
       var baseCost = randomInt(500, 3000, 100);
@@ -272,12 +266,18 @@ var QuestionGenerator = (function() {
 
       var answer = template.answerFormula(vars);
 
+      // 単位は問題ごとに変わることがある（例: 単位変換は答えが m/秒 だったり
+      // km/時 だったりする）。関数で返せるようにしておく。
+      var unitStr = typeof template.unit === "function"
+        ? template.unit(vars)
+        : (template.unit || "");
+
       // 答えの妥当性チェック
       if (template.answerType === "number") {
         if (!isFinite(answer) || isNaN(answer)) continue;
         // 答えが合理的な範囲かチェック
         var rounded = Math.round(answer * 10) / 10;
-        if (Math.abs(answer - rounded) > 0.001 && template.unit !== "%") {
+        if (Math.abs(answer - rounded) > 0.001 && unitStr !== "%") {
           // 小数点以下が長すぎる → 不適切
           // ただし%は小数1桁OK
           continue;
@@ -307,7 +307,7 @@ var QuestionGenerator = (function() {
         answerType: template.answerType,
         correctAnswer: answer,
         choices: null,
-        unit: template.unit || "",
+        unit: unitStr,
         explanation: explanation,
         timeLimitSec: template.timeLimitSec
       };
@@ -456,33 +456,14 @@ var QuestionGenerator = (function() {
       d.num = vars.red * (vars.red - 1) / 2;
     }
 
-    // 確率: サイコロ
-    if (template.id === "kakuritsu_dice_01") {
-      var combos = [];
-      var count = 0;
-      for (var i = 1; i <= 6; i++) {
-        for (var j = 1; j <= 6; j++) {
-          if (i + j === vars.target) {
-            combos.push("(" + i + ", " + j + ")");
-            count++;
-          }
-        }
-      }
-      d.combinations = combos.join(", ");
-      d.count = count;
-    }
+    // 確率: サイコロ・カードの派生変数はテンプレート側の resolve が作る。
+    // 問われ方（合計/差、奇数/偶数/3の倍数）を可変にしたので、
+    // 「合計」「奇数」を前提にした式がここに残っていると解説だけ誤る。
 
     // 確率: コイン
     if (template.id === "kakuritsu_coin_01") {
       d.den = Math.pow(2, vars.n);
       d.num = combination(vars.n, vars.k);
-    }
-
-    // 確率: カード
-    if (template.id === "kakuritsu_card_01") {
-      d.oddCount = Math.ceil(vars.n / 2);
-      d.den = vars.n * (vars.n - 1) / 2;
-      d.num = d.oddCount * (d.oddCount - 1) / 2;
     }
 
     // 確率: くじ
@@ -724,13 +705,8 @@ var QuestionGenerator = (function() {
       d.headPerm = factorial(vars.n - 1);
     }
 
-    if (template.id === "kakuritsu_arrange_01") {
-      d.allPerm = factorial(vars.n);
-      d.rest = vars.n - 2;
-      d.blocks = vars.n - 1;
-      d.blockPerm = factorial(vars.n - 1);
-      d.adjacent = factorial(vars.n - 1) * 2;
-    }
+    // kakuritsu_arrange_01 の派生変数もテンプレート側の resolve が作る
+    // （隣り合う個数 k を可変にしたため）。
 
     return d;
   }

@@ -1719,6 +1719,110 @@ var SEQ_ASKS = [
 
 // カテゴリ2: 場合の数・確率
 // ============================================================
+// この分野は答えが約分された分数なので、数値を振っても同じ分数に落ちやすく、
+// 見た目の種類が増えにくい。変数の幅を広げるだけでは足りないので、
+// ①場面（容器と中身）を差し替える ②問われ方（合計/差、奇数/偶数/3の倍数、
+// 隣り合う人数）を増やす、の2つで種類を作っている。
+//
+// 分母は 200 以下でないとエンジンが問題を捨てる（generateTemplateQuestion）。
+// 上限を広げるときは C(総数, 2) が 200 を超えないかを必ず確かめること。
+// ============================================================
+
+// 2色の玉を取り出す場面。色名は「赤玉」「赤いボール」のように
+// 語形が変わるので、機械的に連結せず完成した名詞で持つ。
+var BALL2_SCENES = [
+  { box: "袋",   thing: "玉",       a: "赤玉",         b: "白玉" },
+  { box: "箱",   thing: "ボール",   a: "赤いボール",   b: "青いボール" },
+  { box: "かご", thing: "ボール",   a: "黄色いボール", b: "緑のボール" },
+  { box: "缶",   thing: "ビー玉",   a: "青いビー玉",   b: "白いビー玉" }
+];
+
+// 3色の玉
+var BALL3_SCENES = [
+  { box: "袋",   thing: "玉",     a: "赤玉",       b: "白玉",       c: "青玉" },
+  { box: "箱",   thing: "ボール", a: "赤いボール", b: "白いボール", c: "青いボール" },
+  { box: "かご", thing: "ビー玉", a: "緑のビー玉", b: "黄色いビー玉", c: "紫のビー玉" }
+];
+
+// サイコロの振り方（問われ方は DICE_CASES 側で持つ）
+var DICE_SCENES = [
+  "2個のサイコロを同時に投げるとき、",
+  "大小2つのサイコロを同時に投げるとき、",
+  "1個のサイコロを2回続けて投げるとき、"
+];
+
+// サイコロで問える条件。全36通りを数え上げて作る。
+// 「合計がちょうど」だけだと5種類しか作れなかったので、以上・以下・差を足した。
+var DICE_CASES = (function () {
+  var out = [];
+  var add = function (kind, target, phrase) {
+    var pairs = [];
+    for (var i = 1; i <= 6; i++) {
+      for (var j = 1; j <= 6; j++) {
+        var hit = kind === 0 ? (i + j === target)
+                : kind === 1 ? (i + j >= target)
+                : kind === 2 ? (i + j <= target)
+                :              (Math.abs(i - j) === target);
+        if (hit) pairs.push("(" + i + ", " + j + ")");
+      }
+    }
+    // 全部当たり・全部はずれの条件は問題にならない
+    if (pairs.length === 0 || pairs.length === 36) return;
+    out.push({ kind: kind, target: target, phrase: phrase, pairs: pairs });
+  };
+  for (var t = 3; t <= 11; t++) add(0, t, "出た目の合計が" + t + "になる");
+  for (var u = 8; u <= 11; u++) add(1, u, "出た目の合計が" + u + "以上になる");
+  for (var w = 4; w <= 6; w++)  add(2, w, "出た目の合計が" + w + "以下になる");
+  for (var d = 0; d <= 5; d++)  add(3, d, "出た目の差が" + d + "になる");
+  return out;
+})();
+
+// コイン投げの場面
+var COIN_SCENES = [
+  { text: function (n, k) { return "コインを" + n + "回投げるとき、表がちょうど" + k + "回出る確率を求めよ。"; } },
+  { text: function (n, k) { return "1枚の硬貨を" + n + "回続けて投げるとき、表がちょうど" + k + "回出る確率を求めよ。"; } },
+  { text: function (n, k) { return "コインを" + n + "回投げるとき、裏がちょうど" + k + "回出る確率を求めよ。"; } }
+];
+
+// カードから2枚引く場面。cond は「どんなカードか」の呼び名と判定。
+var CARD_CONDS = [
+  { name: "奇数",     test: function (x) { return x % 2 === 1; },  how: "1, 3, 5, ... と数える" },
+  { name: "偶数",     test: function (x) { return x % 2 === 0; },  how: "2, 4, 6, ... と数える" },
+  { name: "3の倍数",  test: function (x) { return x % 3 === 0; },  how: "3, 6, 9, ... と数える" }
+];
+var CARD_SCENES = [
+  function (n, cond) {
+    return "1から" + n + "までの数字が書かれたカードが1枚ずつある。この中から同時に2枚引くとき、2枚とも"
+      + cond + "である確率を求めよ。";
+  },
+  function (n, cond) {
+    return "1から" + n + "までの番号がついた札が1枚ずつ箱に入っている。同時に2枚取り出すとき、2枚とも"
+      + cond + "である確率を求めよ。";
+  }
+];
+
+// くじ引きの場面
+var LOTTERY_SCENES = [
+  function (t, w) { return t + "本のくじの中に当たりが" + w + "本入っている。このくじを2本引くとき、少なくとも1本当たる確率を求めよ。"; },
+  function (t, w) { return t + "枚の抽選券のうち" + w + "枚が当選券である。2枚を同時に引くとき、少なくとも1枚が当選券である確率を求めよ。"; },
+  function (t, w) { return "福引の箱に" + t + "個の玉があり、そのうち" + w + "個が当たり玉である。2個を同時に取り出すとき、少なくとも1個が当たり玉である確率を求めよ。"; }
+];
+
+// 「特定のいくつかが隣り合う」確率の場面
+var ARRANGE_SCENES = [
+  { items: "文字", pick: "特定の{k}文字", text: function (n, k, list) { return list + " の" + n + "文字を無作為に一列に並べるとき、特定の" + k + "文字が隣り合う確率を求めよ。"; } },
+  { items: "人",   pick: "特定の{k}人",   text: function (n, k, list) { return n + "人が無作為に一列に並ぶとき、特定の" + k + "人が隣り合う確率を求めよ。"; } },
+  { items: "本",   pick: "特定の{k}冊",   text: function (n, k, list) { return n + "冊の本を無作為に本棚に並べるとき、特定の" + k + "冊が隣り合う確率を求めよ。"; } },
+  { items: "箱",   pick: "特定の{k}個",   text: function (n, k, list) { return n + "個の箱を無作為に一列に置くとき、特定の" + k + "個が隣り合う確率を求めよ。"; } }
+];
+
+// 条件付き確率（戻さずに2回取り出す）の場面
+var COND_SCENES_P = [
+  { box: "袋", a: "赤玉",       b: "白玉",       thing: "玉" },
+  { box: "箱", a: "赤いボール", b: "青いボール", thing: "ボール" },
+  { box: "かご", a: "白い碁石", b: "黒い碁石",   thing: "碁石" }
+];
+
 (function() {
   // 玉の取り出し
   QUESTION_TEMPLATES.push({
@@ -1727,12 +1831,20 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 1,
-    templateText: "袋の中に赤玉が{{red}}個、白玉が{{white}}個入っている。この袋から同時に2個の玉を取り出すとき、2個とも赤玉である確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      red: { type: "int", min: 3, max: 7, step: 1 },
-      white: { type: "int", min: 2, max: 5, step: 1 }
+      red:   { type: "int", min: 3, max: 8, step: 1 },
+      white: { type: "int", min: 2, max: 7, step: 1 },
+      scene: { type: "int", min: 0, max: 3, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      var sc = BALL2_SCENES[v.scene % BALL2_SCENES.length];
+      v.box = sc.box; v.thing = sc.thing; v.itemA = sc.a; v.itemB = sc.b;
+      v.q = sc.box + "の中に" + sc.a + "が" + v.red + "個、" + sc.b + "が" + v.white
+        + "個入っている。この" + sc.box + "から同時に2個の" + sc.thing + "を取り出すとき、2個とも"
+        + sc.a + "である確率を求めよ。";
+    },
     answerFormula: function(v) {
       var total = v.red + v.white;
       var num = v.red * (v.red - 1) / 2;
@@ -1741,7 +1853,7 @@ var SEQ_ASKS = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「同時に取り出す」問題は組み合わせ(C)を使います。\n確率 = 該当する場合の数 / 全体の場合の数\n\n【解法】\n全体の玉の数: {{red}} + {{white}} = {{total}}個\n\n① 全体から2個選ぶ場合の数（分母）:\n  C({{total}}, 2) = {{total}} × {{totalM1}} / 2 = {{den}}通り\n\n② 赤玉2個を選ぶ場合の数（分子）:\n  C({{red}}, 2) = {{red}} × {{redM1}} / 2 = {{num}}通り\n\n③ 確率 = ②÷① = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・C(n, r) = n! / (r! × (n-r)!) は「n個からr個選ぶ組み合わせ」\n・「同時に取り出す」= 順序を考えない = 組み合わせ",
+    explanationTemplate: "【考え方】\n「同時に取り出す」問題は組み合わせ(C)を使います。\n確率 = 該当する場合の数 / 全体の場合の数\n\n【解法】\n全体の{{thing}}の数: {{red}} + {{white}} = {{total}}個\n\n① 全体から2個選ぶ場合の数（分母）:\n  C({{total}}, 2) = {{total}} × {{totalM1}} / 2 = {{den}}通り\n\n② {{itemA}}2個を選ぶ場合の数（分子）:\n  C({{red}}, 2) = {{red}} × {{redM1}} / 2 = {{num}}通り\n\n③ 確率 = ②÷① = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・C(n, r) = n! / (r! × (n-r)!) は「n個からr個選ぶ組み合わせ」\n・「同時に取り出す」= 順序を考えない = 組み合わせ",
     timeLimitSec: 120
   });
 
@@ -1752,23 +1864,29 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 1,
-    templateText: "2個のサイコロを同時に投げるとき、出た目の合計が{{target}}になる確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      target: { type: "choice", options: [5, 6, 7, 8, 9] }
+      idx:   { type: "int", min: 0, max: 40, step: 1 },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      var c = DICE_CASES[v.idx % DICE_CASES.length];
+      v._count = c.pairs.length;
+      v.count = c.pairs.length;
+      v.phrase = c.phrase;
+      v.q = DICE_SCENES[v.scene % DICE_SCENES.length] + c.phrase + "確率を求めよ。";
+      // 該当する組が多いときに全部並べると解説が読めなくなる
+      v.combinations = c.pairs.length <= 8
+        ? c.pairs.join(", ")
+        : c.pairs.slice(0, 8).join(", ") + " …（全" + c.pairs.length + "通り）";
+    },
     answerFormula: function(v) {
-      var count = 0;
-      for (var i = 1; i <= 6; i++) {
-        for (var j = 1; j <= 6; j++) {
-          if (i + j === v.target) count++;
-        }
-      }
-      var g = gcd(count, 36);
-      return { numerator: count / g, denominator: 36 / g };
+      var g = gcd(v._count, 36);
+      return { numerator: v._count / g, denominator: 36 / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nサイコロ2個の問題は「全パターンを数えて条件に合うものを探す」が基本。\n全パターンは 6×6 = 36通り（順序を区別する）。\n\n【解法】\n① 全パターン: 6 × 6 = 36通り\n\n② 合計が{{target}}になる組み合わせを列挙:\n{{combinations}}\n→ 該当: {{count}}通り\n\n③ 確率 = {{count}} / 36 = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・2つのサイコロは区別して考える（(1,2)と(2,1)は別パターン）\n・合計7が最も出やすい（6通り）、合計2と12が最も出にくい（各1通り）",
+    explanationTemplate: "【考え方】\nサイコロ2個の問題は「全パターンを数えて条件に合うものを探す」が基本。\n全パターンは 6×6 = 36通り（順序を区別する）。\n\n【解法】\n① 全パターン: 6 × 6 = 36通り\n\n② {{phrase}}組み合わせを列挙:\n{{combinations}}\n→ 該当: {{count}}通り\n\n③ 確率 = {{count}} / 36 = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・2つのサイコロは区別して考える（(1,2)と(2,1)は別パターン）\n・合計7が最も出やすい（6通り）、合計2と12が最も出にくい（各1通り）\n・「以上」「以下」は境界を含む。数え落としに注意",
     timeLimitSec: 90
   });
 
@@ -1779,12 +1897,22 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 2,
-    templateText: "コインを{{n}}回投げるとき、表がちょうど{{k}}回出る確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "choice", options: [3, 4, 5] },
-      k: { type: "custom" }  // nに依存して設定
+      n:     { type: "int", min: 3, max: 8, step: 1 },
+      kSeed: { type: "int", min: 0, max: 6, step: 1 },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      // k は n に依存する（1 〜 n-1）。generator.js 側の custom 分岐ではなく
+      // ここで決める。resolve があると custom 分岐は呼ばれない。
+      v.k = 1 + (v.kSeed % (v.n - 1));
+      var sc = COIN_SCENES[v.scene % COIN_SCENES.length];
+      v.q = sc.text(v.n, v.k);
+      // 「裏がちょうどk回」も C(n,k)/2^n で同じ形になる
+      v.face = v.scene % COIN_SCENES.length === 2 ? "裏" : "表";
+    },
     answerFormula: function(v) {
       var num = combination(v.n, v.k);
       var den = Math.pow(2, v.n);
@@ -1792,7 +1920,7 @@ var SEQ_ASKS = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nコインの問題は「反復試行の確率」。\n全パターン = 2^(回数)、該当パターン = C(回数, 表の回数)。\n\n【解法】\n① 全パターン: 2^{{n}} = {{den}}通り\n  （各回で表or裏の2通り × {{n}}回）\n\n② {{n}}回中{{k}}回だけ表が出る場合の数:\n  「{{n}}回のうちどの{{k}}回が表か」を選ぶ → C({{n}}, {{k}}) = {{num}}通り\n\n③ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・反復試行: 各回が独立で同じ確率の試行を繰り返す場合\n・C(n,k) × p^k × (1-p)^(n-k) の公式（コインはp=1/2なので分母が2^n）",
+    explanationTemplate: "【考え方】\nコインの問題は「反復試行の確率」。\n全パターン = 2^(回数)、該当パターン = C(回数, {{face}}の回数)。\n\n【解法】\n① 全パターン: 2^{{n}} = {{den}}通り\n  （各回で表or裏の2通り × {{n}}回）\n\n② {{n}}回中{{k}}回だけ{{face}}が出る場合の数:\n  「{{n}}回のうちどの{{k}}回が{{face}}か」を選ぶ → C({{n}}, {{k}}) = {{num}}通り\n\n③ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・反復試行: 各回が独立で同じ確率の試行を繰り返す場合\n・C(n,k) × p^k × (1-p)^(n-k) の公式（コインはp=1/2なので分母が2^n）\n・表と裏は対称なので、どちらを数えても同じ形になる",
     timeLimitSec: 120
   });
 
@@ -1803,20 +1931,37 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 2,
-    templateText: "1から{{n}}までの数字が書かれたカードが1枚ずつある。この中から同時に2枚引くとき、2枚とも奇数である確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "choice", options: [6, 7, 8, 9, 10] }
+      n:     { type: "int", min: 5, max: 16, step: 1 },
+      cond:  { type: "int", min: 0, max: 2, step: 1 },
+      scene: { type: "int", min: 0, max: 1, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      var cd = CARD_CONDS[v.cond % CARD_CONDS.length];
+      var hit = 0;
+      for (var i = 1; i <= v.n; i++) if (cd.test(i)) hit++;
+      v._hit = hit;
+      v.condName = cd.name;
+      v.how = cd.how;
+      v.hitCount = hit;
+      v.den = v.n * (v.n - 1) / 2;
+      v.num = hit * (hit - 1) / 2;
+      v.q = CARD_SCENES[v.scene % CARD_SCENES.length](v.n, cd.name);
+    },
+    validate: function(v) {
+      // 該当が2枚未満だと確率0、全部該当だと確率1で問題にならない
+      return v._hit >= 2 && v._hit <= v.n - 1;
+    },
     answerFormula: function(v) {
-      var oddCount = Math.ceil(v.n / 2);
-      var num = oddCount * (oddCount - 1) / 2;
+      var num = v._hit * (v._hit - 1) / 2;
       var den = v.n * (v.n - 1) / 2;
       var g = gcd(num, den);
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nまず条件に合うもの（奇数）の個数を数え、そこから2枚選ぶ組み合わせを求めます。\n\n【解法】\n① 1から{{n}}までの奇数の個数: {{oddCount}}個\n  （1, 3, 5, ...を数える）\n\n② 全体から2枚選ぶ場合の数（分母）:\n  C({{n}}, 2) = {{den}}通り\n\n③ 奇数から2枚選ぶ場合の数（分子）:\n  C({{oddCount}}, 2) = {{num}}通り\n\n④ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・「2枚とも○○」の確率 = C(○○の個数, 2) / C(全体, 2)\n・1〜nの奇数の個数は n÷2を切り上げた値",
+    explanationTemplate: "【考え方】\nまず条件に合うもの（{{condName}}）の個数を数え、そこから2枚選ぶ組み合わせを求めます。\n\n【解法】\n① 1から{{n}}までの{{condName}}の個数: {{hitCount}}個\n  （{{how}}）\n\n② 全体から2枚選ぶ場合の数（分母）:\n  C({{n}}, 2) = {{den}}通り\n\n③ {{condName}}から2枚選ぶ場合の数（分子）:\n  C({{hitCount}}, 2) = {{num}}通り\n\n④ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・「2枚とも○○」の確率 = C(○○の個数, 2) / C(全体, 2)\n・まず該当する個数を正確に数えるのが最優先",
     timeLimitSec: 120
   });
 
@@ -1827,12 +1972,20 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 2,
-    templateText: "{{total}}本のくじの中に当たりが{{win}}本入っている。このくじを2本引くとき、少なくとも1本当たる確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      total: { type: "choice", options: [8, 10, 12] },
-      win: { type: "choice", options: [2, 3] }
+      total: { type: "int", min: 6, max: 20, step: 1 },
+      win:   { type: "int", min: 2, max: 5, step: 1 },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      v.q = LOTTERY_SCENES[v.scene % LOTTERY_SCENES.length](v.total, v.win);
+    },
+    validate: function(v) {
+      // はずれが2本以上ないと「全部はずれ」が作れず、余事象で解く意味がなくなる
+      return v.total - v.win >= 2;
+    },
     answerFormula: function(v) {
       var lose = v.total - v.win;
       var allPairs = v.total * (v.total - 1) / 2;
@@ -1853,13 +2006,20 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 2,
-    templateText: "袋の中に赤玉{{red}}個、白玉{{white}}個、青玉{{blue}}個が入っている。この中から2個を同時に取り出すとき、異なる色の玉が出る確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      red: { type: "int", min: 2, max: 5, step: 1 },
-      white: { type: "int", min: 2, max: 5, step: 1 },
-      blue: { type: "int", min: 2, max: 4, step: 1 }
+      red:   { type: "int", min: 2, max: 6, step: 1 },
+      white: { type: "int", min: 2, max: 6, step: 1 },
+      blue:  { type: "int", min: 2, max: 5, step: 1 },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      var sc = BALL3_SCENES[v.scene % BALL3_SCENES.length];
+      v.thing = sc.thing; v.itemA = sc.a; v.itemB = sc.b; v.itemC = sc.c;
+      v.q = sc.box + "の中に" + sc.a + v.red + "個、" + sc.b + v.white + "個、" + sc.c + v.blue
+        + "個が入っている。この中から2個を同時に取り出すとき、異なる色の" + sc.thing + "が出る確率を求めよ。";
+    },
     answerFormula: function(v) {
       var total = v.red + v.white + v.blue;
       var allPairs = total * (total - 1) / 2;
@@ -1869,7 +2029,7 @@ var SEQ_ASKS = [
       return { numerator: diffPairs / g, denominator: allPairs / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「異なる色」を直接数えると場合分けが多い（赤白、赤青、白青…）ので、\n余事象「同じ色」を使います。異なる色 = 全体 - 同じ色\n\n【解法】\n① 全体: {{red}}+{{white}}+{{blue}} = {{total}}個\n  全ペア数: C({{total}},2) = {{allPairs}}通り\n\n② 同色ペアを数える:\n  赤赤: C({{red}},2) + 白白: C({{white}},2) + 青青: C({{blue}},2)\n  = {{samePairs}}通り\n\n③ 異なる色のペア:\n  {{allPairs}} - {{samePairs}} = {{diffPairs}}通り\n\n④ 確率 = {{diffPairs}}/{{allPairs}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・3色以上ある場合は余事象（同色）から求める方が楽\n・同色の場合の数 = 各色のC(個数, 2)の合計",
+    explanationTemplate: "【考え方】\n「異なる色」を直接数えると場合分けが多いので、\n余事象「同じ色」を使います。異なる色 = 全体 - 同じ色\n\n【解法】\n① 全体: {{red}}+{{white}}+{{blue}} = {{total}}個\n  全ペア数: C({{total}},2) = {{allPairs}}通り\n\n② 同色ペアを数える:\n  C({{red}},2) + C({{white}},2) + C({{blue}},2)\n  = {{samePairs}}通り\n\n③ 異なる色のペア:\n  {{allPairs}} - {{samePairs}} = {{diffPairs}}通り\n\n④ 確率 = {{diffPairs}}/{{allPairs}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・3色以上ある場合は余事象（同色）から求める方が楽\n・同色の場合の数 = 各色のC(個数, 2)の合計",
     timeLimitSec: 120
   });
 
@@ -1880,18 +2040,38 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 3,
-    templateText: "{{letters}} の{{n}}文字を無作為に一列に並べるとき、AとBが隣り合う確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 4, max: 7, step: 1 }
+      n:     { type: "int", min: 4, max: 10, step: 1 },
+      k:     { type: "int", min: 2, max: 3, step: 1 },
+      scene: { type: "int", min: 0, max: 3, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      var alpha = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+      var list = alpha.slice(0, v.n).join(", ");
+      v.letters = list;
+      var sc = ARRANGE_SCENES[v.scene % ARRANGE_SCENES.length];
+      v.q = sc.text(v.n, v.k, list);
+      // 解説で使う値。k を可変にしたので generator.js 側の固定式では合わない
+      v.allPerm = factorial(v.n);
+      v.blocks = v.n - v.k + 1;
+      v.blockPerm = factorial(v.n - v.k + 1);
+      v.innerPerm = factorial(v.k);
+      v.adjacent = factorial(v.n - v.k + 1) * factorial(v.k);
+    },
+    validate: function(v) {
+      return v.k <= v.n - 1;
+    },
     answerFormula: function(v) {
-      // AとBを1ブロックとみなす: (n-1)! × 2 通り / 全体 n! 通り = 2/n
-      var g = gcd(2, v.n);
-      return { numerator: 2 / g, denominator: v.n / g };
+      // k個をまとめて1ブロック: (n-k+1)! × k! 通り / 全体 n! 通り
+      var num = factorial(v.n - v.k + 1) * factorial(v.k);
+      var den = factorial(v.n);
+      var g = gcd(num, den);
+      return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合う2つをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② AとBが隣り合う場合:\n  ABをひとまとめ（1ブロック）にする\n  → ブロック + 残り{{rest}}文字 = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内のA,Bの順(AB or BA): 2通り\n  → 隣り合う場合: {{blockPerm}} × 2 = {{adjacent}}通り\n\n③ 確率 = {{adjacent}}/{{allPerm}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・n文字のうち特定の2文字が隣り合う確率は、必ず 2/n になる\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽",
+    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合うものをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② 特定の{{k}}つが隣り合う場合:\n  {{k}}つをひとまとめ（1ブロック）にする\n  → ブロック + 残り = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内の並び順: {{k}}! = {{innerPerm}}通り\n  → 隣り合う場合: {{blockPerm}} × {{innerPerm}} = {{adjacent}}通り\n\n③ 確率 = {{adjacent}}/{{allPerm}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽\n・ブロック内の並び順を掛け忘れるのが最も多い間違い",
     timeLimitSec: 120
   });
 
@@ -1902,12 +2082,20 @@ var SEQ_ASKS = [
     category: "場合の数・確率",
     categoryId: 2,
     difficulty: 2,
-    templateText: "袋に赤玉{{red}}個と白玉{{white}}個が入っている。1個取り出して色を確認し、戻さずにもう1個取り出す。1個目が赤玉だったとき、2個目も赤玉である確率を求めよ。",
+    templateText: "{{q}}",
     variables: {
-      red: { type: "int", min: 3, max: 7, step: 1 },
-      white: { type: "int", min: 2, max: 5, step: 1 }
+      red:   { type: "int", min: 3, max: 8, step: 1 },
+      white: { type: "int", min: 2, max: 7, step: 1 },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "fraction",
+    resolve: function(v) {
+      var sc = COND_SCENES_P[v.scene % COND_SCENES_P.length];
+      v.itemA = sc.a; v.itemB = sc.b; v.thing = sc.thing;
+      v.q = sc.box + "に" + sc.a + "が" + v.red + "個と" + sc.b + "が" + v.white
+        + "個入っている。1個取り出して色を確認し、戻さずにもう1個取り出す。1個目が"
+        + sc.a + "だったとき、2個目も" + sc.a + "である確率を求めよ。";
+    },
     answerFormula: function(v) {
       var num = v.red - 1;
       var den = v.red + v.white - 1;
@@ -1915,7 +2103,7 @@ var SEQ_ASKS = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「戻さずに取り出す」= 条件付き確率。1個目の結果で残りの状態が変わります。\n1個目が赤玉と「わかっている」ので、その後の状態で考えます。\n\n【解法】\n① 1個目が赤玉を取り出した後の残り:\n  赤: {{red}}-1 = {{redM1}}個、白: {{white}}個 → 合計{{denTotal}}個\n\n② 2個目が赤玉の確率 = {{redM1}} / {{denTotal}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・条件付き確率: P(B|A) = 「Aが起きた後にBが起きる確率」\n・「戻さない」→ 毎回残りの状態が変わる → 全体の数も1個減る",
+    explanationTemplate: "【考え方】\n「戻さずに取り出す」= 条件付き確率。1個目の結果で残りの状態が変わります。\n1個目が{{itemA}}と「わかっている」ので、その後の状態で考えます。\n\n【解法】\n① 1個目に{{itemA}}を取り出した後の残り:\n  {{itemA}}: {{red}}-1 = {{redM1}}個、{{itemB}}: {{white}}個 → 合計{{denTotal}}個\n\n② 2個目が{{itemA}}である確率 = {{redM1}} / {{denTotal}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・条件付き確率: P(B|A) = 「Aが起きた後にBが起きる確率」\n・「戻さない」→ 毎回残りの状態が変わる → 全体の数も1個減る",
     timeLimitSec: 90
   });
 })();
@@ -2271,6 +2459,96 @@ var SEQ_ASKS = [
 
 // カテゴリ5: 速度算
 // ============================================================
+
+// 速さの単位変換。答えが必ず整数になる値だけを列挙してある。
+// 「小数点以下を四捨五入」と書いて誤魔化すと、四捨五入の有無で答えが
+// 割れる問題が混ざるので、割り切れる値しか出さない方針にした。
+var SPEED_CONVERT_CASES = (function () {
+  var out = [];
+  var a, b;
+  // 時速km → 秒速m（÷3.6）。3.6で割り切れるのは18の倍数
+  for (a = 18; a <= 180; a += 18) {
+    out.push({
+      q: "時速" + a + "kmは秒速何mか。", ans: a / 3.6, unit: "m/秒",
+      calc: "時速" + a + "km\n  = " + a + " × 1000 ÷ 3600 m/秒\n  = " + a + " ÷ 3.6\n  = " + (a / 3.6) + " m/秒",
+      tip: "時速から秒速へは 3.6 で割る"
+    });
+  }
+  // 秒速m → 時速km（×3.6）。整数になるのは5の倍数
+  for (b = 5; b <= 50; b += 5) {
+    out.push({
+      q: "秒速" + b + "mは時速何kmか。", ans: b * 3.6, unit: "km/時",
+      calc: "秒速" + b + "m\n  = " + b + " × 3600 ÷ 1000 km/時\n  = " + b + " × 3.6\n  = " + (b * 3.6) + " km/時",
+      tip: "秒速から時速へは 3.6 を掛ける"
+    });
+  }
+  // 時速km → 分速m（×1000÷60）。整数になるのは3の倍数
+  for (a = 3; a <= 60; a += 3) {
+    out.push({
+      q: "時速" + a + "kmは分速何mか。", ans: a * 1000 / 60, unit: "m/分",
+      calc: "時速" + a + "km\n  = " + a + " × 1000 ÷ 60 m/分\n  = " + (a * 1000 / 60) + " m/分",
+      tip: "時速から分速へは 1000 を掛けて 60 で割る"
+    });
+  }
+  // 分速m → 時速km（×60÷1000）。整数になるのは50の倍数
+  for (b = 50; b <= 600; b += 50) {
+    out.push({
+      q: "分速" + b + "mは時速何kmか。", ans: b * 60 / 1000, unit: "km/時",
+      calc: "分速" + b + "m\n  = " + b + " × 60 ÷ 1000 km/時\n  = " + (b * 60 / 1000) + " km/時",
+      tip: "分速から時速へは 60 を掛けて 1000 で割る"
+    });
+  }
+  // 秒速m → 分速m（×60）
+  for (b = 4; b <= 30; b += 2) {
+    out.push({
+      q: "秒速" + b + "mは分速何mか。", ans: b * 60, unit: "m/分",
+      calc: "秒速" + b + "m\n  = " + b + " × 60 m/分\n  = " + (b * 60) + " m/分",
+      tip: "秒速から分速へは 60 を掛ける（距離の単位は変わらない）"
+    });
+  }
+  return out;
+})();
+
+// 追いかけっこの場面。a が先に出るほう、b が追いかけるほう。
+// 解説でも同じ呼び名を使うので、名前を場面と一緒に持たせる。
+var CHASE_SCENES = [
+  {
+    a: "A", b: "B",
+    text: function (h, sa, sb) {
+      return "Aが出発してから" + h + "分後にBが同じ方向に出発した。Aの速さは分速" + sa
+        + "m、Bの速さは分速" + sb + "mである。BがAに追いつくのはBが出発してから何分後か。";
+    }
+  },
+  {
+    a: "兄", b: "弟",
+    text: function (h, sa, sb) {
+      return "兄が家を出てから" + h + "分後に、弟が同じ道を追いかけた。兄の速さは分速" + sa
+        + "m、弟の速さは分速" + sb + "mである。弟が兄に追いつくのは弟が出発してから何分後か。";
+    }
+  },
+  {
+    a: "先頭のランナー", b: "後続のランナー",
+    text: function (h, sa, sb) {
+      return "先頭のランナーが通過してから" + h + "分後に、後続のランナーが同じ地点を通過した。先頭は分速" + sa
+        + "m、後続は分速" + sb + "mで走り続ける。後続が先頭に追いつくのは通過から何分後か。";
+    }
+  },
+  {
+    a: "貨物列車", b: "回送列車",
+    text: function (h, sa, sb) {
+      return "貨物列車が駅を出発してから" + h + "分後に、同じ方向へ回送列車が出発した。貨物列車は分速" + sa
+        + "m、回送列車は分速" + sb + "mで進む。回送列車が追いつくのは出発から何分後か。";
+    }
+  }
+];
+
+// すれ違い・追い越しの場面
+var TRAIN_SCENES = [
+  { a: "電車A", b: "電車B" },
+  { a: "列車P", b: "列車Q" },
+  { a: "特急列車", b: "普通列車" }
+];
+
 (function() {
   QUESTION_TEMPLATES.push({
     id: "sokudo_basic_01",
@@ -2325,19 +2603,25 @@ var SEQ_ASKS = [
     category: "速度算",
     categoryId: 5,
     difficulty: 2,
-    templateText: "Aが出発してから{{headStart}}分後にBが同じ方向に出発した。Aの速さは分速{{speedA}}m、Bの速さは分速{{speedB}}mである。BがAに追いつくのはBが出発してから何分後か。",
+    templateText: "{{q}}",
     variables: {
-      headStart: { type: "choice", options: [5, 10, 15, 20] },
-      speedA: { type: "choice", options: [60, 70, 80, 100] },
-      speedB: { type: "choice", options: [100, 120, 150, 200] }
+      headStart: { type: "choice", options: [3, 4, 5, 6, 8, 10, 12, 15, 20] },
+      speedA: { type: "choice", options: [50, 60, 70, 75, 80, 90, 100] },
+      speedB: { type: "choice", options: [90, 100, 110, 120, 125, 140, 150, 160, 180, 200] },
+      scene: { type: "int", min: 0, max: 3, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var sc = CHASE_SCENES[v.scene % CHASE_SCENES.length];
+      v.nameA = sc.a; v.nameB = sc.b;
+      v.q = sc.text(v.headStart, v.speedA, v.speedB);
+    },
     answerFormula: function(v) {
       var gap = v.speedA * v.headStart;
       return gap / (v.speedB - v.speedA);
     },
     unit: "分後",
-    explanationTemplate: "【考え方】\n追いかけ問題は「先行者との距離差」を「速度の差」で割ります。\n同じ方向に進むので、速い方が速度差の分だけ毎分距離を詰めます。\n\n【解法】\n① Bが出発する時点でのAとBの距離（先行距離）:\n  {{speedA}} × {{headStart}} = {{gap}}m\n\n② 速度の差（毎分縮まる距離）:\n  {{speedB}} - {{speedA}} = {{diff}}m/分\n\n③ 追いつくまでの時間:\n  {{gap}} / {{diff}} = {{answer}}分後\n\n【ポイント】\n・追いかけ → 速さの差で距離を詰める\n・まず「差の距離」を求めてから「差の速度」で割る",
+    explanationTemplate: "【考え方】\n追いかけ問題は「先行者との距離差」を「速度の差」で割ります。\n同じ方向に進むので、速い方が速度差の分だけ毎分距離を詰めます。\n\n【解法】\n① {{nameB}}が動き出す時点で開いている距離（先行距離）:\n  {{speedA}} × {{headStart}} = {{gap}}m\n\n② 速度の差（毎分縮まる距離）:\n  {{speedB}} - {{speedA}} = {{diff}}m/分\n\n③ 追いつくまでの時間:\n  {{gap}} / {{diff}} = {{answer}}分後\n\n【ポイント】\n・追いかけ → 速さの差で距離を詰める\n・まず「差の距離」を求めてから「差の速度」で割る\n・先行距離は「先に出たほうの速さ × 先に出た時間」",
     timeLimitSec: 90,
     validate: function(v) {
       return v.speedB > v.speedA && (v.speedA * v.headStart) % (v.speedB - v.speedA) === 0;
@@ -2380,16 +2664,27 @@ var SEQ_ASKS = [
     category: "速度算",
     categoryId: 5,
     difficulty: 1,
-    templateText: "時速{{speedKmh}}kmは秒速何mか。（小数点以下を四捨五入）",
+    // 変換の向きを4通りに増やした。時速→秒速だけだと6種類しか作れず、
+    // 実際の試験では逆向き（秒速→時速）や分速がらみも同じ頻度で出る。
+    templateText: "{{q}}",
     variables: {
-      speedKmh: { type: "choice", options: [36, 54, 72, 90, 108, 144] }
+      idx: { type: "int", min: 0, max: 120, step: 1 }
     },
     answerType: "number",
-    answerFormula: function(v) {
-      return Math.round(v.speedKmh * 1000 / 3600);
+    resolve: function(v) {
+      var c = SPEED_CONVERT_CASES[v.idx % SPEED_CONVERT_CASES.length];
+      v._case = c;
+      v.q = c.q;
+      v.calc = c.calc;
+      v.tip = c.tip;
     },
-    unit: "m/秒",
-    explanationTemplate: "【考え方】\n単位変換は「距離の単位」と「時間の単位」をそれぞれ変換します。\nkm→m（×1000）、時→秒（÷3600）を同時に行います。\n\n【解法】\n① 時速 → 秒速の変換:\n  時速{{speedKmh}}km = {{speedKmh}} × 1000 / 3600 m/秒\n  = {{speedKmh}} / 3.6\n  = {{answer}} m/秒\n\n【ポイント】\n・時速(km/h) → 秒速(m/s): ÷3.6\n・秒速(m/s) → 時速(km/h): ×3.6\n・3.6 = 3600÷1000（秒÷メートル換算）\n・よく出る値: 時速36km=秒速10m、時速72km=秒速20m",
+    answerFormula: function(v) {
+      return v._case.ans;
+    },
+    unit: function(v) {
+      return v._case.unit;
+    },
+    explanationTemplate: "【考え方】\n単位変換は「距離の単位」と「時間の単位」をそれぞれ変換します。\nどちらを何倍・何分の1にするかを分けて考えると間違えません。\n\n【解法】\n{{calc}}\n\n【ポイント】\n・{{tip}}\n・時速(km/h) → 秒速(m/s): ÷3.6、その逆は ×3.6\n・3.6 = 3600 ÷ 1000（時→秒 と km→m をまとめた値）\n・よく出る値: 時速36km=秒速10m、時速72km=秒速20m",
     timeLimitSec: 60
   });
 
@@ -2400,21 +2695,29 @@ var SEQ_ASKS = [
     category: "速度算",
     categoryId: 5,
     difficulty: 3,
-    templateText: "長さ{{lenA}}mの電車Aが時速{{speedA}}kmで走っている。長さ{{lenB}}mの電車Bが反対方向から時速{{speedB}}kmで走ってきた。2つの電車がすれ違い始めてからすれ違い終わるまで何秒かかるか。",
+    templateText: "{{q}}",
     variables: {
-      lenA: { type: "int", min: 100, max: 250, step: 50 },
-      lenB: { type: "int", min: 100, max: 250, step: 50 },
-      speedA: { type: "choice", options: [54, 72, 90] },
-      speedB: { type: "choice", options: [54, 72, 90] }
+      lenA: { type: "int", min: 80, max: 300, step: 20 },
+      lenB: { type: "int", min: 80, max: 300, step: 20 },
+      speedA: { type: "choice", options: [36, 54, 72, 90, 108, 126] },
+      speedB: { type: "choice", options: [36, 54, 72, 90, 108, 126] },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var sc = TRAIN_SCENES[v.scene % TRAIN_SCENES.length];
+      v.nameA = sc.a; v.nameB = sc.b;
+      v.q = "長さ" + v.lenA + "mの" + sc.a + "が時速" + v.speedA + "kmで走っている。長さ"
+        + v.lenB + "mの" + sc.b + "が反対方向から時速" + v.speedB
+        + "kmで走ってきた。2つがすれ違い始めてからすれ違い終わるまで何秒かかるか。";
+    },
     answerFormula: function(v) {
       var totalLen = v.lenA + v.lenB;
       var totalSpeed = (v.speedA + v.speedB) * 1000 / 3600; // m/秒
       return Math.round(totalLen / totalSpeed);
     },
     unit: "秒",
-    explanationTemplate: "【考え方】\n電車のすれ違い問題は「進む距離」と「相対速度」がポイント。\n反対方向 → 速度の和、同じ方向 → 速度の差。\nすれ違う距離 = 2つの電車の長さの合計です。\n\n【解法】\n① すれ違う距離（先頭が出会ってから最後尾が離れるまで）:\n  電車A + 電車B = {{lenA}} + {{lenB}} = {{totalLen}}m\n\n② 相対速度（反対方向なので速さの和）:\n  {{speedA}} + {{speedB}} = {{totalSpeedKmh}}km/h\n  秒速に変換: {{totalSpeedKmh}} / 3.6 = {{totalSpeedMs}}m/秒\n\n③ すれ違い時間 = 距離 / 速度:\n  {{totalLen}} / {{totalSpeedMs}} = {{answer}}秒\n\n【ポイント】\n・すれ違い → 進む距離 = 両方の長さの合計、速度 = 和\n・追い越し → 進む距離 = 両方の長さの合計、速度 = 差\n・単位変換（km/h → m/s）を忘れずに",
+    explanationTemplate: "【考え方】\n電車のすれ違い問題は「進む距離」と「相対速度」がポイント。\n反対方向 → 速度の和、同じ方向 → 速度の差。\nすれ違う距離 = 2つの電車の長さの合計です。\n\n【解法】\n① すれ違う距離（先頭が出会ってから最後尾が離れるまで）:\n  {{nameA}} + {{nameB}} = {{lenA}} + {{lenB}} = {{totalLen}}m\n\n② 相対速度（反対方向なので速さの和）:\n  {{speedA}} + {{speedB}} = {{totalSpeedKmh}}km/h\n  秒速に変換: {{totalSpeedKmh}} / 3.6 = {{totalSpeedMs}}m/秒\n\n③ すれ違い時間 = 距離 / 速度:\n  {{totalLen}} / {{totalSpeedMs}} = {{answer}}秒\n\n【ポイント】\n・すれ違い → 進む距離 = 両方の長さの合計、速度 = 和\n・追い越し → 進む距離 = 両方の長さの合計、速度 = 差\n・単位変換（km/h → m/s）を忘れずに",
     timeLimitSec: 120,
     validate: function(v) {
       var totalLen = v.lenA + v.lenB;
@@ -3102,6 +3405,25 @@ var WORK_JOIN_SCENES = [
 
 // カテゴリ8: 割合・比
 // ============================================================
+
+// 連続増減の向き。増→減 だけでなく 減→増・増→増・減→減 も出す。
+// s は倍率の符号（+1 なら 1+r/100、-1 なら 1-r/100）。
+var CONSEC_DIRECTIONS = [
+  { s1:  1, s2: -1 },
+  { s1: -1, s2:  1 },
+  { s1:  1, s2:  1 },
+  { s1: -1, s2: -1 }
+];
+
+// 何が増減するか。word() は向きに応じた動詞を返す。
+// 「値上がり／値下がり」は価格にしか使えないので、対象ごとに語を分けている。
+var CONSEC_SCENES = [
+  { subject: "ある商品の価格", noun: "価格",   word: function (s) { return s > 0 ? "値上がり" : "値下がり"; } },
+  { subject: "ある町の人口",   noun: "人口",   word: function (s) { return s > 0 ? "増加" : "減少"; } },
+  { subject: "ある店の売上",   noun: "売上",   word: function (s) { return s > 0 ? "増加" : "減少"; } },
+  { subject: "ある会の会員数", noun: "会員数", word: function (s) { return s > 0 ? "増加" : "減少"; } }
+];
+
 (function() {
   QUESTION_TEMPLATES.push({
     id: "wariai_basic_01",
@@ -3200,21 +3522,38 @@ var WORK_JOIN_SCENES = [
     category: "割合・比",
     categoryId: 8,
     difficulty: 3,
-    templateText: "ある商品の価格が最初{{percent1}}%値上がりし、その後{{percent2}}%値下がりした。最終的な価格は元の価格の何%か。",
+    templateText: "{{q}}",
     variables: {
-      percent1: { type: "choice", options: [10, 20, 25, 30, 50] },
-      percent2: { type: "choice", options: [10, 20, 25, 30, 50] }
+      percent1: { type: "choice", options: [5, 10, 15, 20, 25, 30, 40, 50, 60] },
+      percent2: { type: "choice", options: [5, 10, 15, 20, 25, 30, 40, 50, 60] },
+      dir:      { type: "int", min: 0, max: 3, step: 1 },
+      scene:    { type: "int", min: 0, max: 3, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var d = CONSEC_DIRECTIONS[v.dir % CONSEC_DIRECTIONS.length];
+      var sc = CONSEC_SCENES[v.scene % CONSEC_SCENES.length];
+      v._s1 = d.s1; v._s2 = d.s2;
+      v.subject = sc.subject;
+      v.noun = sc.noun;
+      v.word1 = sc.word(d.s1);
+      v.word2 = sc.word(d.s2);
+      v.sign1 = d.s1 > 0 ? "+" : "-";
+      v.sign2 = d.s2 > 0 ? "+" : "-";
+      v.after1 = Math.round((1 + d.s1 * v.percent1 / 100) * 100 * 100) / 100;
+      v.q = sc.subject + "が最初に" + v.percent1 + "%" + sc.word(d.s1) + "し、その後" + v.percent2
+        + "%" + sc.word(d.s2) + "した。最終的な" + sc.noun + "は元の" + sc.noun + "の何%か。";
+    },
     answerFormula: function(v) {
-      return Math.round((1 + v.percent1/100) * (1 - v.percent2/100) * 100);
+      return Math.round((1 + v._s1 * v.percent1/100) * (1 + v._s2 * v.percent2/100) * 100);
     },
     unit: "%",
-    explanationTemplate: "【考え方】\n連続増減の問題。増減率を「倍率」に変換して順にかけます。\n同じ率で上がって下がっても元に戻らないことに注意！\n\n【解法】\n① 元の価格を100とする\n\n② {{percent1}}%値上がり後:\n  100 × (1 + {{percent1}}/100) = {{after1}}\n\n③ さらに{{percent2}}%値下がり後:\n  {{after1}} × (1 - {{percent2}}/100) = {{answer}}%\n\n【ポイント】\n・連続変化 = 倍率のかけ算: (1+a/100) × (1-b/100)\n・20%UP → 20%DOWN = 100 × 1.2 × 0.8 = 96（元に戻らない!）\n・「同率の増減は損する」のがポイント（SPI定番のひっかけ）",
+    explanationTemplate: "【考え方】\n連続増減の問題。増減率を「倍率」に変換して順にかけます。\n同じ率で上がって下がっても元に戻らないことに注意！\n\n【解法】\n① 元の{{noun}}を100とする\n\n② {{percent1}}%{{word1}}した後:\n  100 × (1 {{sign1}} {{percent1}}/100) = {{after1}}\n\n③ さらに{{percent2}}%{{word2}}した後:\n  {{after1}} × (1 {{sign2}} {{percent2}}/100) = {{answer}}%\n\n【ポイント】\n・連続変化 = 倍率のかけ算。足し引きではない\n・20%増 → 20%減 = 100 × 1.2 × 0.8 = 96（元に戻らない!）\n・「同率の増減は必ず元より小さくなる」のがSPI定番のひっかけ",
     timeLimitSec: 90,
     validate: function(v) {
-      var result = (1 + v.percent1/100) * (1 - v.percent2/100) * 100;
-      return Math.abs(result - Math.round(result)) < 0.01;
+      var result = (1 + v._s1 * v.percent1/100) * (1 + v._s2 * v.percent2/100) * 100;
+      // 100%ちょうどに戻る組は「元に戻らない」という論点が消えるので出さない
+      return Math.abs(result - Math.round(result)) < 0.01 && Math.round(result) !== 100;
     }
   });
 

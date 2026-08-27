@@ -1,5 +1,24 @@
 // カテゴリ8: 割合・比
 // ============================================================
+
+// 連続増減の向き。増→減 だけでなく 減→増・増→増・減→減 も出す。
+// s は倍率の符号（+1 なら 1+r/100、-1 なら 1-r/100）。
+var CONSEC_DIRECTIONS = [
+  { s1:  1, s2: -1 },
+  { s1: -1, s2:  1 },
+  { s1:  1, s2:  1 },
+  { s1: -1, s2: -1 }
+];
+
+// 何が増減するか。word() は向きに応じた動詞を返す。
+// 「値上がり／値下がり」は価格にしか使えないので、対象ごとに語を分けている。
+var CONSEC_SCENES = [
+  { subject: "ある商品の価格", noun: "価格",   word: function (s) { return s > 0 ? "値上がり" : "値下がり"; } },
+  { subject: "ある町の人口",   noun: "人口",   word: function (s) { return s > 0 ? "増加" : "減少"; } },
+  { subject: "ある店の売上",   noun: "売上",   word: function (s) { return s > 0 ? "増加" : "減少"; } },
+  { subject: "ある会の会員数", noun: "会員数", word: function (s) { return s > 0 ? "増加" : "減少"; } }
+];
+
 (function() {
   QUESTION_TEMPLATES.push({
     id: "wariai_basic_01",
@@ -98,21 +117,38 @@
     category: "割合・比",
     categoryId: 8,
     difficulty: 3,
-    templateText: "ある商品の価格が最初{{percent1}}%値上がりし、その後{{percent2}}%値下がりした。最終的な価格は元の価格の何%か。",
+    templateText: "{{q}}",
     variables: {
-      percent1: { type: "choice", options: [10, 20, 25, 30, 50] },
-      percent2: { type: "choice", options: [10, 20, 25, 30, 50] }
+      percent1: { type: "choice", options: [5, 10, 15, 20, 25, 30, 40, 50, 60] },
+      percent2: { type: "choice", options: [5, 10, 15, 20, 25, 30, 40, 50, 60] },
+      dir:      { type: "int", min: 0, max: 3, step: 1 },
+      scene:    { type: "int", min: 0, max: 3, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var d = CONSEC_DIRECTIONS[v.dir % CONSEC_DIRECTIONS.length];
+      var sc = CONSEC_SCENES[v.scene % CONSEC_SCENES.length];
+      v._s1 = d.s1; v._s2 = d.s2;
+      v.subject = sc.subject;
+      v.noun = sc.noun;
+      v.word1 = sc.word(d.s1);
+      v.word2 = sc.word(d.s2);
+      v.sign1 = d.s1 > 0 ? "+" : "-";
+      v.sign2 = d.s2 > 0 ? "+" : "-";
+      v.after1 = Math.round((1 + d.s1 * v.percent1 / 100) * 100 * 100) / 100;
+      v.q = sc.subject + "が最初に" + v.percent1 + "%" + sc.word(d.s1) + "し、その後" + v.percent2
+        + "%" + sc.word(d.s2) + "した。最終的な" + sc.noun + "は元の" + sc.noun + "の何%か。";
+    },
     answerFormula: function(v) {
-      return Math.round((1 + v.percent1/100) * (1 - v.percent2/100) * 100);
+      return Math.round((1 + v._s1 * v.percent1/100) * (1 + v._s2 * v.percent2/100) * 100);
     },
     unit: "%",
-    explanationTemplate: "【考え方】\n連続増減の問題。増減率を「倍率」に変換して順にかけます。\n同じ率で上がって下がっても元に戻らないことに注意！\n\n【解法】\n① 元の価格を100とする\n\n② {{percent1}}%値上がり後:\n  100 × (1 + {{percent1}}/100) = {{after1}}\n\n③ さらに{{percent2}}%値下がり後:\n  {{after1}} × (1 - {{percent2}}/100) = {{answer}}%\n\n【ポイント】\n・連続変化 = 倍率のかけ算: (1+a/100) × (1-b/100)\n・20%UP → 20%DOWN = 100 × 1.2 × 0.8 = 96（元に戻らない!）\n・「同率の増減は損する」のがポイント（SPI定番のひっかけ）",
+    explanationTemplate: "【考え方】\n連続増減の問題。増減率を「倍率」に変換して順にかけます。\n同じ率で上がって下がっても元に戻らないことに注意！\n\n【解法】\n① 元の{{noun}}を100とする\n\n② {{percent1}}%{{word1}}した後:\n  100 × (1 {{sign1}} {{percent1}}/100) = {{after1}}\n\n③ さらに{{percent2}}%{{word2}}した後:\n  {{after1}} × (1 {{sign2}} {{percent2}}/100) = {{answer}}%\n\n【ポイント】\n・連続変化 = 倍率のかけ算。足し引きではない\n・20%増 → 20%減 = 100 × 1.2 × 0.8 = 96（元に戻らない!）\n・「同率の増減は必ず元より小さくなる」のがSPI定番のひっかけ",
     timeLimitSec: 90,
     validate: function(v) {
-      var result = (1 + v.percent1/100) * (1 - v.percent2/100) * 100;
-      return Math.abs(result - Math.round(result)) < 0.01;
+      var result = (1 + v._s1 * v.percent1/100) * (1 + v._s2 * v.percent2/100) * 100;
+      // 100%ちょうどに戻る組は「元に戻らない」という論点が消えるので出さない
+      return Math.abs(result - Math.round(result)) < 0.01 && Math.round(result) !== 100;
     }
   });
 

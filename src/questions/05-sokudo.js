@@ -1,5 +1,95 @@
 // カテゴリ5: 速度算
 // ============================================================
+
+// 速さの単位変換。答えが必ず整数になる値だけを列挙してある。
+// 「小数点以下を四捨五入」と書いて誤魔化すと、四捨五入の有無で答えが
+// 割れる問題が混ざるので、割り切れる値しか出さない方針にした。
+var SPEED_CONVERT_CASES = (function () {
+  var out = [];
+  var a, b;
+  // 時速km → 秒速m（÷3.6）。3.6で割り切れるのは18の倍数
+  for (a = 18; a <= 180; a += 18) {
+    out.push({
+      q: "時速" + a + "kmは秒速何mか。", ans: a / 3.6, unit: "m/秒",
+      calc: "時速" + a + "km\n  = " + a + " × 1000 ÷ 3600 m/秒\n  = " + a + " ÷ 3.6\n  = " + (a / 3.6) + " m/秒",
+      tip: "時速から秒速へは 3.6 で割る"
+    });
+  }
+  // 秒速m → 時速km（×3.6）。整数になるのは5の倍数
+  for (b = 5; b <= 50; b += 5) {
+    out.push({
+      q: "秒速" + b + "mは時速何kmか。", ans: b * 3.6, unit: "km/時",
+      calc: "秒速" + b + "m\n  = " + b + " × 3600 ÷ 1000 km/時\n  = " + b + " × 3.6\n  = " + (b * 3.6) + " km/時",
+      tip: "秒速から時速へは 3.6 を掛ける"
+    });
+  }
+  // 時速km → 分速m（×1000÷60）。整数になるのは3の倍数
+  for (a = 3; a <= 60; a += 3) {
+    out.push({
+      q: "時速" + a + "kmは分速何mか。", ans: a * 1000 / 60, unit: "m/分",
+      calc: "時速" + a + "km\n  = " + a + " × 1000 ÷ 60 m/分\n  = " + (a * 1000 / 60) + " m/分",
+      tip: "時速から分速へは 1000 を掛けて 60 で割る"
+    });
+  }
+  // 分速m → 時速km（×60÷1000）。整数になるのは50の倍数
+  for (b = 50; b <= 600; b += 50) {
+    out.push({
+      q: "分速" + b + "mは時速何kmか。", ans: b * 60 / 1000, unit: "km/時",
+      calc: "分速" + b + "m\n  = " + b + " × 60 ÷ 1000 km/時\n  = " + (b * 60 / 1000) + " km/時",
+      tip: "分速から時速へは 60 を掛けて 1000 で割る"
+    });
+  }
+  // 秒速m → 分速m（×60）
+  for (b = 4; b <= 30; b += 2) {
+    out.push({
+      q: "秒速" + b + "mは分速何mか。", ans: b * 60, unit: "m/分",
+      calc: "秒速" + b + "m\n  = " + b + " × 60 m/分\n  = " + (b * 60) + " m/分",
+      tip: "秒速から分速へは 60 を掛ける（距離の単位は変わらない）"
+    });
+  }
+  return out;
+})();
+
+// 追いかけっこの場面。a が先に出るほう、b が追いかけるほう。
+// 解説でも同じ呼び名を使うので、名前を場面と一緒に持たせる。
+var CHASE_SCENES = [
+  {
+    a: "A", b: "B",
+    text: function (h, sa, sb) {
+      return "Aが出発してから" + h + "分後にBが同じ方向に出発した。Aの速さは分速" + sa
+        + "m、Bの速さは分速" + sb + "mである。BがAに追いつくのはBが出発してから何分後か。";
+    }
+  },
+  {
+    a: "兄", b: "弟",
+    text: function (h, sa, sb) {
+      return "兄が家を出てから" + h + "分後に、弟が同じ道を追いかけた。兄の速さは分速" + sa
+        + "m、弟の速さは分速" + sb + "mである。弟が兄に追いつくのは弟が出発してから何分後か。";
+    }
+  },
+  {
+    a: "先頭のランナー", b: "後続のランナー",
+    text: function (h, sa, sb) {
+      return "先頭のランナーが通過してから" + h + "分後に、後続のランナーが同じ地点を通過した。先頭は分速" + sa
+        + "m、後続は分速" + sb + "mで走り続ける。後続が先頭に追いつくのは通過から何分後か。";
+    }
+  },
+  {
+    a: "貨物列車", b: "回送列車",
+    text: function (h, sa, sb) {
+      return "貨物列車が駅を出発してから" + h + "分後に、同じ方向へ回送列車が出発した。貨物列車は分速" + sa
+        + "m、回送列車は分速" + sb + "mで進む。回送列車が追いつくのは出発から何分後か。";
+    }
+  }
+];
+
+// すれ違い・追い越しの場面
+var TRAIN_SCENES = [
+  { a: "電車A", b: "電車B" },
+  { a: "列車P", b: "列車Q" },
+  { a: "特急列車", b: "普通列車" }
+];
+
 (function() {
   QUESTION_TEMPLATES.push({
     id: "sokudo_basic_01",
@@ -54,19 +144,25 @@
     category: "速度算",
     categoryId: 5,
     difficulty: 2,
-    templateText: "Aが出発してから{{headStart}}分後にBが同じ方向に出発した。Aの速さは分速{{speedA}}m、Bの速さは分速{{speedB}}mである。BがAに追いつくのはBが出発してから何分後か。",
+    templateText: "{{q}}",
     variables: {
-      headStart: { type: "choice", options: [5, 10, 15, 20] },
-      speedA: { type: "choice", options: [60, 70, 80, 100] },
-      speedB: { type: "choice", options: [100, 120, 150, 200] }
+      headStart: { type: "choice", options: [3, 4, 5, 6, 8, 10, 12, 15, 20] },
+      speedA: { type: "choice", options: [50, 60, 70, 75, 80, 90, 100] },
+      speedB: { type: "choice", options: [90, 100, 110, 120, 125, 140, 150, 160, 180, 200] },
+      scene: { type: "int", min: 0, max: 3, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var sc = CHASE_SCENES[v.scene % CHASE_SCENES.length];
+      v.nameA = sc.a; v.nameB = sc.b;
+      v.q = sc.text(v.headStart, v.speedA, v.speedB);
+    },
     answerFormula: function(v) {
       var gap = v.speedA * v.headStart;
       return gap / (v.speedB - v.speedA);
     },
     unit: "分後",
-    explanationTemplate: "【考え方】\n追いかけ問題は「先行者との距離差」を「速度の差」で割ります。\n同じ方向に進むので、速い方が速度差の分だけ毎分距離を詰めます。\n\n【解法】\n① Bが出発する時点でのAとBの距離（先行距離）:\n  {{speedA}} × {{headStart}} = {{gap}}m\n\n② 速度の差（毎分縮まる距離）:\n  {{speedB}} - {{speedA}} = {{diff}}m/分\n\n③ 追いつくまでの時間:\n  {{gap}} / {{diff}} = {{answer}}分後\n\n【ポイント】\n・追いかけ → 速さの差で距離を詰める\n・まず「差の距離」を求めてから「差の速度」で割る",
+    explanationTemplate: "【考え方】\n追いかけ問題は「先行者との距離差」を「速度の差」で割ります。\n同じ方向に進むので、速い方が速度差の分だけ毎分距離を詰めます。\n\n【解法】\n① {{nameB}}が動き出す時点で開いている距離（先行距離）:\n  {{speedA}} × {{headStart}} = {{gap}}m\n\n② 速度の差（毎分縮まる距離）:\n  {{speedB}} - {{speedA}} = {{diff}}m/分\n\n③ 追いつくまでの時間:\n  {{gap}} / {{diff}} = {{answer}}分後\n\n【ポイント】\n・追いかけ → 速さの差で距離を詰める\n・まず「差の距離」を求めてから「差の速度」で割る\n・先行距離は「先に出たほうの速さ × 先に出た時間」",
     timeLimitSec: 90,
     validate: function(v) {
       return v.speedB > v.speedA && (v.speedA * v.headStart) % (v.speedB - v.speedA) === 0;
@@ -109,16 +205,27 @@
     category: "速度算",
     categoryId: 5,
     difficulty: 1,
-    templateText: "時速{{speedKmh}}kmは秒速何mか。（小数点以下を四捨五入）",
+    // 変換の向きを4通りに増やした。時速→秒速だけだと6種類しか作れず、
+    // 実際の試験では逆向き（秒速→時速）や分速がらみも同じ頻度で出る。
+    templateText: "{{q}}",
     variables: {
-      speedKmh: { type: "choice", options: [36, 54, 72, 90, 108, 144] }
+      idx: { type: "int", min: 0, max: 120, step: 1 }
     },
     answerType: "number",
-    answerFormula: function(v) {
-      return Math.round(v.speedKmh * 1000 / 3600);
+    resolve: function(v) {
+      var c = SPEED_CONVERT_CASES[v.idx % SPEED_CONVERT_CASES.length];
+      v._case = c;
+      v.q = c.q;
+      v.calc = c.calc;
+      v.tip = c.tip;
     },
-    unit: "m/秒",
-    explanationTemplate: "【考え方】\n単位変換は「距離の単位」と「時間の単位」をそれぞれ変換します。\nkm→m（×1000）、時→秒（÷3600）を同時に行います。\n\n【解法】\n① 時速 → 秒速の変換:\n  時速{{speedKmh}}km = {{speedKmh}} × 1000 / 3600 m/秒\n  = {{speedKmh}} / 3.6\n  = {{answer}} m/秒\n\n【ポイント】\n・時速(km/h) → 秒速(m/s): ÷3.6\n・秒速(m/s) → 時速(km/h): ×3.6\n・3.6 = 3600÷1000（秒÷メートル換算）\n・よく出る値: 時速36km=秒速10m、時速72km=秒速20m",
+    answerFormula: function(v) {
+      return v._case.ans;
+    },
+    unit: function(v) {
+      return v._case.unit;
+    },
+    explanationTemplate: "【考え方】\n単位変換は「距離の単位」と「時間の単位」をそれぞれ変換します。\nどちらを何倍・何分の1にするかを分けて考えると間違えません。\n\n【解法】\n{{calc}}\n\n【ポイント】\n・{{tip}}\n・時速(km/h) → 秒速(m/s): ÷3.6、その逆は ×3.6\n・3.6 = 3600 ÷ 1000（時→秒 と km→m をまとめた値）\n・よく出る値: 時速36km=秒速10m、時速72km=秒速20m",
     timeLimitSec: 60
   });
 
@@ -129,21 +236,29 @@
     category: "速度算",
     categoryId: 5,
     difficulty: 3,
-    templateText: "長さ{{lenA}}mの電車Aが時速{{speedA}}kmで走っている。長さ{{lenB}}mの電車Bが反対方向から時速{{speedB}}kmで走ってきた。2つの電車がすれ違い始めてからすれ違い終わるまで何秒かかるか。",
+    templateText: "{{q}}",
     variables: {
-      lenA: { type: "int", min: 100, max: 250, step: 50 },
-      lenB: { type: "int", min: 100, max: 250, step: 50 },
-      speedA: { type: "choice", options: [54, 72, 90] },
-      speedB: { type: "choice", options: [54, 72, 90] }
+      lenA: { type: "int", min: 80, max: 300, step: 20 },
+      lenB: { type: "int", min: 80, max: 300, step: 20 },
+      speedA: { type: "choice", options: [36, 54, 72, 90, 108, 126] },
+      speedB: { type: "choice", options: [36, 54, 72, 90, 108, 126] },
+      scene: { type: "int", min: 0, max: 2, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var sc = TRAIN_SCENES[v.scene % TRAIN_SCENES.length];
+      v.nameA = sc.a; v.nameB = sc.b;
+      v.q = "長さ" + v.lenA + "mの" + sc.a + "が時速" + v.speedA + "kmで走っている。長さ"
+        + v.lenB + "mの" + sc.b + "が反対方向から時速" + v.speedB
+        + "kmで走ってきた。2つがすれ違い始めてからすれ違い終わるまで何秒かかるか。";
+    },
     answerFormula: function(v) {
       var totalLen = v.lenA + v.lenB;
       var totalSpeed = (v.speedA + v.speedB) * 1000 / 3600; // m/秒
       return Math.round(totalLen / totalSpeed);
     },
     unit: "秒",
-    explanationTemplate: "【考え方】\n電車のすれ違い問題は「進む距離」と「相対速度」がポイント。\n反対方向 → 速度の和、同じ方向 → 速度の差。\nすれ違う距離 = 2つの電車の長さの合計です。\n\n【解法】\n① すれ違う距離（先頭が出会ってから最後尾が離れるまで）:\n  電車A + 電車B = {{lenA}} + {{lenB}} = {{totalLen}}m\n\n② 相対速度（反対方向なので速さの和）:\n  {{speedA}} + {{speedB}} = {{totalSpeedKmh}}km/h\n  秒速に変換: {{totalSpeedKmh}} / 3.6 = {{totalSpeedMs}}m/秒\n\n③ すれ違い時間 = 距離 / 速度:\n  {{totalLen}} / {{totalSpeedMs}} = {{answer}}秒\n\n【ポイント】\n・すれ違い → 進む距離 = 両方の長さの合計、速度 = 和\n・追い越し → 進む距離 = 両方の長さの合計、速度 = 差\n・単位変換（km/h → m/s）を忘れずに",
+    explanationTemplate: "【考え方】\n電車のすれ違い問題は「進む距離」と「相対速度」がポイント。\n反対方向 → 速度の和、同じ方向 → 速度の差。\nすれ違う距離 = 2つの電車の長さの合計です。\n\n【解法】\n① すれ違う距離（先頭が出会ってから最後尾が離れるまで）:\n  {{nameA}} + {{nameB}} = {{lenA}} + {{lenB}} = {{totalLen}}m\n\n② 相対速度（反対方向なので速さの和）:\n  {{speedA}} + {{speedB}} = {{totalSpeedKmh}}km/h\n  秒速に変換: {{totalSpeedKmh}} / 3.6 = {{totalSpeedMs}}m/秒\n\n③ すれ違い時間 = 距離 / 速度:\n  {{totalLen}} / {{totalSpeedMs}} = {{answer}}秒\n\n【ポイント】\n・すれ違い → 進む距離 = 両方の長さの合計、速度 = 和\n・追い越し → 進む距離 = 両方の長さの合計、速度 = 差\n・単位変換（km/h → m/s）を忘れずに",
     timeLimitSec: 120,
     validate: function(v) {
       var totalLen = v.lenA + v.lenB;
