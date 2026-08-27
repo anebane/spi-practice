@@ -588,10 +588,8 @@ var QuestionGenerator = (function() {
     if (template.id === "kumiawase_basic_01") {
       d.calculation = "C(" + vars.n + ", " + vars.r + ")";
     }
-    if (template.id === "junretsu_cond_01") {
-      d.nMinus1 = vars.n - 1;
-      d.blockPerm = factorial(vars.n - 1);
-    }
+    // junretsu_cond_01 の派生変数はテンプレート側の resolve が作る。
+    // 隣り合う人数 k を可変にしたので、2人固定を前提にした (n-1)! では合わない。
     if (template.id === "kumiawase_cond_01") {
       d.boysComb = combination(vars.boys, vars.selectBoys);
       d.girlsComb = combination(vars.girls, vars.selectGirls);

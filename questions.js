@@ -2460,6 +2460,188 @@ var SEQ_ASKS = [
 
 // カテゴリ6: 仕事算
 // ============================================================
+// 仕事算は「1日あたりの仕事量を足す」だけの単純な型なので、数値を変えても
+// 同じ問題に見えてしまう。場面（誰が何をするか）を差し替えて、
+// 利用者が別の問題と認識できるようにしている。
+//
+// 日数の組は validate で弾くのではなく、条件を満たすものをあらかじめ
+// 列挙しておく。弾く方式は生成の試行を無駄にするうえ、
+// 「結局何種類作れるのか」が読めない（実測で basic は7種類しかなかった）。
+// ============================================================
+
+// 1/a + 1/b の逆数が整数になる組（2人が同時に働くと整数日で終わる組）
+var WORK_PAIRS_2 = (function () {
+  var out = [];
+  for (var a = 3; a <= 60; a++) {
+    for (var b = a + 1; b <= 60; b++) {
+      var h = a * b / (a + b);
+      if (h === Math.round(h) && h >= 2 && h <= 20) out.push([a, b]);
+    }
+  }
+  return out;
+})();
+
+// 3人版。1/a + 1/b + 1/c の逆数が整数になる組
+var WORK_TRIPLES = (function () {
+  var out = [];
+  for (var a = 3; a <= 24; a++) {
+    for (var b = a + 1; b <= 40; b++) {
+      for (var c = b + 1; c <= 60; c++) {
+        var d = 1 / (1 / a + 1 / b + 1 / c);
+        if (Math.abs(d - Math.round(d)) < 1e-9 && Math.round(d) >= 2 && Math.round(d) <= 12) {
+          out.push([a, b, c]);
+        }
+      }
+    }
+  }
+  return out;
+})();
+
+// 途中合流。Aが alone 日働いた後、2人で tog 日で仕上げたとき、
+// Bの単独日数がちょうど整数になる組み合わせ
+var WORK_JOIN_CASES = (function () {
+  var out = [];
+  var As = [8, 9, 10, 12, 14, 15, 16, 18, 20, 21, 24, 27, 30];
+  var Bs = [5, 6, 8, 9, 10, 12, 14, 15, 16, 18, 20, 24, 30, 36];
+  for (var i = 0; i < As.length; i++) {
+    for (var k = 1; k < As[i]; k++) {
+      var rem = 1 - k / As[i];
+      if (rem <= 0) continue;
+      for (var j = 0; j < Bs.length; j++) {
+        var tog = rem / (1 / As[i] + 1 / Bs[j]);
+        if (Math.abs(tog - Math.round(tog)) < 1e-9 && Math.round(tog) >= 1 && Math.round(tog) <= 15) {
+          out.push([As[i], k, Math.round(tog)]);
+        }
+      }
+    }
+  }
+  return out;
+})();
+
+// 2人で1つの仕事をする場面。job は解説で「この○○」と受けるための名詞。
+var WORK_SCENES_2 = [
+  {
+    a: "A", b: "B", job: "仕事",
+    text: function (x, y) {
+      return "ある仕事をAだけですると" + x + "日かかり、Bだけですると" + y
+        + "日かかる。AとBが一緒にこの仕事をすると何日かかるか。";
+    }
+  },
+  {
+    a: "兄", b: "弟", job: "掃除",
+    text: function (x, y) {
+      return "ある倉庫の掃除を、兄1人ですると" + x + "日、弟1人ですると" + y
+        + "日かかる。2人で一緒に掃除をすると何日かかるか。";
+    }
+  },
+  {
+    a: "Pさん", b: "Qさん", job: "入力作業",
+    text: function (x, y) {
+      return "ある原稿の入力作業を、Pさん1人では" + x + "日、Qさん1人では" + y
+        + "日で終える。2人で同時に進めると何日かかるか。";
+    }
+  },
+  {
+    a: "機械A", b: "機械B", job: "作業",
+    text: function (x, y) {
+      return "ある畑を耕すのに、機械Aだけでは" + x + "日、機械Bだけでは" + y
+        + "日かかる。2台を同時に使うと何日かかるか。";
+    }
+  },
+  {
+    a: "Xチーム", b: "Yチーム", job: "工事",
+    text: function (x, y) {
+      return "ある工事を、Xチームだけでは" + x + "日、Yチームだけでは" + y
+        + "日かかる。2つのチームが合同で行うと何日かかるか。";
+    }
+  },
+  {
+    a: "職人", b: "見習い", job: "組み立て",
+    text: function (x, y) {
+      return "ある製品の組み立てを、職人1人では" + x + "日、見習い1人では" + y
+        + "日かかる。2人で分担すると何日かかるか。";
+    }
+  }
+];
+
+// 水槽・タンクを満たす場面（単位が時間になる）
+var WORK_SCENES_TANK = [
+  {
+    a: "ポンプA", b: "ポンプB", job: "水槽",
+    text: function (x, y) {
+      return "ある水槽を満水にするのにポンプAだけでは" + x + "時間、ポンプBだけでは" + y
+        + "時間かかる。両方のポンプを同時に使うと何時間で満水になるか。";
+    }
+  },
+  {
+    a: "蛇口A", b: "蛇口B", job: "浴槽",
+    text: function (x, y) {
+      return "浴槽に湯をためるのに、蛇口Aだけでは" + x + "時間、蛇口Bだけでは" + y
+        + "時間かかる。両方の蛇口を同時に開くと何時間でいっぱいになるか。";
+    }
+  },
+  {
+    a: "給水管P", b: "給水管Q", job: "貯水タンク",
+    text: function (x, y) {
+      return "貯水タンクを満たすのに、給水管Pだけでは" + x + "時間、給水管Qだけでは" + y
+        + "時間かかる。2本の給水管を同時に使うと何時間かかるか。";
+    }
+  },
+  {
+    a: "ホースA", b: "ホースB", job: "プール",
+    text: function (x, y) {
+      return "プールに水を入れるのに、ホースAだけでは" + x + "時間、ホースBだけでは" + y
+        + "時間かかる。2本のホースを同時に使うと何時間かかるか。";
+    }
+  },
+  {
+    a: "装置A", b: "装置B", job: "タンク",
+    text: function (x, y) {
+      return "薬液タンクを満たすのに、装置Aだけでは" + x + "時間、装置Bだけでは" + y
+        + "時間かかる。2台を同時に稼働させると何時間かかるか。";
+    }
+  }
+];
+
+// 3人で1つの仕事をする場面
+var WORK_SCENES_3 = [
+  {
+    job: "仕事",
+    text: function (x, y, z) {
+      return "ある仕事をAだけですると" + x + "日、Bだけですると" + y + "日、Cだけですると" + z
+        + "日かかる。3人で一緒に仕事をすると何日かかるか。";
+    }
+  },
+  {
+    job: "袋詰め",
+    text: function (x, y, z) {
+      return "ある商品の袋詰めを、Pさん1人では" + x + "日、Qさん1人では" + y + "日、Rさん1人では" + z
+        + "日で終える。3人で同時に進めると何日かかるか。";
+    }
+  },
+  {
+    job: "塗装",
+    text: function (x, y, z) {
+      return "ある建物の塗装を、甲組だけでは" + x + "日、乙組だけでは" + y + "日、丙組だけでは" + z
+        + "日かかる。3組が合同で行うと何日かかるか。";
+    }
+  },
+  {
+    job: "点検",
+    text: function (x, y, z) {
+      return "工場の設備点検を、班Aだけでは" + x + "日、班Bだけでは" + y + "日、班Cだけでは" + z
+        + "日かかる。3班で手分けすると何日かかるか。";
+    }
+  },
+  {
+    job: "写経",
+    text: function (x, y, z) {
+      return "ある資料の書き写しを、Xさんは" + x + "日、Yさんは" + y + "日、Zさんは" + z
+        + "日で終える。3人で同時に取りかかると何日かかるか。";
+    }
+  }
+];
+
 (function() {
   QUESTION_TEMPLATES.push({
     id: "shigoto_basic_01",
@@ -2467,21 +2649,27 @@ var SEQ_ASKS = [
     category: "仕事算",
     categoryId: 6,
     difficulty: 1,
-    templateText: "ある仕事をAだけですると{{daysA}}日かかり、Bだけですると{{daysB}}日かかる。AとBが一緒にこの仕事をすると何日かかるか。",
+    templateText: "{{q}}",
     variables: {
-      daysA: { type: "choice", options: [6, 8, 10, 12, 15, 20] },
-      daysB: { type: "choice", options: [6, 8, 10, 12, 15, 20, 30] }
+      pair:  { type: "int", min: 0, max: 200, step: 1 },
+      swap:  { type: "choice", options: [0, 1] },
+      scene: { type: "int", min: 0, max: 5, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var p = WORK_PAIRS_2[v.pair % WORK_PAIRS_2.length];
+      v.daysA = v.swap ? p[1] : p[0];
+      v.daysB = v.swap ? p[0] : p[1];
+      var sc = WORK_SCENES_2[v.scene % WORK_SCENES_2.length];
+      v.a = sc.a; v.b = sc.b; v.job = sc.job;
+      v.q = sc.text(v.daysA, v.daysB);
+    },
     answerFormula: function(v) {
       return v.daysA * v.daysB / (v.daysA + v.daysB);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n仕事算の基本: 仕事全体を「1」として、1日あたりの仕事量を分数で表します。\n2人で同時にやれば仕事量が足し算になります。\n\n【解法】\n① 仕事全体を1とする\n\n② 1日あたりの仕事量:\n  A: 1/{{daysA}}\n  B: 1/{{daysB}}\n\n③ 2人の1日の合計仕事量:\n  1/{{daysA}} + 1/{{daysB}} = {{combined}}\n\n④ かかる日数 = 全体÷1日の仕事量:\n  1 / {{combined}} = {{answer}}日\n\n【ポイント】\n・仕事全体を1とおく → 「○日で完了」= 1日に1/○ずつ進む\n・公式: A×B/(A+B) 日で一発計算も可能\n・仕事算は「速さ」の問題と同じ構造（仕事量=速さ×時間）",
-    timeLimitSec: 90,
-    validate: function(v) {
-      return v.daysA !== v.daysB && Number.isInteger(v.daysA * v.daysB / (v.daysA + v.daysB));
-    }
+    explanationTemplate: "【考え方】\n仕事算の基本: {{job}}全体を「1」として、1日あたりの仕事量を分数で表します。\n2人で同時にやれば仕事量が足し算になります。\n\n【解法】\n① {{job}}全体を1とする\n\n② 1日あたりの仕事量:\n  {{a}}: 1/{{daysA}}\n  {{b}}: 1/{{daysB}}\n\n③ 2人の1日の合計仕事量:\n  1/{{daysA}} + 1/{{daysB}} = {{combined}}\n\n④ かかる日数 = 全体÷1日の仕事量:\n  1 / {{combined}} = {{answer}}日\n\n【ポイント】\n・全体を1とおく → 「○日で完了」= 1日に1/○ずつ進む\n・公式: A×B/(A+B) 日で一発計算も可能\n・仕事算は「速さ」の問題と同じ構造（仕事量=速さ×時間）",
+    timeLimitSec: 90
   });
 
   QUESTION_TEMPLATES.push({
@@ -2517,24 +2705,30 @@ var SEQ_ASKS = [
     category: "仕事算",
     categoryId: 6,
     difficulty: 2,
-    templateText: "ある仕事をAだけですると{{daysA}}日、Bだけですると{{daysB}}日、Cだけですると{{daysC}}日かかる。3人で一緒に仕事をすると何日かかるか。",
+    templateText: "{{q}}",
     variables: {
-      daysA: { type: "choice", options: [4, 6, 8, 10, 12] },
-      daysB: { type: "choice", options: [6, 8, 10, 12, 15] },
-      daysC: { type: "choice", options: [8, 10, 12, 15, 20, 24] }
+      triple: { type: "int", min: 0, max: 200, step: 1 },
+      order:  { type: "choice", options: [0, 1, 2] },
+      scene:  { type: "int", min: 0, max: 4, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var t = WORK_TRIPLES[v.triple % WORK_TRIPLES.length].slice();
+      // 大きい順・小さい順が固定だと「一番左が一番速い」と覚えられてしまう
+      if (v.order === 1) t.reverse();
+      else if (v.order === 2) t = [t[1], t[2], t[0]];
+      v.daysA = t[0]; v.daysB = t[1]; v.daysC = t[2];
+      var sc = WORK_SCENES_3[v.scene % WORK_SCENES_3.length];
+      v.job = sc.job;
+      v.q = sc.text(v.daysA, v.daysB, v.daysC);
+    },
     answerFormula: function(v) {
       var rate = 1/v.daysA + 1/v.daysB + 1/v.daysC;
       return Math.round(1 / rate);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n2人の仕事算と同じ考え方を3人に拡張します。\n3人の1日の仕事量をすべて足し算します。\n\n【解法】\n① 仕事全体を1とする\n\n② 1日あたりの仕事量:\n  A: 1/{{daysA}}\n  B: 1/{{daysB}}\n  C: 1/{{daysC}}\n\n③ 3人合計の1日の仕事量:\n  1/{{daysA}} + 1/{{daysB}} + 1/{{daysC}} = {{combined}}\n\n④ かかる日数:\n  1 / {{combined}} = {{answer}}日\n\n【ポイント】\n・何人でも同じ方法: 全員の1日の仕事量を合計 → 逆数が日数\n・通分して計算する → 最小公倍数を使うと楽",
-    timeLimitSec: 120,
-    validate: function(v) {
-      var rate = 1/v.daysA + 1/v.daysB + 1/v.daysC;
-      return v.daysA !== v.daysB && v.daysB !== v.daysC && v.daysA !== v.daysC && Math.abs(1/rate - Math.round(1/rate)) < 0.01;
-    }
+    explanationTemplate: "【考え方】\n2人の仕事算と同じ考え方を3人に拡張します。\n3人の1日の仕事量をすべて足し算します。\n\n【解法】\n① {{job}}全体を1とする\n\n② 1日あたりの仕事量:\n  1人目: 1/{{daysA}}\n  2人目: 1/{{daysB}}\n  3人目: 1/{{daysC}}\n\n③ 3人合計の1日の仕事量:\n  1/{{daysA}} + 1/{{daysB}} + 1/{{daysC}} = {{combined}}\n\n④ かかる日数:\n  1 / {{combined}} = {{answer}}日\n\n【ポイント】\n・何人でも同じ方法: 全員の1日の仕事量を合計 → 逆数が日数\n・通分して計算する → 最小公倍数を使うと楽",
+    timeLimitSec: 120
   });
 
   // 仕事算: 水槽
@@ -2544,21 +2738,29 @@ var SEQ_ASKS = [
     category: "仕事算",
     categoryId: 6,
     difficulty: 1,
-    templateText: "ある水槽を満水にするのにポンプAだけでは{{hoursA}}時間、ポンプBだけでは{{hoursB}}時間かかる。両方のポンプを同時に使うと何時間で満水になるか。",
+    templateText: "{{q}}",
     variables: {
-      hoursA: { type: "choice", options: [3, 4, 5, 6, 8, 10] },
-      hoursB: { type: "choice", options: [4, 5, 6, 8, 10, 12] }
+      pair:  { type: "int", min: 0, max: 200, step: 1 },
+      swap:  { type: "choice", options: [0, 1] },
+      scene: { type: "int", min: 0, max: 4, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      // 水槽は「何時間で満水になるまでの時間」なので、日数の組より小さめの値を使う
+      var pool = WORK_PAIRS_2.filter(function (p) { return p[1] <= 40; });
+      var p = pool[v.pair % pool.length];
+      v.hoursA = v.swap ? p[1] : p[0];
+      v.hoursB = v.swap ? p[0] : p[1];
+      var sc = WORK_SCENES_TANK[v.scene % WORK_SCENES_TANK.length];
+      v.a = sc.a; v.b = sc.b; v.job = sc.job;
+      v.q = sc.text(v.hoursA, v.hoursB);
+    },
     answerFormula: function(v) {
       return v.hoursA * v.hoursB / (v.hoursA + v.hoursB);
     },
     unit: "時間",
-    explanationTemplate: "【考え方】\n水槽問題は仕事算の応用。水槽を満たす仕事を「1」として、\n各ポンプの1時間あたりの仕事量を足し合わせます。\n\n【解法】\n① 水槽の容量を1とする\n\n② 1時間あたりの仕事量:\n  ポンプA: 1/{{hoursA}}\n  ポンプB: 1/{{hoursB}}\n\n③ 2台同時の1時間の仕事量:\n  1/{{hoursA}} + 1/{{hoursB}} = ({{hoursA}}+{{hoursB}}) / ({{hoursA}}×{{hoursB}})\n\n④ 満水までの時間:\n  1 ÷ 合計仕事量 = {{answer}}時間\n\n【ポイント】\n・水槽問題 = 仕事算と完全に同じ解法\n・「注水」と「排水」が両方ある場合は引き算になる\n・公式: A×B/(A+B) で一発計算可能",
-    timeLimitSec: 90,
-    validate: function(v) {
-      return v.hoursA !== v.hoursB && Number.isInteger(v.hoursA * v.hoursB / (v.hoursA + v.hoursB));
-    }
+    explanationTemplate: "【考え方】\n{{job}}の問題は仕事算の応用。満たす仕事を「1」として、\n1時間あたりの仕事量を足し合わせます。\n\n【解法】\n① {{job}}の容量を1とする\n\n② 1時間あたりの仕事量:\n  {{a}}: 1/{{hoursA}}\n  {{b}}: 1/{{hoursB}}\n\n③ 2つ同時の1時間の仕事量:\n  1/{{hoursA}} + 1/{{hoursB}} = ({{hoursA}}+{{hoursB}}) / ({{hoursA}}×{{hoursB}})\n\n④ 満たすまでの時間:\n  1 ÷ 合計仕事量 = {{answer}}時間\n\n【ポイント】\n・水槽問題 = 仕事算と完全に同じ解法\n・「注水」と「排水」が両方ある場合は引き算になる\n・公式: A×B/(A+B) で一発計算可能",
+    timeLimitSec: 90
   });
 
   // 仕事算: 効率の違い
@@ -2568,20 +2770,26 @@ var SEQ_ASKS = [
     category: "仕事算",
     categoryId: 6,
     difficulty: 1,
-    templateText: "ある仕事を仕上げるのにAは{{daysA}}日かかる。BはAの{{ratio}}倍の速さで仕事ができる。Bだけでこの仕事をすると何日かかるか。",
+    templateText: "{{q}}",
     variables: {
-      daysA: { type: "choice", options: [6, 8, 10, 12, 15, 20, 24, 30] },
-      ratio: { type: "choice", options: [2, 3, 4, 5, 6] }
+      daysA: { type: "choice", options: [6, 8, 10, 12, 15, 16, 18, 20, 21, 24, 28, 30, 32, 36, 40, 42, 45, 48, 54, 56, 60, 63, 72] },
+      ratio: { type: "choice", options: [2, 3, 4, 5, 6, 7, 8, 9] },
+      scene: { type: "int", min: 0, max: 4, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var sc = WORK_EFFICIENCY_SCENES[v.scene % WORK_EFFICIENCY_SCENES.length];
+      v.a = sc.a; v.b = sc.b;
+      v.q = sc.text(v.daysA, v.ratio);
+    },
     answerFormula: function(v) {
       return v.daysA / v.ratio;
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n「速さが○倍」= 「かかる時間は1/○倍」です。\n速さと時間は反比例の関係にあります。\n\n【解法】\n① BはAの{{ratio}}倍の速さで仕事ができる\n  → 同じ仕事を 1/{{ratio}} の時間で完了できる\n\n② Bの日数 = Aの日数 / {{ratio}}\n  = {{daysA}} / {{ratio}} = {{answer}}日\n\n【ポイント】\n・速さ(効率)が○倍 → 時間は1/○倍（反比例）\n・例: 2倍速ければ半分の時間で終わる\n・逆に「○倍の時間がかかる」= 速さは1/○倍",
+    explanationTemplate: "【考え方】\n「速さが○倍」= 「かかる時間は1/○倍」です。\n速さと時間は反比例の関係にあります。\n\n【解法】\n① {{b}}は{{a}}の{{ratio}}倍の速さで進められる\n  → 同じ量を 1/{{ratio}} の時間で終えられる\n\n② {{b}}の日数 = {{a}}の日数 / {{ratio}}\n  = {{daysA}} / {{ratio}} = {{answer}}日\n\n【ポイント】\n・速さ(効率)が○倍 → 時間は1/○倍（反比例）\n・例: 2倍速ければ半分の時間で終わる\n・逆に「○倍の時間がかかる」= 速さは1/○倍",
     timeLimitSec: 60,
     validate: function(v) {
-      return Number.isInteger(v.daysA / v.ratio);
+      return Number.isInteger(v.daysA / v.ratio) && v.daysA / v.ratio >= 2;
     }
   });
 
@@ -2592,13 +2800,19 @@ var SEQ_ASKS = [
     category: "仕事算",
     categoryId: 6,
     difficulty: 3,
-    templateText: "ある仕事をAだけですると{{daysA}}日かかる。Aが{{daysAlone}}日間1人で仕事をした後、Bが加わって2人で残りを仕上げたところ、さらに{{daysTogether}}日かかった。Bだけでこの仕事をすると何日かかるか。",
+    templateText: "{{q}}",
     variables: {
-      daysA: { type: "choice", options: [10, 12, 15, 18, 20] },
-      daysAlone: { type: "custom" },
-      daysTogether: { type: "custom" }
+      idx:   { type: "int", min: 0, max: 400, step: 1 },
+      scene: { type: "int", min: 0, max: 4, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var c = WORK_JOIN_CASES[v.idx % WORK_JOIN_CASES.length];
+      v.daysA = c[0]; v.daysAlone = c[1]; v.daysTogether = c[2];
+      var sc = WORK_JOIN_SCENES[v.scene % WORK_JOIN_SCENES.length];
+      v.a = sc.a; v.b = sc.b;
+      v.q = sc.text(v.daysA, v.daysAlone, v.daysTogether);
+    },
     answerFormula: function(v) {
       // A単独でdaysAlone日: daysAlone/daysA 完了
       // 残り: 1 - daysAlone/daysA
@@ -2609,15 +2823,98 @@ var SEQ_ASKS = [
       return Math.round(1 / bRate);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\nBの仕事速度が未知の逆算問題。\nAの単独作業→A+Bの共同作業の情報からBの速度を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ 2人で{{daysTogether}}日かけて残りを完了:\n  (1/{{daysA}} + 1/B) × {{daysTogether}} = {{remaining}}\n\n⑤ Bの1日の仕事量を求める:\n  1/B = {{remaining}}/{{daysTogether}} - 1/{{daysA}}\n\n⑥ Bだけでかかる日数:\n  B = {{answer}}日\n\n【ポイント】\n・「途中から合流」→ 残りの仕事量を方程式で立てる\n・1/B = (残り÷日数) - 1/A → B = その逆数",
+    explanationTemplate: "【考え方】\n{{b}}の作業速度が未知の逆算問題。\n{{a}}の単独作業→2人の共同作業の情報から{{b}}の速度を求めます。\n\n【解法】\n① 全体を1とする\n\n② {{a}}が{{daysAlone}}日間で進めた量:\n  {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの量:\n  1 - {{aDone}} = {{remaining}}\n\n④ 2人で{{daysTogether}}日かけて残りを完了:\n  (1/{{daysA}} + 1/B) × {{daysTogether}} = {{remaining}}\n\n⑤ {{b}}の1日の仕事量を求める:\n  1/B = {{remaining}}/{{daysTogether}} - 1/{{daysA}}\n\n⑥ {{b}}だけでかかる日数:\n  B = {{answer}}日\n\n【ポイント】\n・「途中から合流」→ 残りの量を方程式で立てる\n・1/B = (残り÷日数) - 1/A → B = その逆数",
     timeLimitSec: 150,
     validate: function(v) {
       var remaining = 1 - v.daysAlone / v.daysA;
       var bRate = remaining / v.daysTogether - 1 / v.daysA;
-      return bRate > 0 && Number.isInteger(Math.round(1/bRate)) && Math.abs(1/bRate - Math.round(1/bRate)) < 0.01;
+      return bRate > 0 && Math.abs(1/bRate - Math.round(1/bRate)) < 0.01 && Math.round(1/bRate) >= 2;
     }
   });
 })();
+
+// 効率比較の場面。a が基準、b が「a の○倍の速さ」で働くほう。
+var WORK_EFFICIENCY_SCENES = [
+  {
+    a: "A", b: "B",
+    text: function (d, r) {
+      return "ある仕事を仕上げるのにAは" + d + "日かかる。BはAの" + r
+        + "倍の速さで仕事ができる。Bだけでこの仕事をすると何日かかるか。";
+    }
+  },
+  {
+    a: "旧型の機械", b: "新型の機械",
+    text: function (d, r) {
+      return "ある部品の加工に、旧型の機械では" + d + "日かかる。新型の機械は旧型の" + r
+        + "倍の速さで加工できる。新型の機械だけで加工すると何日かかるか。";
+    }
+  },
+  {
+    a: "見習い", b: "職人",
+    text: function (d, r) {
+      return "ある家具を作るのに見習いは" + d + "日かかる。職人は見習いの" + r
+        + "倍の速さで作ることができる。職人だけで作ると何日かかるか。";
+    }
+  },
+  {
+    a: "手作業", b: "自動装置",
+    text: function (d, r) {
+      return "ある検品作業を手作業で行うと" + d + "日かかる。自動装置は手作業の" + r
+        + "倍の速さで処理できる。自動装置だけで行うと何日かかるか。";
+    }
+  },
+  {
+    a: "Pチーム", b: "Qチーム",
+    text: function (d, r) {
+      return "ある調査をPチームだけで行うと" + d + "日かかる。QチームはPチームの" + r
+        + "倍の速さで調査を進められる。Qチームだけで行うと何日かかるか。";
+    }
+  }
+];
+
+// 途中合流の場面
+var WORK_JOIN_SCENES = [
+  {
+    a: "A", b: "B",
+    text: function (dA, alone, tog) {
+      return "ある仕事をAだけですると" + dA + "日かかる。Aが" + alone
+        + "日間1人で仕事をした後、Bが加わって2人で残りを仕上げたところ、さらに" + tog
+        + "日かかった。Bだけでこの仕事をすると何日かかるか。";
+    }
+  },
+  {
+    a: "兄", b: "弟",
+    text: function (dA, alone, tog) {
+      return "ある部屋の片付けを兄1人ですると" + dA + "日かかる。兄が" + alone
+        + "日間1人で片付けた後、弟が手伝いに加わり、2人でさらに" + tog
+        + "日かけて終えた。弟1人で片付けると何日かかるか。";
+    }
+  },
+  {
+    a: "Pさん", b: "Qさん",
+    text: function (dA, alone, tog) {
+      return "ある資料の作成をPさん1人ですると" + dA + "日かかる。Pさんが" + alone
+        + "日間作業した後、Qさんが加わって2人で進め、さらに" + tog
+        + "日で完成した。Qさん1人で作成すると何日かかるか。";
+    }
+  },
+  {
+    a: "機械A", b: "機械B",
+    text: function (dA, alone, tog) {
+      return "ある量の製品を作るのに機械Aだけでは" + dA + "日かかる。機械Aを" + alone
+        + "日間動かした後、機械Bも動かして2台でさらに" + tog
+        + "日かけて作り終えた。機械Bだけで作ると何日かかるか。";
+    }
+  },
+  {
+    a: "甲組", b: "乙組",
+    text: function (dA, alone, tog) {
+      return "ある工事を甲組だけで行うと" + dA + "日かかる。甲組が" + alone
+        + "日間工事を進めた後、乙組が加わって2組でさらに" + tog
+        + "日かけて完了した。乙組だけで行うと何日かかるか。";
+    }
+  }
+];
 
 // カテゴリ7: 濃度算
 // ============================================================
@@ -3515,6 +3812,93 @@ var SEQ_ASKS = [
 
 // カテゴリ10: 順列・組み合わせ
 // ============================================================
+// 公式が1本しかない型なので、数値だけを振っても「n人からr人」の
+// 同じ文面が延々と出る。場面を差し替えて、同じ公式でも別の問題として
+// 読めるようにしている。式そのものは変えていないので難易度は変わらない。
+// ============================================================
+
+// 選んで並べる（順列）場面
+var PERM_PICK_SCENES = [
+  function (n, r) { return n + "人の中から" + r + "人を選んで一列に並べる方法は何通りあるか。"; },
+  function (n, r) { return n + "冊の本の中から" + r + "冊を選び、本棚に左から順に並べる方法は何通りあるか。"; },
+  function (n, r) { return n + "人の部員の中から" + r + "人を選んで、リレーの走順を決める方法は何通りあるか。"; },
+  function (n, r) { return n + "色の絵の具から" + r + "色を選び、旗を上から順に塗り分ける方法は何通りあるか。"; },
+  function (n, r) { return n + "枚のカードから" + r + "枚を取り出して、左から並べる方法は何通りあるか。"; },
+  function (n, r) { return n + "種類の料理から" + r + "品を選び、コースの提供順を決める方法は何通りあるか。"; },
+  function (n, r) { return n + "曲の候補から" + r + "曲を選び、発表会の演奏順を決める方法は何通りあるか。"; }
+];
+
+// 選ぶだけ（組み合わせ）場面
+var COMB_PICK_SCENES = [
+  function (n, r) { return n + "人の中から" + r + "人を選ぶ方法は何通りあるか。"; },
+  function (n, r) { return n + "種類のケーキから" + r + "種類を選ぶ方法は何通りあるか。"; },
+  function (n, r) { return n + "人の候補者から" + r + "人の委員を選ぶ方法は何通りあるか。"; },
+  function (n, r) { return n + "冊の本から" + r + "冊を借りる方法は何通りあるか。"; },
+  function (n, r) { return n + "個の商品から" + r + "個をまとめて買う方法は何通りあるか。"; },
+  function (n, r) { return n + "枚のカードから" + r + "枚を同時に引く方法は何通りあるか。"; },
+  function (n, r) { return n + "か所の観光地から" + r + "か所を選んで訪れる方法は何通りあるか。（回る順は考えない）"; }
+];
+
+// 隣り合う条件つき順列の場面
+var PERM_ADJACENT_SCENES = [
+  function (n, k) { return n + "人を一列に並べるとき、特定の" + k + "人が隣り合う並べ方は何通りあるか。"; },
+  function (n, k) { return n + "冊の本を本棚に並べるとき、特定の" + k + "冊が隣り合う並べ方は何通りあるか。"; },
+  function (n, k) { return n + "人が横一列に並んで写真を撮るとき、特定の" + k + "人が隣り合う並び方は何通りあるか。"; },
+  function (n, k) { return n + "個の箱を一列に置くとき、特定の" + k + "個が隣り合う置き方は何通りあるか。"; },
+  function (n, k) { return n + "枚のカードを左から並べるとき、特定の" + k + "枚が隣り合う並べ方は何通りあるか。"; },
+  function (n, k) { return n + "種類の料理を一列に配膳するとき、特定の" + k + "品が隣り合う並べ方は何通りあるか。"; },
+  function (n, k) { return n + "両の車両を連結するとき、特定の" + k + "両が隣り合うつなぎ方は何通りあるか。"; }
+];
+
+// 円順列の場面
+var PERM_CIRCLE_SCENES = [
+  function (n) { return n + "人が円形のテーブルに座る方法は何通りあるか。"; },
+  function (n) { return n + "人が丸いテーブルを囲んで座る座り方は何通りあるか。"; },
+  function (n) { return n + "個の飾りを円形のリースに等間隔で取り付ける方法は何通りあるか。"; },
+  function (n) { return n + "人が輪になって手をつなぐとき、並び方は何通りあるか。"; },
+  function (n) { return n + "種類の料理を回転テーブルに等間隔で並べる方法は何通りあるか。"; },
+  function (n) { return n + "人が円卓に着席する方法は何通りあるか。"; },
+  function (n) { return n + "本の旗を円形の広場に等間隔で立てる方法は何通りあるか。"; },
+  function (n) { return n + "色のランプを円形に等間隔で配置する方法は何通りあるか。"; },
+  function (n) { return n + "個のケーキを円形の皿に等間隔で並べる方法は何通りあるか。"; },
+  function (n) { return n + "枚の写真を円形のボードに等間隔で貼る方法は何通りあるか。"; }
+];
+
+// 役職を割り当てる（順列）場面
+var PERM_ROLE_SCENES = [
+  function (n) { return n + "人の中から委員長1人、副委員長1人、書記1人を選ぶ方法は何通りあるか。"; },
+  function (n) { return n + "人の部員から部長1人、副部長1人、会計1人を選ぶ方法は何通りあるか。"; },
+  function (n) { return n + "人の社員からリーダー1人、サブリーダー1人、記録係1人を選ぶ方法は何通りあるか。"; },
+  function (n) { return n + "人の候補から会長1人、副会長1人、書記1人を選ぶ方法は何通りあるか。"; },
+  function (n) { return n + "チームの中から優勝、準優勝、第3位を決める方法は何通りあるか。"; },
+  function (n) { return n + "人の応募者から金賞1人、銀賞1人、銅賞1人を選ぶ方法は何通りあるか。"; },
+  function (n) { return n + "人の中から主将1人、副主将1人、マネージャー1人を選ぶ方法は何通りあるか。"; },
+  function (n) { return n + "点の作品から最優秀賞1点、優秀賞1点、佳作1点を選ぶ方法は何通りあるか。"; }
+];
+
+// 最短経路の場面
+var PATH_SCENES = [
+  function (r, u) { return "右に" + r + "回、上に" + u + "回進んで目的地に着く最短経路は何通りあるか。"; },
+  function (r, u) { return "碁盤の目状の道を、東に" + r + "区画、北に" + u + "区画進んで目的地へ向かう最短経路は何通りあるか。"; },
+  function (r, u) { return "格子状の通路を、右へ" + r + "マス、上へ" + u + "マス移動する最短の道順は何通りあるか。"; },
+  function (r, u) { return "駅から図書館まで、東に" + r + "ブロック、北に" + u + "ブロック進む。遠回りをしない行き方は何通りあるか。"; },
+  function (r, u) { return "マス目の左上から、右に" + r + "マス・下に" + u + "マス進んでゴールに着く最短経路は何通りあるか。"; }
+];
+
+// 「特定の1つが端に来ない」場面。pos は解説でそのまま使う位置の呼び名。
+var PERM_EXCLUDE_SCENES = [
+  { pos: "先頭",     thing: "人",   text: function (n) { return n + "人を一列に並べるとき、特定の1人が先頭にならない並べ方は何通りあるか。"; } },
+  { pos: "左端",     thing: "本",   text: function (n) { return n + "冊の本を本棚に並べるとき、特定の1冊が左端にならない並べ方は何通りあるか。"; } },
+  { pos: "第1走者",  thing: "人",   text: function (n) { return n + "人でリレーの走順を決めるとき、特定の1人が第1走者にならない決め方は何通りあるか。"; } },
+  { pos: "一番左",   thing: "カード", text: function (n) { return n + "枚のカードを左から並べるとき、特定の1枚が一番左にならない並べ方は何通りあるか。"; } },
+  { pos: "最後尾",   thing: "人",   text: function (n) { return n + "人が縦一列に並ぶとき、特定の1人が最後尾にならない並び方は何通りあるか。"; } },
+  { pos: "右端",     thing: "箱",   text: function (n) { return n + "個の箱を一列に置くとき、特定の1個が右端にならない置き方は何通りあるか。"; } },
+  { pos: "1曲目",    thing: "曲",   text: function (n) { return n + "曲の演奏順を決めるとき、特定の1曲が1曲目にならない決め方は何通りあるか。"; } },
+  { pos: "最初",     thing: "議題", text: function (n) { return n + "件の議題を扱う順番を決めるとき、特定の1件が最初にならない決め方は何通りあるか。"; } },
+  { pos: "1番目",    thing: "商品", text: function (n) { return n + "個の商品を陳列する順番を決めるとき、特定の1個が1番目にならない決め方は何通りあるか。"; } },
+  { pos: "先発",     thing: "選手", text: function (n) { return n + "人の選手の登板順を決めるとき、特定の1人が先発にならない決め方は何通りあるか。"; } }
+];
+
 (function() {
   QUESTION_TEMPLATES.push({
     id: "junretsu_basic_01",
@@ -3522,12 +3906,16 @@ var SEQ_ASKS = [
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 1,
-    templateText: "{{n}}人の中から{{r}}人を選んで一列に並べる方法は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 4, max: 8, step: 1 },
-      r: { type: "int", min: 2, max: 4, step: 1 }
+      n:     { type: "int", min: 4, max: 10, step: 1 },
+      r:     { type: "int", min: 2, max: 5, step: 1 },
+      scene: { type: "int", min: 0, max: 6, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      v.q = PERM_PICK_SCENES[v.scene % PERM_PICK_SCENES.length](v.n, v.r);
+    },
     answerFormula: function(v) {
       return permutation(v.n, v.r);
     },
@@ -3535,7 +3923,7 @@ var SEQ_ASKS = [
     explanationTemplate: "【考え方】\n「選んで並べる」→ 順列(P)を使います。\n順番が区別される（1番目と2番目が違う）場合は順列。\n\n【解法】\n① 順列の公式: P(n, r) = n! / (n-r)!\n  = n × (n-1) × ... × (n-r+1)\n\n② P({{n}}, {{r}}) = {{calculation}} = {{answer}}通り\n\n【ポイント】\n・順列(P): 順番を区別する → 並べ方の数\n・組み合わせ(C): 順番を区別しない → 選び方の数\n・P(n,r) = C(n,r) × r!（並べ方 = 選び方 × 並べる順番）",
     timeLimitSec: 90,
     validate: function(v) {
-      return v.r <= v.n;
+      return v.r <= v.n - 1;
     }
   });
 
@@ -3545,12 +3933,16 @@ var SEQ_ASKS = [
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 1,
-    templateText: "{{n}}人の中から{{r}}人を選ぶ方法は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 5, max: 10, step: 1 },
-      r: { type: "int", min: 2, max: 4, step: 1 }
+      n:     { type: "int", min: 5, max: 12, step: 1 },
+      r:     { type: "int", min: 2, max: 5, step: 1 },
+      scene: { type: "int", min: 0, max: 6, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      v.q = COMB_PICK_SCENES[v.scene % COMB_PICK_SCENES.length](v.n, v.r);
+    },
     answerFormula: function(v) {
       return combination(v.n, v.r);
     },
@@ -3558,7 +3950,7 @@ var SEQ_ASKS = [
     explanationTemplate: "【考え方】\n「選ぶだけ（順番なし）」→ 組み合わせ(C)を使います。\n「委員を選ぶ」「チームを作る」などは組み合わせ。\n\n【解法】\n① 組み合わせの公式: C(n, r) = n! / (r! × (n-r)!)\n\n② C({{n}}, {{r}}) = {{calculation}} = {{answer}}通り\n\n【ポイント】\n・C(n,r) = P(n,r) / r!（順列を「順番の重複」で割る）\n・C(n,r) = C(n, n-r) の性質あり（例: C(7,5) = C(7,2)）\n・計算のコツ: 小さい方のrを使うと計算が楽",
     timeLimitSec: 90,
     validate: function(v) {
-      return v.r <= v.n;
+      return v.r <= v.n - 1;
     }
   });
 
@@ -3568,17 +3960,30 @@ var SEQ_ASKS = [
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 2,
-    templateText: "{{n}}人を一列に並べるとき、特定の2人が隣り合う並べ方は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 4, max: 7, step: 1 }
+      n:     { type: "int", min: 4, max: 9, step: 1 },
+      k:     { type: "int", min: 2, max: 3, step: 1 },
+      scene: { type: "int", min: 0, max: 6, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      v.q = PERM_ADJACENT_SCENES[v.scene % PERM_ADJACENT_SCENES.length](v.n, v.k);
+      // 解説で使う値。generator.js の computeDerivedVars ではなくここで作る
+      // （k を可変にしたので、2人固定を前提にした式では合わなくなる）
+      v.blocks = v.n - v.k + 1;
+      v.blockPerm = factorial(v.n - v.k + 1);
+      v.innerPerm = factorial(v.k);
+    },
     answerFormula: function(v) {
-      return factorial(v.n - 1) * 2;
+      return factorial(v.n - v.k + 1) * factorial(v.k);
     },
     unit: "通り",
-    explanationTemplate: "【考え方】\n「隣り合う」条件付き順列。隣り合う人たちを1つのブロックとみなして\nまとめて並べ、ブロック内の並び順を掛けます。\n\n【解法】\n① 特定の2人を1つのブロック（かたまり）として扱う\n  → {{n}}人 → ブロック+残り = {{nMinus1}}組\n\n② {{nMinus1}}組の並べ方:\n  {{nMinus1}}! = {{blockPerm}}通り\n\n③ ブロック内の2人の並び順:\n  AB or BA = 2通り\n\n④ 合計: {{blockPerm}} × 2 = {{answer}}通り\n\n【ポイント】\n・「隣り合う」→ まとめて1ブロック → (n-1)! × (ブロック内の並び)\n・「隣り合わない」→ 全体 - 隣り合う で求めるのが楽\n・3人が隣り合う場合は (n-2)! × 3! になる",
-    timeLimitSec: 120
+    explanationTemplate: "【考え方】\n「隣り合う」条件付き順列。隣り合うものを1つのブロックとみなして\nまとめて並べ、ブロック内の並び順を掛けます。\n\n【解法】\n① 特定の{{k}}つを1つのブロック（かたまり）として扱う\n  → 全体は「ブロック + 残り」= {{blocks}}組になる\n\n② {{blocks}}組の並べ方:\n  {{blocks}}! = {{blockPerm}}通り\n\n③ ブロック内の{{k}}つの並び順:\n  {{k}}! = {{innerPerm}}通り\n\n④ 合計: {{blockPerm}} × {{innerPerm}} = {{answer}}通り\n\n【ポイント】\n・「隣り合う」→ まとめて1ブロック → (n-k+1)! × k!\n・「隣り合わない」→ 全体 - 隣り合う で求めるのが楽\n・ブロック内の並び順を掛け忘れるのが最も多い間違い",
+    timeLimitSec: 120,
+    validate: function(v) {
+      return v.k <= v.n - 1;
+    }
   });
 
   QUESTION_TEMPLATES.push({
@@ -3613,36 +4018,45 @@ var SEQ_ASKS = [
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 2,
-    templateText: "{{n}}人が円形のテーブルに座る方法は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 4, max: 7, step: 1 }
+      n:     { type: "int", min: 4, max: 10, step: 1 },
+      scene: { type: "int", min: 0, max: 9, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      v.q = PERM_CIRCLE_SCENES[v.scene % PERM_CIRCLE_SCENES.length](v.n);
+      v.nMinus1 = v.n - 1;
+    },
     answerFormula: function(v) {
       return factorial(v.n - 1);
     },
     unit: "通り",
-    explanationTemplate: "【考え方】\n円形に並べる「円順列」は、回転を同一視するため1人を固定します。\n直線の順列(n!)から回転分(n通り)を割ります。\n\n【解法】\n① 円順列の公式: (n-1)!\n  1人を固定し、残り(n-1)人の並べ方を数える\n\n② ({{n}}-1)! = {{nMinus1}}! = {{answer}}通り\n\n【ポイント】\n・直線の順列: n!、円順列: (n-1)!\n・なぜ(n-1)!か: 回転して同じ並びはn通りあるので n!/n = (n-1)!\n・さらに裏返しも同じとする場合: (n-1)!/2（じゅず順列）",
+    explanationTemplate: "【考え方】\n円形に並べる「円順列」は、回転を同一視するため1つを固定します。\n直線の順列(n!)から回転分(n通り)を割ります。\n\n【解法】\n① 円順列の公式: (n-1)!\n  1つを固定し、残り(n-1)個の並べ方を数える\n\n② ({{n}}-1)! = {{nMinus1}}! = {{answer}}通り\n\n【ポイント】\n・直線の順列: n!、円順列: (n-1)!\n・なぜ(n-1)!か: 回転して同じ並びはn通りあるので n!/n = (n-1)!\n・さらに裏返しも同じとする場合: (n-1)!/2（じゅず順列）",
     timeLimitSec: 90
   });
 
-  // 組合せ: 委員の選び方
+  // 組合せ: 役職の割り当て
   QUESTION_TEMPLATES.push({
     id: "kumiawase_committee_01",
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 2,
-    templateText: "{{n}}人の中から委員長1人、副委員長1人、書記1人を選ぶ方法は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 5, max: 10, step: 1 }
+      n:     { type: "int", min: 5, max: 14, step: 1 },
+      scene: { type: "int", min: 0, max: 7, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      v.q = PERM_ROLE_SCENES[v.scene % PERM_ROLE_SCENES.length](v.n);
+    },
     answerFormula: function(v) {
       return v.n * (v.n - 1) * (v.n - 2);
     },
     unit: "通り",
-    explanationTemplate: "【考え方】\n役職（委員長・副委員長・書記）が異なるので、誰がどの役かが重要。\nこれは「順列」の問題です（選んで割り当てる）。\n\n【解法】\n① 委員長の選び方: {{n}}通り\n② 副委員長の選び方: {{nM1}}通り（委員長以外）\n③ 書記の選び方: {{nM2}}通り（委員長・副委員長以外）\n\n④ 合計: {{n}} × {{nM1}} × {{nM2}} = {{answer}}通り\n  = P({{n}}, 3)\n\n【ポイント】\n・役職あり → 順列（誰がどの役かで区別）\n・役職なし（3人選ぶだけ）→ 組み合わせ C(n,3)\n・P(n,3) = C(n,3) × 3!（3つの役の並べ方6通り分の差）",
+    explanationTemplate: "【考え方】\n3つの役割が互いに異なるので、誰がどれになるかが区別されます。\nこれは「順列」の問題です（選んで割り当てる）。\n\n【解法】\n① 1つ目の選び方: {{n}}通り\n② 2つ目の選び方: {{nM1}}通り（1つ目以外）\n③ 3つ目の選び方: {{nM2}}通り（1つ目・2つ目以外）\n\n④ 合計: {{n}} × {{nM1}} × {{nM2}} = {{answer}}通り\n  = P({{n}}, 3)\n\n【ポイント】\n・役割が区別される → 順列（誰がどれかで区別）\n・区別しない（3人選ぶだけ）→ 組み合わせ C(n,3)\n・P(n,3) = C(n,3) × 3!（3つの役の並べ方6通り分の差）",
     timeLimitSec: 90
   });
 
@@ -3653,37 +4067,48 @@ var SEQ_ASKS = [
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 3,
-    templateText: "右に{{right}}回、上に{{up}}回進んで目的地に着く最短経路は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      right: { type: "int", min: 2, max: 5, step: 1 },
-      up: { type: "int", min: 2, max: 4, step: 1 }
+      right: { type: "int", min: 2, max: 7, step: 1 },
+      up:    { type: "int", min: 2, max: 6, step: 1 },
+      scene: { type: "int", min: 0, max: 4, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      v.q = PATH_SCENES[v.scene % PATH_SCENES.length](v.right, v.up);
+    },
     answerFormula: function(v) {
       return combination(v.right + v.up, v.up);
     },
     unit: "通り",
-    explanationTemplate: "【考え方】\n最短経路問題は「右(→)と上(↑)の移動順序」の組み合わせ。\n全移動回数の中から「上に進む回」を選ぶ問題に帰着します。\n\n【解法】\n① 全移動回数:\n  右{{right}}回 + 上{{up}}回 = {{total}}回\n\n② この{{total}}回の中から「上に進む{{up}}回」を選ぶ:\n  C({{total}}, {{up}}) = {{answer}}通り\n\n【ポイント】\n・最短経路 = 同じものを含む順列 = 組み合わせ\n・C(右+上, 上) = C(右+上, 右) どちらで計算してもOK\n・途中に通過点がある場合: 「出発→通過点」×「通過点→目的地」\n・通れない交差点がある場合: 全体 - 通れない経路 で求める",
+    explanationTemplate: "【考え方】\n最短経路問題は「2方向の移動をどの順に行うか」の組み合わせ。\n全移動回数の中から「片方の方向に進む回」を選ぶ問題に帰着します。\n\n【解法】\n① 全移動回数:\n  {{right}}回 + {{up}}回 = {{total}}回\n\n② この{{total}}回の中から、片方の方向に進む{{up}}回を選ぶ:\n  C({{total}}, {{up}}) = {{answer}}通り\n\n【ポイント】\n・最短経路 = 同じものを含む順列 = 組み合わせ\n・C(合計, 一方) = C(合計, もう一方) どちらで計算してもOK\n・途中に通過点がある場合: 「出発→通過点」×「通過点→目的地」\n・通れない交差点がある場合: 全体 - 通れない経路 で求める",
     timeLimitSec: 120
   });
 
-  // 順列: 特定の人を除外
+  // 順列: 特定の1つを端から除外
   QUESTION_TEMPLATES.push({
     id: "junretsu_exclude_01",
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
     difficulty: 2,
-    templateText: "{{n}}人を一列に並べるとき、特定の1人が先頭にならない並べ方は何通りあるか。",
+    templateText: "{{q}}",
     variables: {
-      n: { type: "int", min: 4, max: 7, step: 1 }
+      n:     { type: "int", min: 4, max: 10, step: 1 },
+      scene: { type: "int", min: 0, max: 9, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var sc = PERM_EXCLUDE_SCENES[v.scene % PERM_EXCLUDE_SCENES.length];
+      v.q = sc.text(v.n);
+      v.pos = sc.pos;
+      v.thing = sc.thing;
+    },
     answerFormula: function(v) {
       return factorial(v.n) - factorial(v.n - 1);
     },
     unit: "通り",
-    explanationTemplate: "【考え方】\n「○○にならない場合の数」= 全体 - ○○になる場合の数。\n余事象の考え方を使います。\n\n【解法】\n① 全体の並べ方（制約なし）:\n  {{n}}! = {{allPerm}}通り\n\n② 特定の人が先頭になる場合:\n  先頭を固定 → 残り({{n}}-1)人の並べ方: ({{n}}-1)! = {{headPerm}}通り\n\n③ 先頭にならない場合（余事象）:\n  {{allPerm}} - {{headPerm}} = {{answer}}通り\n\n【ポイント】\n・「○○でない」→ 全体 - ○○ の余事象が楽\n・別解: 先頭は(n-1)通り × 残りは(n-1)! = (n-1)×(n-1)! でも同じ\n・余事象は確率・場合の数どちらでも超重要テクニック",
+    explanationTemplate: "【考え方】\n「○○にならない場合の数」= 全体 - ○○になる場合の数。\n余事象の考え方を使います。\n\n【解法】\n① 全体の並べ方（制約なし）:\n  {{n}}! = {{allPerm}}通り\n\n② 特定の{{thing}}が{{pos}}になる場合:\n  {{pos}}を固定 → 残り({{n}}-1)個の並べ方: ({{n}}-1)! = {{headPerm}}通り\n\n③ {{pos}}にならない場合（余事象）:\n  {{allPerm}} - {{headPerm}} = {{answer}}通り\n\n【ポイント】\n・「○○でない」→ 全体 - ○○ の余事象が楽\n・別解: {{pos}}は(n-1)通り × 残りは(n-1)! でも同じ\n・余事象は確率・場合の数どちらでも超重要テクニック",
     timeLimitSec: 90
   });
 })();
