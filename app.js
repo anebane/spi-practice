@@ -225,7 +225,9 @@
       if (state.questionTimeRemaining <= 0) {
         // 時間切れ → 自動スキップ
         var tq = state.questions[state.currentIndex];
-        trackEvent("question_timeout", { question_id: tq.id, category: tq.category, difficulty: tq.difficulty });
+        // 時間切れは「問題文が読みにくい」の最も強い信号なので、
+        // テンプレート別に数えられる形で送る。
+        trackEvent("question_timeout", { template_id: tq.templateId || "", category: tq.category, difficulty: tq.difficulty });
         recordAnswer(null, true);
       }
     }, 1000);
@@ -512,8 +514,17 @@
       skipped: !!skipped
     };
 
+    // ⚠️ question_id（q.id）は送らない。generator が毎問
+    //    `<templateId>_<timestamp>_<乱数>` で作るので全部が別の値になり、
+    //    GA4 では「(other)」に丸められて集計できないうえ、カーディナリティの
+    //    枠を食い潰す。テンプレート別に見たいので templateId を送る。
+    //
+    // この数字で見たいのは難易度調整ではなく「壊れた問題の検出」。
+    // 検証テストは問題の数学的な正しさしか見られず、
+    // 「問題文が分かりにくい」「選択肢が紛らわしい」「解説が理解できない」は
+    // 正答率と所要時間にしか出ない。
     trackEvent("question_answer", {
-      question_id: q.id,
+      template_id: q.templateId || "",
       category: q.category,
       difficulty: q.difficulty,
       is_correct: isCorrect,
@@ -566,7 +577,7 @@
 
     var q = state.questions[state.currentIndex];
     state.isPeeking = true;
-    trackEvent("peek_explanation", { question_id: q.id, category: q.category, difficulty: q.difficulty });
+    trackEvent("peek_explanation", { template_id: q.templateId || "", category: q.category, difficulty: q.difficulty });
 
     // 正解と解説を表示
     document.getElementById("peek-correct-answer").textContent = "正解: " + formatAnswer(q.correctAnswer, q);
@@ -1067,7 +1078,9 @@
     // 誤り報告ボタン
     document.getElementById("btn-report-error").addEventListener("click", function() {
       openReportForm(reviewIndex);
-      trackEvent("report_error", { question_id: (state.questions[reviewIndex] || {}).id });
+      // 利用者からの誤り報告は最も強い信号。どのテンプレートかが分からないと
+      // 直しようがないので、必ず templateId を送る。
+      trackEvent("report_error", { template_id: (state.questions[reviewIndex] || {}).templateId || "" });
     });
 
     // FAQ開閉トラッキング

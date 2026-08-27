@@ -165,6 +165,7 @@ var QuestionGenerator = (function() {
 
     return {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
       category: template.category,
       categoryId: template.categoryId,
       difficulty: template.difficulty,
@@ -185,6 +186,7 @@ var QuestionGenerator = (function() {
 
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
       category: template.category,
       categoryId: template.categoryId,
       difficulty: template.difficulty || 2,
@@ -213,6 +215,7 @@ var QuestionGenerator = (function() {
 
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
       category: template.category,
       categoryId: template.categoryId,
       difficulty: template.difficulty || 2,
@@ -287,6 +290,7 @@ var QuestionGenerator = (function() {
 
       var result = {
         id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
         category: template.category,
         categoryId: template.categoryId,
         difficulty: template.difficulty,
