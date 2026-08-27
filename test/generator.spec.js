@@ -821,30 +821,33 @@ if (failures.length) process.exitCode = 1;
 
   const total = rels.reduce((a, r) => a + WORD_PAIRS[r].length, 0);
   console.log(`\n語ペア辞書の不変条件: ${rels.length}関係 / ${total}ペア`);
-  if (!problems.length) {
-    console.log("   ✅ 同じペアが2つ以上の関係に現れていない（語順違いも含む）");
-  }
-
-  // 語単位の重複は正解の一意性を壊さない（ペアが違えば関係も違う）ので落とさない。
-  // ただし「職業:教師」と「教師:生徒」が同じ問題に並ぶと読み手が混乱するため、
-  // 生成側で同居しないようにガードしている。どの語が該当するかは見えるようにしておく。
+  // 語単位の重複も落とす。
+  //
+  // ペアが違えば関係も違うので正解の一意性は壊れないが、「職業:教師」と
+  // 「教師:生徒」が同じ問題に並ぶと読み手が混乱する。
+  // 以前はここを警告にとどめ、生成物を600問サンプリングして同居を探していたが、
+  // 衝突語が1つしか無い状態では当たらない回のほうが多く（実測で5回中3回が素通り）、
+  // 見逃しが常態化していた。辞書は静的なので確率に頼る必要がない。
+  // 全ペアを走査して1語でも重複したら落とす＝検出率100%。
   {
-    const relOfWord = new Map(), collide = [];
+    const relOfWord = new Map();
     for (const rel of rels) {
       for (const p of WORD_PAIRS[rel] || []) {
         for (const w of (Array.isArray(p) ? p : [])) {
-          if (relOfWord.has(w) && relOfWord.get(w) !== rel) collide.push(`${w}（${relOfWord.get(w)} / ${rel}）`);
-          else relOfWord.set(w, rel);
+          if (relOfWord.has(w) && relOfWord.get(w) !== rel) {
+            problems.push(`語「${w}」が「${relOfWord.get(w)}」と「${rel}」の両方に登場している`);
+          } else {
+            relOfWord.set(w, rel);
+          }
         }
       }
     }
-    if (collide.length) {
-      console.log(`   ⚠️ 複数の関係に登場する語 ${collide.length}件: ${collide.join(", ")}`);
-      console.log("      （正解の一意性には影響しない。同じ問題には並ばないよう生成側で除外している）");
-    }
+    console.log(`   異なり語 ${relOfWord.size}語（${total * 2}スロット）`);
   }
 
-  if (problems.length) {
+  if (!problems.length) {
+    console.log("   ✅ 同じペア・同じ語が2つ以上の関係に現れていない（語順違いも含む）");
+  } else {
     console.log(`   ❌ ${problems.length}件`);
     for (const p of problems.slice(0, 10)) console.log("   - " + p);
     process.exitCode = 1;
@@ -882,9 +885,6 @@ if (failures.length) process.exitCode = 1;
       const hits = chRels.map((r, idx) => r === exRel ? idx : -1).filter(idx => idx >= 0);
       if (hits.length !== 1) notOne++;
       else if (hits[0] !== q.correctAnswer) mismatch++;
-
-      const words = [exLine].concat(q.choices).join(" : ").split(" : ").map(s => s.trim());
-      if (new Set(words).size !== words.length) dupWord++;
     }
   }
 
@@ -904,19 +904,45 @@ if (failures.length) process.exitCode = 1;
       const odd = chRels.map((r, idx) => count[r] === 1 ? idx : -1).filter(idx => idx >= 0);
       if (odd.length !== 1) notOne2++;
       else if (odd[0] !== q.correctAnswer) mismatch2++;
-
-      const words = q.choices.join(" : ").split(" : ").map(s => s.trim());
-      if (new Set(words).size !== words.length) dupWord2++;
     }
   }
 
   console.log(`\n語句の関係の一意性: 同じ関係を選ぶ ${checked}問 / 仲間はずれ ${checked2}問を辞書から引き直して検証`);
-  const bad = unknown + notOne + mismatch + dupWord + unknown2 + notOne2 + mismatch2 + dupWord2;
+  const bad = unknown + notOne + mismatch + unknown2 + notOne2 + mismatch2;
   if (checked && checked2 && bad === 0) {
-    console.log("   ✅ 該当する選択肢が常にちょうど1つ・正解と一致・同じ語の重複なし");
+    console.log("   ✅ 該当する選択肢が常にちょうど1つで、正解と一致");
   } else {
-    console.log(`   ❌ [同じ関係] 辞書に無いペア ${unknown} / 該当が1つでない ${notOne} / 正解不一致 ${mismatch} / 語の重複 ${dupWord}`);
-    console.log(`      [仲間はずれ] 辞書に無いペア ${unknown2} / 外れが1つでない ${notOne2} / 正解不一致 ${mismatch2} / 語の重複 ${dupWord2}`);
+    console.log(`   ❌ [同じ関係] 辞書に無いペア ${unknown} / 該当が1つでない ${notOne} / 正解不一致 ${mismatch}`);
+    console.log(`      [仲間はずれ] 辞書に無いペア ${unknown2} / 外れが1つでない ${notOne2} / 正解不一致 ${mismatch2}`);
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 同居ガードの単体テスト ---
+//
+// 「同じ語を含むペアを1問に並べない」ガードは、辞書が綺麗なうちは
+// 出番が無く、生成物をいくらサンプリングしても働いている証拠が得られない。
+// 辞書の中身に依存しない形で、人工的に衝突するペアを渡して確かめる。
+{
+  const guard = vm.runInContext("wordPairsAllDistinct", ctx);
+  const cases = [
+    { want: true,  name: "全て異なる語",           in: [["果物", "りんご"], ["自動車", "タイヤ"]] },
+    { want: false, name: "前の語どうしが衝突",     in: [["教師", "生徒"], ["教師", "教壇"]] },
+    { want: false, name: "後の語どうしが衝突",     in: [["職業", "教師"], ["学校", "教師"]] },
+    { want: false, name: "前の語と後の語が衝突",   in: [["職業", "教師"], ["教師", "生徒"]] },
+    { want: false, name: "3ペア目で衝突",           in: [["果物", "りんご"], ["自動車", "タイヤ"], ["樹木", "りんご"]] },
+    { want: false, name: "1ペア内で同語",           in: [["教師", "教師"]] },
+    { want: true,  name: "ペアが1つだけ",           in: [["果物", "りんご"]] },
+    { want: true,  name: "空",                      in: [] }
+  ];
+  const ng = cases.filter(c => guard(c.in) !== c.want);
+  console.log(`\n同居ガードの単体テスト: ${cases.length}ケース`);
+  if (!ng.length) {
+    console.log("   ✅ 同じ語を含むペアの同居をすべて弾き、正常な組は通す");
+  } else {
+    console.log(`   ❌ ${ng.length}件`);
+    for (const c of ng) console.log(`   - ${c.name}: 期待 ${c.want} / 実際 ${guard(c.in)}`);
     process.exitCode = 1;
   }
 }
