@@ -359,6 +359,350 @@ function countSolutions(names, conds, limit) {
   return found;
 }
 
+/** 配列をその場でシャッフルする（既存の個別実装をまとめたもの）。 */
+function shuffleArray(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+// 1..n の順列をすべて作る。生成のたびに作り直すと重いのでキャッシュする。
+var _PERMS_CACHE = {};
+function permsOfN(n) {
+  if (_PERMS_CACHE[n]) return _PERMS_CACHE[n];
+  var base = [];
+  for (var i = 1; i <= n; i++) base.push(i);
+  var out = [];
+  (function rec(cur, rest) {
+    if (rest.length === 0) { out.push(cur.slice()); return; }
+    for (var k = 0; k < rest.length; k++) {
+      rec(cur.concat([rest[k]]), rest.slice(0, k).concat(rest.slice(k + 1)));
+    }
+  })([], base);
+  _PERMS_CACHE[n] = out;
+  return out;
+}
+
+/**
+ * 「条件からの絞り込み」推論を作る。
+ *
+ * 1〜n の値を n 個の対象に1つずつ割り当てる。比較条件（XはYより大きい）と
+ * 確定条件（Xはk である）を与え、「ある対象の値として考えられるものは何通りか」を問う。
+ *
+ * ここでの一意性は「答えが1つ」ではなく「通り数が1つに定まる」こと。
+ * 全順列を総当たりして解集合を出し、その中で問い先が取りうる値の個数を数える。
+ *
+ * target を外から与えるのは、選択肢（1つ〜4つ）の中での正解の位置を一様にするため。
+ * ここを成り行きに任せると正解が特定の位置に偏り、選ぶだけで当たるようになる。
+ *
+ * @returns {Object|null} {conds, sols, ask, values}
+ */
+function buildCondPuzzle(n, target) {
+  var perms = permsOfN(n);
+
+  for (var attempt = 0; attempt < 200; attempt++) {
+    // 1) 少なくとも1つは解があることを保証するため、正解を1つ先に決める
+    var perm = [];
+    for (var i = 1; i <= n; i++) perm.push(i);
+    shuffleArray(perm);
+
+    // 2) その割り当てと矛盾しない条件の候補
+    var gtCands = [], eqCands = [];
+    for (var a = 0; a < n; a++) {
+      for (var b = 0; b < n; b++) {
+        if (a !== b && perm[a] > perm[b]) gtCands.push({ kind: "gt", a: a, b: b });
+      }
+      eqCands.push({ kind: "eq", a: a, k: perm[a] });
+    }
+    shuffleArray(gtCands); shuffleArray(eqCands);
+
+    var nGt = 1 + Math.floor(Math.random() * 3);          // 1〜3個
+    var nEq = Math.random() < 0.5 ? 1 : 0;
+    var conds = gtCands.slice(0, nGt).concat(eqCands.slice(0, nEq));
+    if (conds.length < 2) continue;
+    shuffleArray(conds);
+
+    // 3) 条件を満たす割り当てを全列挙
+    var sols = perms.filter(function (p) {
+      for (var c = 0; c < conds.length; c++) {
+        var cd = conds[c];
+        if (cd.kind === "gt") { if (!(p[cd.a] > p[cd.b])) return false; }
+        else if (p[cd.a] !== cd.k) return false;
+      }
+      return true;
+    });
+    // 解が1通りしかないと「何通りか」を問う意味が無い。
+    // 多すぎると解説で全部書き出せない（書き出せない解説は解説になっていない）。
+    if (sols.length < 2 || sols.length > 8) continue;
+
+    // 4) 「考えられる値がちょうど target 通り」になる問い先を探す
+    var order = [];
+    for (var w = 0; w < n; w++) order.push(w);
+    shuffleArray(order);
+    for (var oi = 0; oi < order.length; oi++) {
+      var idx = order[oi];
+      var vals = [];
+      for (var s = 0; s < sols.length; s++) {
+        if (vals.indexOf(sols[s][idx]) === -1) vals.push(sols[s][idx]);
+      }
+      if (vals.length !== target) continue;
+      vals.sort(function (x, y) { return x - y; });
+      return { conds: conds, sols: sols, ask: idx, values: vals };
+    }
+  }
+  return null;
+}
+
+/** 条件からの絞り込みテンプレートの共通 resolve。 */
+function resolveCondPuzzle(v) {
+  var sc = COND_SCENES[v.scene % COND_SCENES.length];
+  var pool = sc.pool === "letter" ? COND_LETTER_SETS : COND_PERSON_SETS;
+  var names = pool[v.nameSet % pool.length].slice(0, COND_N);
+
+  var puz = buildCondPuzzle(COND_N, v.target);
+  if (!puz) { v._ok = false; return; }
+
+  v._ok = true;
+  v._count = puz.values.length;
+  v.setup = sc.setup(names);
+  v.conds = puz.conds.map(function (c) {
+    return c.kind === "gt" ? sc.gt(names[c.a], names[c.b]) : sc.eq(names[c.a], c.k);
+  }).join("\n");
+  v.question = sc.ask(names[puz.ask]);
+  v.solCount = puz.sols.length;
+  v.solText = puz.sols.map(function (s) {
+    return "・" + names.map(function (nm, i) { return sc.sol(nm, s[i]); }).join("、");
+  }).join("\n");
+  v.askLabel = sc.askLabel(names[puz.ask]);
+  v.valueList = puz.values.map(function (k) { return sc.value(k); }).join("、");
+  v.count = puz.values.length;
+}
+
+/** 真偽判定（対偶）テンプレートの共通 resolve。 */
+function resolveTfPuzzle(v) {
+  var sc = TF_SCENES[v.scene % TF_SCENES.length];
+  var person = TF_PERSONS[v.person % TF_PERSONS.length];
+
+  // 「運転免許を持っている社員」「運転免許を持っていない社員」を辞書から組み立てる。
+  // 連体形＋名詞なので機械的に連結しても日本語が壊れない形だけを辞書に置いてある。
+  var attrNoun = sc.attrAff + sc.member;
+  var attrNegNoun = sc.attrNegPred + sc.member;
+
+  // 対偶だけが確実に言える。逆・裏・個別の断定はいずれも言えない。
+  var correct = attrNegNoun + "は" + sc.subNegPred;
+  var wrongs = [
+    person + "は" + sc.subAff,                 // 逆を個別に当てはめたもの
+    sc.notSubNoun + "は" + sc.attrNegPred,     // 裏
+    attrNoun + "は全員" + sc.subAff,           // 逆（全称）
+    person + "は" + sc.subNegPred              // 逆の否定を個別に当てはめたもの
+  ];
+  shuffleArray(wrongs);
+
+  var opts = [{ t: correct, ok: true }];
+  for (var i = 0; i < 3; i++) opts.push({ t: wrongs[i], ok: false });
+  shuffleArray(opts);
+
+  var texts = opts.map(function (o) { return o.t; });
+  if (new Set(texts).size !== texts.length) { v._ok = false; return; }
+
+  v._ok = true;
+  v._choices = texts;
+  v._correctIndex = opts.findIndex(function (o) { return o.ok; });
+  v.group = sc.group;
+  v.subNoun = sc.subNoun;
+  v.subNegPred = sc.subNegPred;
+  v.attrAff = sc.attrAff;
+  v.attrNegPred = sc.attrNegPred;
+  v.person = person;
+}
+
+/**
+ * 数列の規則性の問題を作る。
+ *
+ * 「答えが2通りに読める」のがこの分野の事故。たとえば 2,4,8,… は等比とも
+ * 「差が倍々」とも読めて、たまたま両者の予測が食い違えば正解が2つになる。
+ * そこで、SPIで実際に問われる規則の族を列挙し、示した数列に当てはまる族の
+ * 予測がちょうど1通りのときだけ採用する（fitSequenceRules）。
+ */
+function buildSequencePuzzle(kind) {
+  var terms = [], rule = null, i, x;
+
+  if (kind === 0) {                                   // 等差
+    var a0 = 1 + Math.floor(Math.random() * 12);
+    var d = 2 + Math.floor(Math.random() * 9);
+    for (i = 0; i < 7; i++) terms.push(a0 + d * i);
+    rule = { type: "arith", d: d };
+
+  } else if (kind === 1) {                            // 等比
+    var a1 = 1 + Math.floor(Math.random() * 6);
+    var r = 2 + Math.floor(Math.random() * 2);
+    x = a1;
+    for (i = 0; i < 7; i++) { terms.push(x); x *= r; }
+    rule = { type: "geom", r: r };
+
+  } else if (kind === 2) {                            // 差が等差
+    var a2 = 1 + Math.floor(Math.random() * 8);
+    var d0 = 1 + Math.floor(Math.random() * 6);
+    var dd = 1 + Math.floor(Math.random() * 4);
+    terms.push(a2);
+    x = a2;
+    var dcur = d0;
+    for (i = 0; i < 6; i++) { x += dcur; terms.push(x); dcur += dd; }
+    rule = { type: "arith2", d0: d0, dd: dd };
+
+  } else if (kind === 3) {                            // フィボナッチ型
+    var f1 = 1 + Math.floor(Math.random() * 5);
+    var f2 = f1 + Math.floor(Math.random() * 5);
+    terms.push(f1); terms.push(f2);
+    for (i = 2; i < 7; i++) terms.push(terms[i - 1] + terms[i - 2]);
+    rule = { type: "fib" };
+
+  } else {                                            // 前の数を m 倍して c を足す
+    var m = 2 + Math.floor(Math.random() * 2);
+    var c = 1 + Math.floor(Math.random() * 5);
+    var a4 = 1 + Math.floor(Math.random() * 5);
+    terms.push(a4);
+    for (i = 1; i < 7; i++) terms.push(terms[i - 1] * m + c);
+    rule = { type: "mulAdd", m: m, c: c };
+  }
+
+  // 桁が大きすぎると電卓なしのテストセンターで解けない
+  for (i = 0; i < terms.length; i++) {
+    if (!isFinite(terms[i]) || terms[i] <= 0 || terms[i] > 3000) return null;
+  }
+  return { terms: terms, rule: rule };
+}
+
+/**
+ * 数列に当てはまる規則を総当たりし、次の項の予測値を重複なしで返す。
+ * 予測が2つ以上出るものは「答えが定まらない問題」なので出題しない。
+ */
+function fitSequenceRules(s) {
+  var n = s.length, i;
+  var preds = [];
+  var push = function (v) {
+    if (isFinite(v) && v === Math.round(v) && preds.indexOf(v) === -1) preds.push(v);
+  };
+
+  // 等差
+  var d = s[1] - s[0], okA = true;
+  for (i = 1; i < n; i++) if (s[i] - s[i - 1] !== d) { okA = false; break; }
+  if (okA) push(s[n - 1] + d);
+
+  // 等比
+  if (s[0] !== 0) {
+    var r = s[1] / s[0], okG = (r !== 1);
+    for (i = 1; i < n && okG; i++) {
+      if (s[i - 1] === 0 || s[i] / s[i - 1] !== r) okG = false;
+    }
+    if (okG) push(s[n - 1] * r);
+  }
+
+  // 差が等差
+  var diffs = [];
+  for (i = 1; i < n; i++) diffs.push(s[i] - s[i - 1]);
+  if (diffs.length >= 3) {
+    var dd = diffs[1] - diffs[0], okA2 = true;
+    for (i = 1; i < diffs.length; i++) if (diffs[i] - diffs[i - 1] !== dd) { okA2 = false; break; }
+    if (okA2) push(s[n - 1] + diffs[diffs.length - 1] + dd);
+  }
+
+  // フィボナッチ型
+  if (n >= 4) {
+    var okF = true;
+    for (i = 2; i < n; i++) if (s[i] !== s[i - 1] + s[i - 2]) { okF = false; break; }
+    if (okF) push(s[n - 1] + s[n - 2]);
+  }
+
+  // 前の数を m 倍して c を足す
+  if (n >= 3 && (s[1] - s[0]) !== 0) {
+    var m = (s[2] - s[1]) / (s[1] - s[0]);
+    if (m === Math.round(m) && Math.abs(m) >= 2 && Math.abs(m) <= 5) {
+      var c = s[1] - s[0] * m;
+      var okM = true;
+      for (i = 1; i < n; i++) if (s[i] !== s[i - 1] * m + c) { okM = false; break; }
+      if (okM) push(s[n - 1] * m + c);
+    }
+  }
+
+  return preds;
+}
+
+/** 数列テンプレートの共通 resolve。 */
+function resolveSequencePuzzle(v) {
+  var puz = buildSequencePuzzle(v.kind);
+  if (!puz) { v._ok = false; return; }
+
+  var shown = puz.terms.slice(0, 6);
+  var ans = puz.terms[6];
+
+  // 生成器の意図と、示した数列から読み取れる規則が一致しているかを確かめる
+  var preds = fitSequenceRules(shown);
+  if (preds.length !== 1 || preds[0] !== ans) { v._ok = false; return; }
+
+  var last = shown[5], prev = shown[4];
+  var lastDiff = last - prev;
+  var prevDiff = prev - shown[3];
+  var firstDiff = shown[1] - shown[0];
+  var base = Math.max(1, Math.abs(lastDiff));
+
+  // 誤答は「よくある計算間違いの結果」。
+  // ±base×1〜3 は必ず正の整数になる（等差・等比・差が等差・フィボナッチ・m倍+c の
+  // どれでも ans-3*base > 0 が成り立つことを確認済み）ので、
+  // エンジン側の補完（答えの半分など小数が出る）を発動させずに済む。
+  var wrongs = [
+    last,                     // 1つ手前で止めてしまった
+    last + lastDiff,          // 差が変わることを見落とした
+    last + prevDiff,          // 1つ前の差を使ってしまった
+    last + firstDiff,         // 最初の差をずっと使ってしまった
+    2 * ans - last,           // 進めすぎた
+    ans + lastDiff,
+    ans - base, ans - 2 * base, ans - 3 * base,
+    ans + base, ans + 2 * base, ans + 3 * base
+  ];
+
+  v._ok = true;
+  v._answer = ans;
+  v._wrongs = wrongs;
+  v.seq = shown.join(", ");
+  v.intro = SEQ_INTROS[v.intro_i % SEQ_INTROS.length];
+  v.ask = SEQ_ASKS[v.ask_i % SEQ_ASKS.length];
+  v.explainBody = explainSequence(puz.rule, shown, ans);
+}
+
+/** 規則ごとの解説本文。規則が違えば解き方の説明も変わるので分けて書く。 */
+function explainSequence(rule, s, ans) {
+  var last = s[5], prev = s[4];
+  var diffs = [];
+  for (var i = 1; i < s.length; i++) diffs.push(s[i] - s[i - 1]);
+
+  if (rule.type === "arith") {
+    return "隣り合う数の差を取ると、すべて " + rule.d + " で一定です。\n\n"
+      + "等差数列なので、次の数は " + last + " + " + rule.d + " = " + ans + " です。";
+  }
+  if (rule.type === "geom") {
+    return "隣り合う数の比を取ると、すべて " + rule.r + " 倍で一定です。\n\n"
+      + "等比数列なので、次の数は " + last + " × " + rule.r + " = " + ans + " です。";
+  }
+  if (rule.type === "arith2") {
+    var lastDiff = diffs[diffs.length - 1];
+    return "差を取ると " + diffs.join(", ") + " となり、差そのものが " + rule.dd + " ずつ増えています。\n\n"
+      + "次の差は " + lastDiff + " + " + rule.dd + " = " + (lastDiff + rule.dd) + " なので、\n"
+      + "? = " + last + " + " + (lastDiff + rule.dd) + " = " + ans + " です。";
+  }
+  if (rule.type === "fib") {
+    return "前の2つの数を足すと次の数になります。\n"
+      + s[0] + " + " + s[1] + " = " + s[2] + "、" + s[1] + " + " + s[2] + " = " + s[3] + " …\n\n"
+      + "? = " + prev + " + " + last + " = " + ans + " です。";
+  }
+  return "各項は「前の数を " + rule.m + " 倍して " + rule.c + " を足す」形になっています。\n"
+    + s[0] + " × " + rule.m + " + " + rule.c + " = " + s[1] + "、"
+    + s[1] + " × " + rule.m + " + " + rule.c + " = " + s[2] + " …\n\n"
+    + "? = " + last + " × " + rule.m + " + " + rule.c + " = " + ans + " です。";
+}
+
 function gcd(a, b) {
   a = Math.abs(Math.round(a));
   b = Math.abs(Math.round(b));
@@ -887,6 +1231,158 @@ var ORDER_ATTRS = {
   ]
 };
 
+// ------------------------------------------------------------
+// 条件からの絞り込み（suiron_cond_01）の素材
+// ------------------------------------------------------------
+// 場面ごとに「値」の意味づけが違う（番号・順位・得点）。
+// 内部では常に 1〜5 の数値を割り当て、表示のときだけ場面の言い回しに直す。
+// 順位だけは数が大きいほど「下位」なので、gt の文言をそこで反転させている。
+var COND_N = 5;
+var COND_LETTER_SETS = [
+  ["A", "B", "C", "D", "E"],
+  ["P", "Q", "R", "S", "T"],
+  ["W", "X", "Y", "Z", "V"]
+];
+var COND_PERSON_SETS = [
+  ["A", "B", "C", "D", "E"],
+  ["P", "Q", "R", "S", "T"],
+  ["甲", "乙", "丙", "丁", "戊"],
+  ["赤木", "青木", "黒田", "白石", "緑川"]
+];
+
+var COND_SCENES = [
+  {
+    pool: "letter",
+    setup: function (nm) {
+      return "箱" + nm.join("、箱") + " の" + COND_N + "つの箱に、1から" + COND_N
+        + "までの番号を1つずつ書いたカードが1枚ずつ入っている。";
+    },
+    gt: function (a, b) { return "・箱" + a + "のカードの番号は箱" + b + "より大きい"; },
+    eq: function (a, k) { return "・箱" + a + "のカードの番号は" + k + "である"; },
+    ask: function (w) { return "箱" + w + "のカードの番号として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return "箱" + w + "のカードの番号"; },
+    sol: function (nm, k) { return "箱" + nm + "=" + k; },
+    value: function (k) { return String(k); }
+  },
+  {
+    pool: "person",
+    setup: function (nm) {
+      return nm.join("、") + " の" + COND_N + "人が徒競走をし、1位から" + COND_N
+        + "位までの順位がついた。同じ順位の人はいない。";
+    },
+    // 順位は数が大きいほど下位。内部の「値が大きい」をそのまま「順位が下」と読み替える
+    gt: function (a, b) { return "・" + a + "は" + b + "より順位が下だった"; },
+    eq: function (a, k) { return "・" + a + "は" + k + "位だった"; },
+    ask: function (w) { return w + "の順位として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return w + "の順位"; },
+    sol: function (nm, k) { return nm + "=" + k + "位"; },
+    value: function (k) { return k + "位"; }
+  },
+  {
+    pool: "person",
+    setup: function (nm) {
+      return nm.join("、") + " の" + COND_N + "人が、1から" + COND_N
+        + "までの番号が書かれた札を1枚ずつ持っている。";
+    },
+    gt: function (a, b) { return "・" + a + "の札の番号は" + b + "より大きい"; },
+    eq: function (a, k) { return "・" + a + "の札の番号は" + k + "である"; },
+    ask: function (w) { return w + "の札の番号として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return w + "の札の番号"; },
+    sol: function (nm, k) { return nm + "=" + k; },
+    value: function (k) { return String(k); }
+  },
+  {
+    pool: "person",
+    setup: function (nm) {
+      return nm.join("、") + " の" + COND_N + "人がゲームをし、1点から" + COND_N
+        + "点までの点数を全員異なる点数で獲得した。";
+    },
+    gt: function (a, b) { return "・" + a + "の得点は" + b + "より高い"; },
+    eq: function (a, k) { return "・" + a + "の得点は" + k + "点である"; },
+    ask: function (w) { return w + "の得点として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return w + "の得点"; },
+    sol: function (nm, k) { return nm + "=" + k + "点"; },
+    value: function (k) { return k + "点"; }
+  }
+];
+
+// ------------------------------------------------------------
+// 真偽判定（suiron_tf_01）の素材
+// ------------------------------------------------------------
+// 【重要】subNoun ⊆ attrAff が成り立ち、その逆が成り立たない組にすること。
+//         逆も成り立つ題材を入れると、誤答（逆）まで正しくなって正解が2つになる。
+// 文字列は連結して選択肢を作るので、名詞句・述語の区別を崩さないこと。
+//   attrAff/attrNegPred は連体形（+ member で名詞句になる）
+//   subAff/subNegPred は述語（「〜は」の後ろに置く）
+var TF_PERSONS = ["田中さん", "佐藤さん", "鈴木さん", "高橋さん",
+                  "伊藤さん", "渡辺さん", "山本さん", "中村さん"];
+
+var TF_SCENES = [
+  {
+    group: "ある会社の社員", member: "社員",
+    subNoun: "営業部の社員", notSubNoun: "営業部でない社員",
+    subAff: "営業部の社員である", subNegPred: "営業部の社員ではない",
+    attrAff: "運転免許を持っている", attrNegPred: "運転免許を持っていない"
+  },
+  {
+    group: "あるクラスの生徒", member: "生徒",
+    subNoun: "サッカー部の生徒", notSubNoun: "サッカー部でない生徒",
+    subAff: "サッカー部の生徒である", subNegPred: "サッカー部の生徒ではない",
+    attrAff: "体力テストでA判定を取った", attrNegPred: "体力テストでA判定を取っていない"
+  },
+  {
+    group: "ある大学の学生", member: "学生",
+    subNoun: "経済学部の学生", notSubNoun: "経済学部でない学生",
+    subAff: "経済学部の学生である", subNegPred: "経済学部の学生ではない",
+    attrAff: "統計学を履修している", attrNegPred: "統計学を履修していない"
+  },
+  {
+    group: "ある町の住民", member: "住民",
+    subNoun: "自治会に加入している住民", notSubNoun: "自治会に加入していない住民",
+    subAff: "自治会に加入している", subNegPred: "自治会に加入していない",
+    attrAff: "回覧板を受け取っている", attrNegPred: "回覧板を受け取っていない"
+  },
+  {
+    group: "ある図書館の利用者", member: "利用者",
+    subNoun: "貸出カードを持つ利用者", notSubNoun: "貸出カードを持たない利用者",
+    subAff: "貸出カードを持っている", subNegPred: "貸出カードを持っていない",
+    attrAff: "利用者登録を済ませている", attrNegPred: "利用者登録を済ませていない"
+  },
+  {
+    group: "ある会社の新入社員", member: "新入社員",
+    subNoun: "技術職の新入社員", notSubNoun: "技術職でない新入社員",
+    subAff: "技術職の新入社員である", subNegPred: "技術職の新入社員ではない",
+    attrAff: "研修を修了している", attrNegPred: "研修を修了していない"
+  },
+  {
+    group: "あるサークルの部員", member: "部員",
+    subNoun: "1年生の部員", notSubNoun: "1年生でない部員",
+    subAff: "1年生である", subNegPred: "1年生ではない",
+    attrAff: "合宿に参加した", attrNegPred: "合宿に参加していない"
+  },
+  {
+    group: "ある病院の職員", member: "職員",
+    subNoun: "看護師の資格を持つ職員", notSubNoun: "看護師の資格を持たない職員",
+    subAff: "看護師の資格を持っている", subNegPred: "看護師の資格を持っていない",
+    attrAff: "夜勤に入ったことがある", attrNegPred: "夜勤に入ったことがない"
+  }
+];
+
+// ------------------------------------------------------------
+// 数列の規則性（suiron_code_01）の言い回し
+// ------------------------------------------------------------
+var SEQ_INTROS = [
+  "ある規則にしたがって数が並んでいる。",
+  "次の数の並びは、ある規則にしたがっている。",
+  "ある法則で数字が並んでいる。",
+  "以下の数列は、一定の規則で作られている。"
+];
+var SEQ_ASKS = [
+  "?に入る数はどれか。",
+  "?に当てはまる数はどれか。",
+  "?の位置に入る数として正しいものはどれか。"
+];
+
 // カテゴリ1: 推論（論理・命題）
 // ============================================================
 (function() {
@@ -992,64 +1488,55 @@ var ORDER_ATTRS = {
   });
 
   // 推論: 真偽判定
+  // 全称命題「S は全員 A」＋個別事実「p は A」から確実に言えるのは対偶だけ。
+  // 逆・裏・個別への当てはめはいずれも言えないので、そこから誤答を作る。
   QUESTION_TEMPLATES.push({
     id: "suiron_tf_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 2,
-    type: "pattern",
-    patterns: [
-      {
-        text: "ある会社の社員について以下のことがわかっている。\n・営業部の社員は全員、運転免許を持っている\n・田中さんは運転免許を持っている\n\n次のうち、確実に正しいと言えるものはどれか。",
-        choices: [
-          "田中さんは営業部の社員である",
-          "営業部でない社員は運転免許を持っていない",
-          "運転免許を持っていない人は営業部の社員ではない",
-          "田中さんは営業部でない部署の社員である"
-        ],
-        correctIndex: 2,
-        explanation: "「営業部の社員 → 運転免許を持っている」の対偶は\n「運転免許を持っていない → 営業部の社員ではない」\nこれは確実に正しいです。\n\n田中さんについては、免許を持っていることから営業部かどうかは判断できません\n（営業部以外でも免許を持つことは可能）。"
-      },
-      {
-        text: "あるクラスの生徒について以下のことがわかっている。\n・サッカー部の生徒は全員、体力テストでA判定を取った\n・鈴木さんは体力テストでA判定を取った\n\n次のうち、確実に正しいと言えるものはどれか。",
-        choices: [
-          "鈴木さんはサッカー部の生徒である",
-          "サッカー部でない生徒はA判定を取っていない",
-          "A判定を取っていない生徒はサッカー部ではない",
-          "A判定を取った生徒は全員サッカー部である"
-        ],
-        correctIndex: 2,
-        explanation: "「サッカー部の生徒 → A判定」の対偶は\n「A判定ではない → サッカー部ではない」\nこれは確実に正しいです。\n\n鈴木さんがA判定を取ったからといって、サッカー部とは限りません。"
-      }
-    ],
+    templateText: "{{group}}について、以下のことがわかっている。\n・{{subNoun}}は全員、{{attrAff}}\n・{{person}}は{{attrAff}}\n\n次のうち、確実に正しいと言えるものはどれか。",
+    variables: {
+      scene:  { type: "int", min: 0, max: 7, step: 1 },
+      person: { type: "int", min: 0, max: 7, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveTfPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._correctIndex; },
+    buildChoices: function(v) {
+      return { choices: v._choices.slice(), correctIndex: v._correctIndex };
+    },
+    unit: "",
+    explanationTemplate: "与えられているのは「{{subNoun}} ならば {{attrAff}}」という一方向の関係だけです。\n\nここから確実に言えるのは対偶だけです。\n対偶: 「{{attrNegPred}} ならば {{subNegPred}}」\n\n{{person}}が{{attrAff}}ことは分かっていますが、\n{{subNoun}}以外にも{{attrAff}}者はいるかもしれないので、\n{{person}}が{{subNoun}}かどうかは判断できません。\n\n【ポイント】\n・「AならばB」から確実に言えるのは対偶「BでないならばAでない」だけ\n・逆「BならばA」と裏「AでないならばBでない」は必ずしも成り立たない\n・「全員〜である」は片方向。反対向きに読み替えた瞬間に誤り",
     timeLimitSec: 120
   });
 
-  // 推論: 条件からの判定（WEBテスティング特有）
+  // 推論: 条件からの絞り込み（WEBテスティング特有）
+  // 「1つに決まらないが、候補の個数は決まる」タイプ。
+  // 選択肢は常に 1つ〜4つ なので、target を変数にして正解の位置を一様にしている。
   QUESTION_TEMPLATES.push({
     id: "suiron_cond_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 3,
-    type: "pattern",
-    patterns: [
-      {
-        text: "5つの箱に1から5までの番号が1つずつ書かれたカードが入っている。\n以下のことがわかっている。\n・箱Aに入っているカードの番号は箱Bより大きい\n・箱Cに入っているカードの番号は3である\n・箱Dに入っているカードの番号は箱Eより小さい\n\n箱Aに入っているカードの番号として考えられるものをすべて選ぶと、いくつあるか。",
-        choices: ["1つ", "2つ", "3つ", "4つ"],
-        correctIndex: 2,
-        explanation: "箱Cは3が確定。\n残りは1,2,4,5を A,B,D,E に割り当てる。\nA > B、D < E の条件がある。\n\n可能な割り当て:\n・A=4,B=1,D=2,E=5 → A>B:○, D<E:○\n・A=4,B=2,D=1,E=5 → A>B:○, D<E:○\n・A=5,B=1,D=2,E=4 → A>B:○, D<E:○\n・A=5,B=2,D=1,E=4 → A>B:○, D<E:○\n・A=5,B=4,D=1,E=2 → A>B:○, D<E:○\n・A=5,B=1,D=4,E=... → 残りなし\n・A=2,B=1,D=4,E=5 → A>B:○, D<E:○\n\nAの値: 2, 4, 5 の3つ。\nよって答えは3つです。"
-      },
-      {
-        text: "A, B, C, D の4人が1位から4位まで順位をつけた。\n以下のことがわかっている。\n・AはCより上位だった\n・BはDより下位だった\n\nBの順位として考えられるものは何通りあるか。",
-        choices: ["1通り", "2通り", "3通り"],
-        correctIndex: 2,
-        explanation: "条件: A < C（順位の数値はAの方が小さい=上位）, B > D\n\n全パターンを列挙:\n1位A,2位D,3位B,4位C → A<C:1<4○, B>D:3>2○ → Bは3位\n1位A,2位D,3位C,4位B → A<C:1<3○, B>D:4>2○ → Bは4位\n1位D,2位A,3位B,4位C → A<C:2<4○, B>D:3>1○ → Bは3位\n1位D,2位A,3位C,4位B → A<C:2<3○, B>D:4>1○ → Bは4位\n1位D,2位B,3位A,4位C → A<C:3<4○, B>D:2>1○ → Bは2位\n1位A,2位B,3位D,4位C → B>D:2>3✗\n\nBの順位: 2位, 3位, 4位 の3通り。"
-      }
-    ],
+    templateText: "{{setup}}\n以下のことがわかっている。\n{{conds}}\n\n{{question}}",
+    variables: {
+      scene:   { type: "int", min: 0, max: 3, step: 1 },
+      nameSet: { type: "int", min: 0, max: 3, step: 1 },
+      target:  { type: "choice", options: [1, 2, 3, 4] }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveCondPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._count; },
+    buildChoices: function(v) {
+      return { choices: ["1つ", "2つ", "3つ", "4つ"], correctIndex: v._count - 1 };
+    },
+    unit: "",
+    explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは1つに決まらないことがある\n・全体が1通りに決まらなくても、問われている値の候補は数え上げられる",
     timeLimitSec: 150
   });
 
@@ -1172,35 +1659,28 @@ var ORDER_ATTRS = {
     timeLimitSec: 120
   });
 
-  // 推論: 暗号推論
+  // 推論: 数列の規則性
+  // 「答えが2通りに読める数列」が最大の事故要因なので、示した6項に当てはまる
+  // 規則の族を総当たりし、予測がちょうど1つのときだけ採用する（resolveSequencePuzzle）。
   QUESTION_TEMPLATES.push({
     id: "suiron_code_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 3,
-    type: "pattern",
-    patterns: [
-      {
-        text: "ある暗号で「いぬ」を「25」、「ねこ」を「73」と表す。\nこの暗号では各文字に固有の数字が割り当てられている。\n\n「こいぬ」はどう表されるか。",
-        choices: ["325", "352", "523", "532"],
-        correctIndex: 0,
-        explanation: "各文字と数字の対応を読み取ります:\n\n「いぬ」= 25 → い=2, ぬ=5\n「ねこ」= 73 → ね=7, こ=3\n\n「こいぬ」= こ(3) + い(2) + ぬ(5) = 325\n\nよって答えは325です。"
-      },
-      {
-        text: "ある規則で数字が並んでいる。\n2, 5, 10, 17, 26, ?\n\n?に入る数字はどれか。",
-        choices: ["35", "37", "33", "39"],
-        correctIndex: 1,
-        explanation: "各項の差を見ると:\n5-2=3, 10-5=5, 17-10=7, 26-17=9\n\n差の列: 3, 5, 7, 9 → 等差数列（公差2）\n次の差: 9+2=11\n\n? = 26 + 11 = 37"
-      },
-      {
-        text: "ある規則で数字が並んでいる。\n1, 1, 2, 3, 5, 8, ?\n\n?に入る数字はどれか。",
-        choices: ["11", "12", "13", "14"],
-        correctIndex: 2,
-        explanation: "フィボナッチ数列: 前の2つの数の和が次の数になる。\n1+1=2, 1+2=3, 2+3=5, 3+5=8\n\n次: 5+8 = 13"
-      }
-    ],
+    templateText: "{{intro}}\n\n{{seq}}, ?\n\n{{ask}}",
+    variables: {
+      kind:    { type: "choice", options: [0, 1, 2, 3, 4] },
+      intro_i: { type: "int", min: 0, max: 3, step: 1 },
+      ask_i:   { type: "int", min: 0, max: 2, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveSequencePuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._answer; },
+    distractors: function(v) { return v._wrongs.slice(); },
+    unit: "",
+    explanationTemplate: "{{explainBody}}\n\n【ポイント】\n・まず隣り合う数の差を取る\n・差が一定なら等差、差そのものが等差なら二段構えの規則\n・差ではなく比が一定なら等比\n・前の2つの数の和になっていないかも確かめる",
     timeLimitSec: 120
   });
 

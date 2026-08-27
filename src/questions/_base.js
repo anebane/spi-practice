@@ -356,6 +356,350 @@ function countSolutions(names, conds, limit) {
   return found;
 }
 
+/** 配列をその場でシャッフルする（既存の個別実装をまとめたもの）。 */
+function shuffleArray(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+// 1..n の順列をすべて作る。生成のたびに作り直すと重いのでキャッシュする。
+var _PERMS_CACHE = {};
+function permsOfN(n) {
+  if (_PERMS_CACHE[n]) return _PERMS_CACHE[n];
+  var base = [];
+  for (var i = 1; i <= n; i++) base.push(i);
+  var out = [];
+  (function rec(cur, rest) {
+    if (rest.length === 0) { out.push(cur.slice()); return; }
+    for (var k = 0; k < rest.length; k++) {
+      rec(cur.concat([rest[k]]), rest.slice(0, k).concat(rest.slice(k + 1)));
+    }
+  })([], base);
+  _PERMS_CACHE[n] = out;
+  return out;
+}
+
+/**
+ * 「条件からの絞り込み」推論を作る。
+ *
+ * 1〜n の値を n 個の対象に1つずつ割り当てる。比較条件（XはYより大きい）と
+ * 確定条件（Xはk である）を与え、「ある対象の値として考えられるものは何通りか」を問う。
+ *
+ * ここでの一意性は「答えが1つ」ではなく「通り数が1つに定まる」こと。
+ * 全順列を総当たりして解集合を出し、その中で問い先が取りうる値の個数を数える。
+ *
+ * target を外から与えるのは、選択肢（1つ〜4つ）の中での正解の位置を一様にするため。
+ * ここを成り行きに任せると正解が特定の位置に偏り、選ぶだけで当たるようになる。
+ *
+ * @returns {Object|null} {conds, sols, ask, values}
+ */
+function buildCondPuzzle(n, target) {
+  var perms = permsOfN(n);
+
+  for (var attempt = 0; attempt < 200; attempt++) {
+    // 1) 少なくとも1つは解があることを保証するため、正解を1つ先に決める
+    var perm = [];
+    for (var i = 1; i <= n; i++) perm.push(i);
+    shuffleArray(perm);
+
+    // 2) その割り当てと矛盾しない条件の候補
+    var gtCands = [], eqCands = [];
+    for (var a = 0; a < n; a++) {
+      for (var b = 0; b < n; b++) {
+        if (a !== b && perm[a] > perm[b]) gtCands.push({ kind: "gt", a: a, b: b });
+      }
+      eqCands.push({ kind: "eq", a: a, k: perm[a] });
+    }
+    shuffleArray(gtCands); shuffleArray(eqCands);
+
+    var nGt = 1 + Math.floor(Math.random() * 3);          // 1〜3個
+    var nEq = Math.random() < 0.5 ? 1 : 0;
+    var conds = gtCands.slice(0, nGt).concat(eqCands.slice(0, nEq));
+    if (conds.length < 2) continue;
+    shuffleArray(conds);
+
+    // 3) 条件を満たす割り当てを全列挙
+    var sols = perms.filter(function (p) {
+      for (var c = 0; c < conds.length; c++) {
+        var cd = conds[c];
+        if (cd.kind === "gt") { if (!(p[cd.a] > p[cd.b])) return false; }
+        else if (p[cd.a] !== cd.k) return false;
+      }
+      return true;
+    });
+    // 解が1通りしかないと「何通りか」を問う意味が無い。
+    // 多すぎると解説で全部書き出せない（書き出せない解説は解説になっていない）。
+    if (sols.length < 2 || sols.length > 8) continue;
+
+    // 4) 「考えられる値がちょうど target 通り」になる問い先を探す
+    var order = [];
+    for (var w = 0; w < n; w++) order.push(w);
+    shuffleArray(order);
+    for (var oi = 0; oi < order.length; oi++) {
+      var idx = order[oi];
+      var vals = [];
+      for (var s = 0; s < sols.length; s++) {
+        if (vals.indexOf(sols[s][idx]) === -1) vals.push(sols[s][idx]);
+      }
+      if (vals.length !== target) continue;
+      vals.sort(function (x, y) { return x - y; });
+      return { conds: conds, sols: sols, ask: idx, values: vals };
+    }
+  }
+  return null;
+}
+
+/** 条件からの絞り込みテンプレートの共通 resolve。 */
+function resolveCondPuzzle(v) {
+  var sc = COND_SCENES[v.scene % COND_SCENES.length];
+  var pool = sc.pool === "letter" ? COND_LETTER_SETS : COND_PERSON_SETS;
+  var names = pool[v.nameSet % pool.length].slice(0, COND_N);
+
+  var puz = buildCondPuzzle(COND_N, v.target);
+  if (!puz) { v._ok = false; return; }
+
+  v._ok = true;
+  v._count = puz.values.length;
+  v.setup = sc.setup(names);
+  v.conds = puz.conds.map(function (c) {
+    return c.kind === "gt" ? sc.gt(names[c.a], names[c.b]) : sc.eq(names[c.a], c.k);
+  }).join("\n");
+  v.question = sc.ask(names[puz.ask]);
+  v.solCount = puz.sols.length;
+  v.solText = puz.sols.map(function (s) {
+    return "・" + names.map(function (nm, i) { return sc.sol(nm, s[i]); }).join("、");
+  }).join("\n");
+  v.askLabel = sc.askLabel(names[puz.ask]);
+  v.valueList = puz.values.map(function (k) { return sc.value(k); }).join("、");
+  v.count = puz.values.length;
+}
+
+/** 真偽判定（対偶）テンプレートの共通 resolve。 */
+function resolveTfPuzzle(v) {
+  var sc = TF_SCENES[v.scene % TF_SCENES.length];
+  var person = TF_PERSONS[v.person % TF_PERSONS.length];
+
+  // 「運転免許を持っている社員」「運転免許を持っていない社員」を辞書から組み立てる。
+  // 連体形＋名詞なので機械的に連結しても日本語が壊れない形だけを辞書に置いてある。
+  var attrNoun = sc.attrAff + sc.member;
+  var attrNegNoun = sc.attrNegPred + sc.member;
+
+  // 対偶だけが確実に言える。逆・裏・個別の断定はいずれも言えない。
+  var correct = attrNegNoun + "は" + sc.subNegPred;
+  var wrongs = [
+    person + "は" + sc.subAff,                 // 逆を個別に当てはめたもの
+    sc.notSubNoun + "は" + sc.attrNegPred,     // 裏
+    attrNoun + "は全員" + sc.subAff,           // 逆（全称）
+    person + "は" + sc.subNegPred              // 逆の否定を個別に当てはめたもの
+  ];
+  shuffleArray(wrongs);
+
+  var opts = [{ t: correct, ok: true }];
+  for (var i = 0; i < 3; i++) opts.push({ t: wrongs[i], ok: false });
+  shuffleArray(opts);
+
+  var texts = opts.map(function (o) { return o.t; });
+  if (new Set(texts).size !== texts.length) { v._ok = false; return; }
+
+  v._ok = true;
+  v._choices = texts;
+  v._correctIndex = opts.findIndex(function (o) { return o.ok; });
+  v.group = sc.group;
+  v.subNoun = sc.subNoun;
+  v.subNegPred = sc.subNegPred;
+  v.attrAff = sc.attrAff;
+  v.attrNegPred = sc.attrNegPred;
+  v.person = person;
+}
+
+/**
+ * 数列の規則性の問題を作る。
+ *
+ * 「答えが2通りに読める」のがこの分野の事故。たとえば 2,4,8,… は等比とも
+ * 「差が倍々」とも読めて、たまたま両者の予測が食い違えば正解が2つになる。
+ * そこで、SPIで実際に問われる規則の族を列挙し、示した数列に当てはまる族の
+ * 予測がちょうど1通りのときだけ採用する（fitSequenceRules）。
+ */
+function buildSequencePuzzle(kind) {
+  var terms = [], rule = null, i, x;
+
+  if (kind === 0) {                                   // 等差
+    var a0 = 1 + Math.floor(Math.random() * 12);
+    var d = 2 + Math.floor(Math.random() * 9);
+    for (i = 0; i < 7; i++) terms.push(a0 + d * i);
+    rule = { type: "arith", d: d };
+
+  } else if (kind === 1) {                            // 等比
+    var a1 = 1 + Math.floor(Math.random() * 6);
+    var r = 2 + Math.floor(Math.random() * 2);
+    x = a1;
+    for (i = 0; i < 7; i++) { terms.push(x); x *= r; }
+    rule = { type: "geom", r: r };
+
+  } else if (kind === 2) {                            // 差が等差
+    var a2 = 1 + Math.floor(Math.random() * 8);
+    var d0 = 1 + Math.floor(Math.random() * 6);
+    var dd = 1 + Math.floor(Math.random() * 4);
+    terms.push(a2);
+    x = a2;
+    var dcur = d0;
+    for (i = 0; i < 6; i++) { x += dcur; terms.push(x); dcur += dd; }
+    rule = { type: "arith2", d0: d0, dd: dd };
+
+  } else if (kind === 3) {                            // フィボナッチ型
+    var f1 = 1 + Math.floor(Math.random() * 5);
+    var f2 = f1 + Math.floor(Math.random() * 5);
+    terms.push(f1); terms.push(f2);
+    for (i = 2; i < 7; i++) terms.push(terms[i - 1] + terms[i - 2]);
+    rule = { type: "fib" };
+
+  } else {                                            // 前の数を m 倍して c を足す
+    var m = 2 + Math.floor(Math.random() * 2);
+    var c = 1 + Math.floor(Math.random() * 5);
+    var a4 = 1 + Math.floor(Math.random() * 5);
+    terms.push(a4);
+    for (i = 1; i < 7; i++) terms.push(terms[i - 1] * m + c);
+    rule = { type: "mulAdd", m: m, c: c };
+  }
+
+  // 桁が大きすぎると電卓なしのテストセンターで解けない
+  for (i = 0; i < terms.length; i++) {
+    if (!isFinite(terms[i]) || terms[i] <= 0 || terms[i] > 3000) return null;
+  }
+  return { terms: terms, rule: rule };
+}
+
+/**
+ * 数列に当てはまる規則を総当たりし、次の項の予測値を重複なしで返す。
+ * 予測が2つ以上出るものは「答えが定まらない問題」なので出題しない。
+ */
+function fitSequenceRules(s) {
+  var n = s.length, i;
+  var preds = [];
+  var push = function (v) {
+    if (isFinite(v) && v === Math.round(v) && preds.indexOf(v) === -1) preds.push(v);
+  };
+
+  // 等差
+  var d = s[1] - s[0], okA = true;
+  for (i = 1; i < n; i++) if (s[i] - s[i - 1] !== d) { okA = false; break; }
+  if (okA) push(s[n - 1] + d);
+
+  // 等比
+  if (s[0] !== 0) {
+    var r = s[1] / s[0], okG = (r !== 1);
+    for (i = 1; i < n && okG; i++) {
+      if (s[i - 1] === 0 || s[i] / s[i - 1] !== r) okG = false;
+    }
+    if (okG) push(s[n - 1] * r);
+  }
+
+  // 差が等差
+  var diffs = [];
+  for (i = 1; i < n; i++) diffs.push(s[i] - s[i - 1]);
+  if (diffs.length >= 3) {
+    var dd = diffs[1] - diffs[0], okA2 = true;
+    for (i = 1; i < diffs.length; i++) if (diffs[i] - diffs[i - 1] !== dd) { okA2 = false; break; }
+    if (okA2) push(s[n - 1] + diffs[diffs.length - 1] + dd);
+  }
+
+  // フィボナッチ型
+  if (n >= 4) {
+    var okF = true;
+    for (i = 2; i < n; i++) if (s[i] !== s[i - 1] + s[i - 2]) { okF = false; break; }
+    if (okF) push(s[n - 1] + s[n - 2]);
+  }
+
+  // 前の数を m 倍して c を足す
+  if (n >= 3 && (s[1] - s[0]) !== 0) {
+    var m = (s[2] - s[1]) / (s[1] - s[0]);
+    if (m === Math.round(m) && Math.abs(m) >= 2 && Math.abs(m) <= 5) {
+      var c = s[1] - s[0] * m;
+      var okM = true;
+      for (i = 1; i < n; i++) if (s[i] !== s[i - 1] * m + c) { okM = false; break; }
+      if (okM) push(s[n - 1] * m + c);
+    }
+  }
+
+  return preds;
+}
+
+/** 数列テンプレートの共通 resolve。 */
+function resolveSequencePuzzle(v) {
+  var puz = buildSequencePuzzle(v.kind);
+  if (!puz) { v._ok = false; return; }
+
+  var shown = puz.terms.slice(0, 6);
+  var ans = puz.terms[6];
+
+  // 生成器の意図と、示した数列から読み取れる規則が一致しているかを確かめる
+  var preds = fitSequenceRules(shown);
+  if (preds.length !== 1 || preds[0] !== ans) { v._ok = false; return; }
+
+  var last = shown[5], prev = shown[4];
+  var lastDiff = last - prev;
+  var prevDiff = prev - shown[3];
+  var firstDiff = shown[1] - shown[0];
+  var base = Math.max(1, Math.abs(lastDiff));
+
+  // 誤答は「よくある計算間違いの結果」。
+  // ±base×1〜3 は必ず正の整数になる（等差・等比・差が等差・フィボナッチ・m倍+c の
+  // どれでも ans-3*base > 0 が成り立つことを確認済み）ので、
+  // エンジン側の補完（答えの半分など小数が出る）を発動させずに済む。
+  var wrongs = [
+    last,                     // 1つ手前で止めてしまった
+    last + lastDiff,          // 差が変わることを見落とした
+    last + prevDiff,          // 1つ前の差を使ってしまった
+    last + firstDiff,         // 最初の差をずっと使ってしまった
+    2 * ans - last,           // 進めすぎた
+    ans + lastDiff,
+    ans - base, ans - 2 * base, ans - 3 * base,
+    ans + base, ans + 2 * base, ans + 3 * base
+  ];
+
+  v._ok = true;
+  v._answer = ans;
+  v._wrongs = wrongs;
+  v.seq = shown.join(", ");
+  v.intro = SEQ_INTROS[v.intro_i % SEQ_INTROS.length];
+  v.ask = SEQ_ASKS[v.ask_i % SEQ_ASKS.length];
+  v.explainBody = explainSequence(puz.rule, shown, ans);
+}
+
+/** 規則ごとの解説本文。規則が違えば解き方の説明も変わるので分けて書く。 */
+function explainSequence(rule, s, ans) {
+  var last = s[5], prev = s[4];
+  var diffs = [];
+  for (var i = 1; i < s.length; i++) diffs.push(s[i] - s[i - 1]);
+
+  if (rule.type === "arith") {
+    return "隣り合う数の差を取ると、すべて " + rule.d + " で一定です。\n\n"
+      + "等差数列なので、次の数は " + last + " + " + rule.d + " = " + ans + " です。";
+  }
+  if (rule.type === "geom") {
+    return "隣り合う数の比を取ると、すべて " + rule.r + " 倍で一定です。\n\n"
+      + "等比数列なので、次の数は " + last + " × " + rule.r + " = " + ans + " です。";
+  }
+  if (rule.type === "arith2") {
+    var lastDiff = diffs[diffs.length - 1];
+    return "差を取ると " + diffs.join(", ") + " となり、差そのものが " + rule.dd + " ずつ増えています。\n\n"
+      + "次の差は " + lastDiff + " + " + rule.dd + " = " + (lastDiff + rule.dd) + " なので、\n"
+      + "? = " + last + " + " + (lastDiff + rule.dd) + " = " + ans + " です。";
+  }
+  if (rule.type === "fib") {
+    return "前の2つの数を足すと次の数になります。\n"
+      + s[0] + " + " + s[1] + " = " + s[2] + "、" + s[1] + " + " + s[2] + " = " + s[3] + " …\n\n"
+      + "? = " + prev + " + " + last + " = " + ans + " です。";
+  }
+  return "各項は「前の数を " + rule.m + " 倍して " + rule.c + " を足す」形になっています。\n"
+    + s[0] + " × " + rule.m + " + " + rule.c + " = " + s[1] + "、"
+    + s[1] + " × " + rule.m + " + " + rule.c + " = " + s[2] + " …\n\n"
+    + "? = " + last + " × " + rule.m + " + " + rule.c + " = " + ans + " です。";
+}
+
 function gcd(a, b) {
   a = Math.abs(Math.round(a));
   b = Math.abs(Math.round(b));

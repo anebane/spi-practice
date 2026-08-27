@@ -541,4 +541,236 @@ if (failures.length) process.exitCode = 1;
   }
 }
 
+// --- 条件からの絞り込み: 「考えられるものは何通りか」が正しいか ---
+//
+// 順序推論・嘘つき問題と同じ方針で、生成器の内部状態は一切見ない。
+// 問題文から場面・名前・条件・問い先を読み直し、1〜5 の全順列(120通り)を
+// 総当たりして候補の個数を数え、選択肢の正解と一致するかを確かめる。
+{
+  const SCENE_PARSERS = [
+    {
+      name: "箱",
+      setup: /^箱(.+?) の5つの箱に、/,
+      split: "、箱",
+      gt: /^・箱(.+?)のカードの番号は箱(.+?)より大きい$/,
+      eq: /^・箱(.+?)のカードの番号は(\d+)である$/,
+      ask: /^箱(.+?)のカードの番号として考えられるものは何通りあるか。$/
+    },
+    {
+      name: "順位",
+      setup: /^(.+?) の5人が徒競走をし、/,
+      split: "、",
+      // 「順位が下」＝内部の値が大きい
+      gt: /^・(.+?)は(.+?)より順位が下だった$/,
+      eq: /^・(.+?)は(\d+)位だった$/,
+      ask: /^(.+?)の順位として考えられるものは何通りあるか。$/
+    },
+    {
+      name: "札",
+      setup: /^(.+?) の5人が、1から5までの番号が書かれた札を/,
+      split: "、",
+      gt: /^・(.+?)の札の番号は(.+?)より大きい$/,
+      eq: /^・(.+?)の札の番号は(\d+)である$/,
+      ask: /^(.+?)の札の番号として考えられるものは何通りあるか。$/
+    },
+    {
+      name: "得点",
+      setup: /^(.+?) の5人がゲームをし、/,
+      split: "、",
+      gt: /^・(.+?)の得点は(.+?)より高い$/,
+      eq: /^・(.+?)の得点は(\d+)点である$/,
+      ask: /^(.+?)の得点として考えられるものは何通りあるか。$/
+    }
+  ];
+
+  // 1〜5 の全順列
+  const PERMS5 = (() => {
+    const out = [];
+    const rec = (cur, rest) => {
+      if (!rest.length) { out.push(cur); return; }
+      rest.forEach((x, i) => rec(cur.concat(x), rest.slice(0, i).concat(rest.slice(i + 1))));
+    };
+    rec([], [1, 2, 3, 4, 5]);
+    return out;
+  })();
+
+  const t = TEMPLATES.find(x => x.id === "suiron_cond_01");
+  let checked = 0, unparsed = 0, zero = 0, mismatch = 0;
+  if (t) {
+    for (let i = 0; i < 600; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const lines = q.text.split("\n");
+      const sc = SCENE_PARSERS.find(s => s.setup.test(lines[0]));
+      if (!sc) { unparsed++; continue; }
+
+      const names = lines[0].match(sc.setup)[1].split(sc.split);
+      const condLines = lines.filter(l => l.startsWith("・"));
+      const askLine = lines[lines.length - 1];
+
+      const conds = [];
+      let broken = false;
+      for (const l of condLines) {
+        const g = l.match(sc.gt), e = l.match(sc.eq);
+        if (g) conds.push({ kind: "gt", a: names.indexOf(g[1]), b: names.indexOf(g[2]) });
+        else if (e) conds.push({ kind: "eq", a: names.indexOf(e[1]), k: parseInt(e[2], 10) });
+        else broken = true;
+      }
+      const am = askLine.match(sc.ask);
+      if (broken || !conds.length || !am || names.length !== 5) { unparsed++; continue; }
+      const ask = names.indexOf(am[1]);
+      if (ask < 0 || conds.some(c => c.a < 0 || (c.kind === "gt" && c.b < 0))) { unparsed++; continue; }
+
+      const sols = PERMS5.filter(p => conds.every(c =>
+        c.kind === "gt" ? p[c.a] > p[c.b] : p[c.a] === c.k));
+      checked++;
+      if (!sols.length) { zero++; continue; }
+      const vals = new Set(sols.map(p => p[ask]));
+      // 選択肢は「1つ」〜「4つ」。正解indexの+1が候補の個数と一致するはず
+      const declared = parseInt(String(q.choices[q.correctAnswer]).replace("つ", ""), 10);
+      if (vals.size !== declared) mismatch++;
+    }
+  }
+  console.log(`\n条件からの絞り込みの検証: ${checked}問を全順列で数え直し`);
+  if (checked && zero + mismatch + unparsed === 0) {
+    console.log("   ✅ すべて候補の個数が選択肢の正解と一致");
+  } else {
+    console.log(`   ❌ 解なし ${zero} / 個数不一致 ${mismatch} / パース不能 ${unparsed} / 検証数 ${checked}`);
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 真偽判定: 「確実に正しい」選択肢がちょうど1つか ---
+//
+// ここは数え上げではなく含意の問題なので、小さなモデルを総当たりして判定する。
+// 前提「S に属する者は全員 A」「p は A」を満たす世界をすべて作り、
+// 各選択肢がそのすべてで成り立つか（＝確実に言えるか）を調べる。
+// 生成器が「対偶が正解」と思っていること自体を疑うために、
+// どの形が正解かはハードコードせずモデル検査で決める。
+{
+  const TF_SCENES = vm.runInContext("TF_SCENES", ctx);
+
+  // 個体3人（うち1人が問題文の p）について S/A の真偽をすべて割り当てる
+  const MODELS = [];
+  for (let m = 0; m < 64; m++) {
+    const ind = [0, 1, 2].map(i => ({ S: !!(m >> (i * 2) & 1), A: !!(m >> (i * 2 + 1) & 1) }));
+    if (!ind.every(x => !x.S || x.A)) continue;   // 前提1: S ⊆ A
+    if (!ind[0].A) continue;                       // 前提2: p は A
+    MODELS.push(ind);
+  }
+  const FORMS = {
+    // 対偶: ¬A ならば ¬S
+    CONTRA:      (ind) => ind.every(x => x.A || !x.S),
+    // 逆(全称): A ならば S
+    CONV_ALL:    (ind) => ind.every(x => !x.A || x.S),
+    // 裏: ¬S ならば ¬A
+    INVERSE:     (ind) => ind.every(x => x.S || !x.A),
+    // 逆を個別に当てはめたもの
+    P_IN_S:      (ind) => ind[0].S,
+    P_NOT_IN_S:  (ind) => !ind[0].S
+  };
+  const entailed = {};
+  for (const k of Object.keys(FORMS)) entailed[k] = MODELS.every(FORMS[k]);
+
+  const t = TEMPLATES.find(x => x.id === "suiron_tf_01");
+  let checked = 0, unknown = 0, notOne = 0, mismatch = 0, noScene = 0;
+  if (t) {
+    for (let i = 0; i < 600; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const lines = q.text.split("\n").filter(l => l.startsWith("・"));
+      const pm = lines[0] && lines[0].match(/^・(.+?)は全員、(.+)$/);
+      const fm = lines[1] && lines[1].match(/^・(.+?)は(.+)$/);
+      if (!pm || !fm) { noScene++; continue; }
+      const sc = TF_SCENES.find(s => s.subNoun === pm[1] && s.attrAff === pm[2]);
+      if (!sc || fm[2] !== sc.attrAff) { noScene++; continue; }
+      const person = fm[1];
+
+      const kinds = q.choices.map(ch => {
+        if (ch === sc.attrNegPred + sc.member + "は" + sc.subNegPred) return "CONTRA";
+        if (ch === sc.attrAff + sc.member + "は全員" + sc.subAff) return "CONV_ALL";
+        if (ch === sc.notSubNoun + "は" + sc.attrNegPred) return "INVERSE";
+        if (ch === person + "は" + sc.subAff) return "P_IN_S";
+        if (ch === person + "は" + sc.subNegPred) return "P_NOT_IN_S";
+        return null;
+      });
+      checked++;
+      if (kinds.some(k => k === null)) { unknown++; continue; }
+      const ok = kinds.map((k, idx) => entailed[k] ? idx : -1).filter(idx => idx >= 0);
+      if (ok.length !== 1) notOne++;
+      else if (ok[0] !== q.correctAnswer) mismatch++;
+    }
+  }
+  console.log(`\n真偽判定の含意検証: ${checked}問をモデル総当たり(${MODELS.length}世界)で判定`);
+  if (checked && unknown + notOne + mismatch + noScene === 0) {
+    console.log("   ✅ 確実に言える選択肢が常にちょうど1つで、正解と一致");
+  } else {
+    console.log(`   ❌ 形が不明な選択肢 ${unknown} / 正解が1つでない ${notOne} / 正解不一致 ${mismatch} / 素材不明 ${noScene} / 検証数 ${checked}`);
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 数列: 示した数列から読める規則が1つに定まるか ---
+//
+// この分野の事故は「答えが2通りに読める」こと。生成器も同じ検査を持っているが、
+// そこにバグがあれば素通りするので、ここでは規則の当てはめを独立に書き直し、
+// 問題文に印字された数列だけから予測値を求める。
+{
+  const nextCandidates = (s) => {
+    const n = s.length, out = [];
+    const add = v => { if (Number.isInteger(v) && !out.includes(v)) out.push(v); };
+    const d = s.map((x, i) => i ? x - s[i - 1] : null).slice(1);
+
+    if (d.every(x => x === d[0])) add(s[n - 1] + d[0]);                        // 等差
+    const r = s[0] !== 0 ? s[1] / s[0] : NaN;
+    if (r !== 1 && s.every((x, i) => i === 0 || (s[i - 1] !== 0 && x / s[i - 1] === r)))
+      add(s[n - 1] * r);                                                        // 等比
+    const dd = d[1] - d[0];
+    if (d.every((x, i) => i === 0 || x - d[i - 1] === dd))
+      add(s[n - 1] + d[d.length - 1] + dd);                                     // 差が等差
+    if (s.every((x, i) => i < 2 || x === s[i - 1] + s[i - 2]))
+      add(s[n - 1] + s[n - 2]);                                                 // フィボナッチ型
+    if (d[0] !== 0) {                                                           // m倍して c を足す
+      const m = (s[2] - s[1]) / (s[1] - s[0]);
+      if (Number.isInteger(m) && Math.abs(m) >= 2 && Math.abs(m) <= 5) {
+        const c = s[1] - s[0] * m;
+        if (s.every((x, i) => i === 0 || x === s[i - 1] * m + c)) add(s[n - 1] * m + c);
+      }
+    }
+    return out;
+  };
+
+  const t = TEMPLATES.find(x => x.id === "suiron_code_01");
+  let checked = 0, unparsed = 0, ambiguous = 0, none = 0, mismatch = 0, badChoice = 0;
+  if (t) {
+    for (let i = 0; i < 600; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.choices) continue;
+      const line = q.text.split("\n").find(l => /^[\d,\s]+, \?$/.test(l));
+      if (!line) { unparsed++; continue; }
+      const s = line.replace(/,\s*\?$/, "").split(",").map(x => parseInt(x.trim(), 10));
+      if (s.length < 5 || s.some(isNaN)) { unparsed++; continue; }
+      checked++;
+
+      const nums = q.choices.map(Number);
+      if (nums.some(v => !Number.isInteger(v) || v <= 0)) badChoice++;
+
+      const cands = nextCandidates(s);
+      if (cands.length === 0) none++;
+      else if (cands.length > 1) ambiguous++;
+      else if (cands[0] !== nums[q.correctAnswer]) mismatch++;
+    }
+  }
+  console.log(`\n数列の規則の一意性: ${checked}問を規則の当てはめで再判定`);
+  if (checked && unparsed + ambiguous + none + mismatch + badChoice === 0) {
+    console.log("   ✅ すべて読める規則が1つ、予測値も正解と一致（選択肢はすべて正の整数）");
+  } else {
+    console.log(`   ❌ パース不能 ${unparsed} / 規則が複数 ${ambiguous} / 規則なし ${none} / 予測不一致 ${mismatch} / 不正な選択肢 ${badChoice} / 検証数 ${checked}`);
+    process.exitCode = 1;
+  }
+}
+
+
 process.exit(process.exitCode ? 1 : 0);

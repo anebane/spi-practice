@@ -43,6 +43,158 @@ var ORDER_ATTRS = {
   ]
 };
 
+// ------------------------------------------------------------
+// 条件からの絞り込み（suiron_cond_01）の素材
+// ------------------------------------------------------------
+// 場面ごとに「値」の意味づけが違う（番号・順位・得点）。
+// 内部では常に 1〜5 の数値を割り当て、表示のときだけ場面の言い回しに直す。
+// 順位だけは数が大きいほど「下位」なので、gt の文言をそこで反転させている。
+var COND_N = 5;
+var COND_LETTER_SETS = [
+  ["A", "B", "C", "D", "E"],
+  ["P", "Q", "R", "S", "T"],
+  ["W", "X", "Y", "Z", "V"]
+];
+var COND_PERSON_SETS = [
+  ["A", "B", "C", "D", "E"],
+  ["P", "Q", "R", "S", "T"],
+  ["甲", "乙", "丙", "丁", "戊"],
+  ["赤木", "青木", "黒田", "白石", "緑川"]
+];
+
+var COND_SCENES = [
+  {
+    pool: "letter",
+    setup: function (nm) {
+      return "箱" + nm.join("、箱") + " の" + COND_N + "つの箱に、1から" + COND_N
+        + "までの番号を1つずつ書いたカードが1枚ずつ入っている。";
+    },
+    gt: function (a, b) { return "・箱" + a + "のカードの番号は箱" + b + "より大きい"; },
+    eq: function (a, k) { return "・箱" + a + "のカードの番号は" + k + "である"; },
+    ask: function (w) { return "箱" + w + "のカードの番号として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return "箱" + w + "のカードの番号"; },
+    sol: function (nm, k) { return "箱" + nm + "=" + k; },
+    value: function (k) { return String(k); }
+  },
+  {
+    pool: "person",
+    setup: function (nm) {
+      return nm.join("、") + " の" + COND_N + "人が徒競走をし、1位から" + COND_N
+        + "位までの順位がついた。同じ順位の人はいない。";
+    },
+    // 順位は数が大きいほど下位。内部の「値が大きい」をそのまま「順位が下」と読み替える
+    gt: function (a, b) { return "・" + a + "は" + b + "より順位が下だった"; },
+    eq: function (a, k) { return "・" + a + "は" + k + "位だった"; },
+    ask: function (w) { return w + "の順位として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return w + "の順位"; },
+    sol: function (nm, k) { return nm + "=" + k + "位"; },
+    value: function (k) { return k + "位"; }
+  },
+  {
+    pool: "person",
+    setup: function (nm) {
+      return nm.join("、") + " の" + COND_N + "人が、1から" + COND_N
+        + "までの番号が書かれた札を1枚ずつ持っている。";
+    },
+    gt: function (a, b) { return "・" + a + "の札の番号は" + b + "より大きい"; },
+    eq: function (a, k) { return "・" + a + "の札の番号は" + k + "である"; },
+    ask: function (w) { return w + "の札の番号として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return w + "の札の番号"; },
+    sol: function (nm, k) { return nm + "=" + k; },
+    value: function (k) { return String(k); }
+  },
+  {
+    pool: "person",
+    setup: function (nm) {
+      return nm.join("、") + " の" + COND_N + "人がゲームをし、1点から" + COND_N
+        + "点までの点数を全員異なる点数で獲得した。";
+    },
+    gt: function (a, b) { return "・" + a + "の得点は" + b + "より高い"; },
+    eq: function (a, k) { return "・" + a + "の得点は" + k + "点である"; },
+    ask: function (w) { return w + "の得点として考えられるものは何通りあるか。"; },
+    askLabel: function (w) { return w + "の得点"; },
+    sol: function (nm, k) { return nm + "=" + k + "点"; },
+    value: function (k) { return k + "点"; }
+  }
+];
+
+// ------------------------------------------------------------
+// 真偽判定（suiron_tf_01）の素材
+// ------------------------------------------------------------
+// 【重要】subNoun ⊆ attrAff が成り立ち、その逆が成り立たない組にすること。
+//         逆も成り立つ題材を入れると、誤答（逆）まで正しくなって正解が2つになる。
+// 文字列は連結して選択肢を作るので、名詞句・述語の区別を崩さないこと。
+//   attrAff/attrNegPred は連体形（+ member で名詞句になる）
+//   subAff/subNegPred は述語（「〜は」の後ろに置く）
+var TF_PERSONS = ["田中さん", "佐藤さん", "鈴木さん", "高橋さん",
+                  "伊藤さん", "渡辺さん", "山本さん", "中村さん"];
+
+var TF_SCENES = [
+  {
+    group: "ある会社の社員", member: "社員",
+    subNoun: "営業部の社員", notSubNoun: "営業部でない社員",
+    subAff: "営業部の社員である", subNegPred: "営業部の社員ではない",
+    attrAff: "運転免許を持っている", attrNegPred: "運転免許を持っていない"
+  },
+  {
+    group: "あるクラスの生徒", member: "生徒",
+    subNoun: "サッカー部の生徒", notSubNoun: "サッカー部でない生徒",
+    subAff: "サッカー部の生徒である", subNegPred: "サッカー部の生徒ではない",
+    attrAff: "体力テストでA判定を取った", attrNegPred: "体力テストでA判定を取っていない"
+  },
+  {
+    group: "ある大学の学生", member: "学生",
+    subNoun: "経済学部の学生", notSubNoun: "経済学部でない学生",
+    subAff: "経済学部の学生である", subNegPred: "経済学部の学生ではない",
+    attrAff: "統計学を履修している", attrNegPred: "統計学を履修していない"
+  },
+  {
+    group: "ある町の住民", member: "住民",
+    subNoun: "自治会に加入している住民", notSubNoun: "自治会に加入していない住民",
+    subAff: "自治会に加入している", subNegPred: "自治会に加入していない",
+    attrAff: "回覧板を受け取っている", attrNegPred: "回覧板を受け取っていない"
+  },
+  {
+    group: "ある図書館の利用者", member: "利用者",
+    subNoun: "貸出カードを持つ利用者", notSubNoun: "貸出カードを持たない利用者",
+    subAff: "貸出カードを持っている", subNegPred: "貸出カードを持っていない",
+    attrAff: "利用者登録を済ませている", attrNegPred: "利用者登録を済ませていない"
+  },
+  {
+    group: "ある会社の新入社員", member: "新入社員",
+    subNoun: "技術職の新入社員", notSubNoun: "技術職でない新入社員",
+    subAff: "技術職の新入社員である", subNegPred: "技術職の新入社員ではない",
+    attrAff: "研修を修了している", attrNegPred: "研修を修了していない"
+  },
+  {
+    group: "あるサークルの部員", member: "部員",
+    subNoun: "1年生の部員", notSubNoun: "1年生でない部員",
+    subAff: "1年生である", subNegPred: "1年生ではない",
+    attrAff: "合宿に参加した", attrNegPred: "合宿に参加していない"
+  },
+  {
+    group: "ある病院の職員", member: "職員",
+    subNoun: "看護師の資格を持つ職員", notSubNoun: "看護師の資格を持たない職員",
+    subAff: "看護師の資格を持っている", subNegPred: "看護師の資格を持っていない",
+    attrAff: "夜勤に入ったことがある", attrNegPred: "夜勤に入ったことがない"
+  }
+];
+
+// ------------------------------------------------------------
+// 数列の規則性（suiron_code_01）の言い回し
+// ------------------------------------------------------------
+var SEQ_INTROS = [
+  "ある規則にしたがって数が並んでいる。",
+  "次の数の並びは、ある規則にしたがっている。",
+  "ある法則で数字が並んでいる。",
+  "以下の数列は、一定の規則で作られている。"
+];
+var SEQ_ASKS = [
+  "?に入る数はどれか。",
+  "?に当てはまる数はどれか。",
+  "?の位置に入る数として正しいものはどれか。"
+];
+
 // カテゴリ1: 推論（論理・命題）
 // ============================================================
 (function() {
@@ -148,64 +300,55 @@ var ORDER_ATTRS = {
   });
 
   // 推論: 真偽判定
+  // 全称命題「S は全員 A」＋個別事実「p は A」から確実に言えるのは対偶だけ。
+  // 逆・裏・個別への当てはめはいずれも言えないので、そこから誤答を作る。
   QUESTION_TEMPLATES.push({
     id: "suiron_tf_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 2,
-    type: "pattern",
-    patterns: [
-      {
-        text: "ある会社の社員について以下のことがわかっている。\n・営業部の社員は全員、運転免許を持っている\n・田中さんは運転免許を持っている\n\n次のうち、確実に正しいと言えるものはどれか。",
-        choices: [
-          "田中さんは営業部の社員である",
-          "営業部でない社員は運転免許を持っていない",
-          "運転免許を持っていない人は営業部の社員ではない",
-          "田中さんは営業部でない部署の社員である"
-        ],
-        correctIndex: 2,
-        explanation: "「営業部の社員 → 運転免許を持っている」の対偶は\n「運転免許を持っていない → 営業部の社員ではない」\nこれは確実に正しいです。\n\n田中さんについては、免許を持っていることから営業部かどうかは判断できません\n（営業部以外でも免許を持つことは可能）。"
-      },
-      {
-        text: "あるクラスの生徒について以下のことがわかっている。\n・サッカー部の生徒は全員、体力テストでA判定を取った\n・鈴木さんは体力テストでA判定を取った\n\n次のうち、確実に正しいと言えるものはどれか。",
-        choices: [
-          "鈴木さんはサッカー部の生徒である",
-          "サッカー部でない生徒はA判定を取っていない",
-          "A判定を取っていない生徒はサッカー部ではない",
-          "A判定を取った生徒は全員サッカー部である"
-        ],
-        correctIndex: 2,
-        explanation: "「サッカー部の生徒 → A判定」の対偶は\n「A判定ではない → サッカー部ではない」\nこれは確実に正しいです。\n\n鈴木さんがA判定を取ったからといって、サッカー部とは限りません。"
-      }
-    ],
+    templateText: "{{group}}について、以下のことがわかっている。\n・{{subNoun}}は全員、{{attrAff}}\n・{{person}}は{{attrAff}}\n\n次のうち、確実に正しいと言えるものはどれか。",
+    variables: {
+      scene:  { type: "int", min: 0, max: 7, step: 1 },
+      person: { type: "int", min: 0, max: 7, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveTfPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._correctIndex; },
+    buildChoices: function(v) {
+      return { choices: v._choices.slice(), correctIndex: v._correctIndex };
+    },
+    unit: "",
+    explanationTemplate: "与えられているのは「{{subNoun}} ならば {{attrAff}}」という一方向の関係だけです。\n\nここから確実に言えるのは対偶だけです。\n対偶: 「{{attrNegPred}} ならば {{subNegPred}}」\n\n{{person}}が{{attrAff}}ことは分かっていますが、\n{{subNoun}}以外にも{{attrAff}}者はいるかもしれないので、\n{{person}}が{{subNoun}}かどうかは判断できません。\n\n【ポイント】\n・「AならばB」から確実に言えるのは対偶「BでないならばAでない」だけ\n・逆「BならばA」と裏「AでないならばBでない」は必ずしも成り立たない\n・「全員〜である」は片方向。反対向きに読み替えた瞬間に誤り",
     timeLimitSec: 120
   });
 
-  // 推論: 条件からの判定（WEBテスティング特有）
+  // 推論: 条件からの絞り込み（WEBテスティング特有）
+  // 「1つに決まらないが、候補の個数は決まる」タイプ。
+  // 選択肢は常に 1つ〜4つ なので、target を変数にして正解の位置を一様にしている。
   QUESTION_TEMPLATES.push({
     id: "suiron_cond_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 3,
-    type: "pattern",
-    patterns: [
-      {
-        text: "5つの箱に1から5までの番号が1つずつ書かれたカードが入っている。\n以下のことがわかっている。\n・箱Aに入っているカードの番号は箱Bより大きい\n・箱Cに入っているカードの番号は3である\n・箱Dに入っているカードの番号は箱Eより小さい\n\n箱Aに入っているカードの番号として考えられるものをすべて選ぶと、いくつあるか。",
-        choices: ["1つ", "2つ", "3つ", "4つ"],
-        correctIndex: 2,
-        explanation: "箱Cは3が確定。\n残りは1,2,4,5を A,B,D,E に割り当てる。\nA > B、D < E の条件がある。\n\n可能な割り当て:\n・A=4,B=1,D=2,E=5 → A>B:○, D<E:○\n・A=4,B=2,D=1,E=5 → A>B:○, D<E:○\n・A=5,B=1,D=2,E=4 → A>B:○, D<E:○\n・A=5,B=2,D=1,E=4 → A>B:○, D<E:○\n・A=5,B=4,D=1,E=2 → A>B:○, D<E:○\n・A=5,B=1,D=4,E=... → 残りなし\n・A=2,B=1,D=4,E=5 → A>B:○, D<E:○\n\nAの値: 2, 4, 5 の3つ。\nよって答えは3つです。"
-      },
-      {
-        text: "A, B, C, D の4人が1位から4位まで順位をつけた。\n以下のことがわかっている。\n・AはCより上位だった\n・BはDより下位だった\n\nBの順位として考えられるものは何通りあるか。",
-        choices: ["1通り", "2通り", "3通り"],
-        correctIndex: 2,
-        explanation: "条件: A < C（順位の数値はAの方が小さい=上位）, B > D\n\n全パターンを列挙:\n1位A,2位D,3位B,4位C → A<C:1<4○, B>D:3>2○ → Bは3位\n1位A,2位D,3位C,4位B → A<C:1<3○, B>D:4>2○ → Bは4位\n1位D,2位A,3位B,4位C → A<C:2<4○, B>D:3>1○ → Bは3位\n1位D,2位A,3位C,4位B → A<C:2<3○, B>D:4>1○ → Bは4位\n1位D,2位B,3位A,4位C → A<C:3<4○, B>D:2>1○ → Bは2位\n1位A,2位B,3位D,4位C → B>D:2>3✗\n\nBの順位: 2位, 3位, 4位 の3通り。"
-      }
-    ],
+    templateText: "{{setup}}\n以下のことがわかっている。\n{{conds}}\n\n{{question}}",
+    variables: {
+      scene:   { type: "int", min: 0, max: 3, step: 1 },
+      nameSet: { type: "int", min: 0, max: 3, step: 1 },
+      target:  { type: "choice", options: [1, 2, 3, 4] }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveCondPuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._count; },
+    buildChoices: function(v) {
+      return { choices: ["1つ", "2つ", "3つ", "4つ"], correctIndex: v._count - 1 };
+    },
+    unit: "",
+    explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは1つに決まらないことがある\n・全体が1通りに決まらなくても、問われている値の候補は数え上げられる",
     timeLimitSec: 150
   });
 
@@ -328,35 +471,28 @@ var ORDER_ATTRS = {
     timeLimitSec: 120
   });
 
-  // 推論: 暗号推論
+  // 推論: 数列の規則性
+  // 「答えが2通りに読める数列」が最大の事故要因なので、示した6項に当てはまる
+  // 規則の族を総当たりし、予測がちょうど1つのときだけ採用する（resolveSequencePuzzle）。
   QUESTION_TEMPLATES.push({
     id: "suiron_code_01",
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
     difficulty: 3,
-    type: "pattern",
-    patterns: [
-      {
-        text: "ある暗号で「いぬ」を「25」、「ねこ」を「73」と表す。\nこの暗号では各文字に固有の数字が割り当てられている。\n\n「こいぬ」はどう表されるか。",
-        choices: ["325", "352", "523", "532"],
-        correctIndex: 0,
-        explanation: "各文字と数字の対応を読み取ります:\n\n「いぬ」= 25 → い=2, ぬ=5\n「ねこ」= 73 → ね=7, こ=3\n\n「こいぬ」= こ(3) + い(2) + ぬ(5) = 325\n\nよって答えは325です。"
-      },
-      {
-        text: "ある規則で数字が並んでいる。\n2, 5, 10, 17, 26, ?\n\n?に入る数字はどれか。",
-        choices: ["35", "37", "33", "39"],
-        correctIndex: 1,
-        explanation: "各項の差を見ると:\n5-2=3, 10-5=5, 17-10=7, 26-17=9\n\n差の列: 3, 5, 7, 9 → 等差数列（公差2）\n次の差: 9+2=11\n\n? = 26 + 11 = 37"
-      },
-      {
-        text: "ある規則で数字が並んでいる。\n1, 1, 2, 3, 5, 8, ?\n\n?に入る数字はどれか。",
-        choices: ["11", "12", "13", "14"],
-        correctIndex: 2,
-        explanation: "フィボナッチ数列: 前の2つの数の和が次の数になる。\n1+1=2, 1+2=3, 2+3=5, 3+5=8\n\n次: 5+8 = 13"
-      }
-    ],
+    templateText: "{{intro}}\n\n{{seq}}, ?\n\n{{ask}}",
+    variables: {
+      kind:    { type: "choice", options: [0, 1, 2, 3, 4] },
+      intro_i: { type: "int", min: 0, max: 3, step: 1 },
+      ask_i:   { type: "int", min: 0, max: 2, step: 1 }
+    },
     answerType: "choice",
+    resolve: function(v) { resolveSequencePuzzle(v); },
+    validate: function(v) { return v._ok === true; },
+    answerFormula: function(v) { return v._answer; },
+    distractors: function(v) { return v._wrongs.slice(); },
+    unit: "",
+    explanationTemplate: "{{explainBody}}\n\n【ポイント】\n・まず隣り合う数の差を取る\n・差が一定なら等差、差そのものが等差なら二段構えの規則\n・差ではなく比が一定なら等比\n・前の2つの数の和になっていないかも確かめる",
     timeLimitSec: 120
   });
 
