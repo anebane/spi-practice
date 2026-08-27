@@ -461,18 +461,31 @@
         '<span class="answer-unit">' + escapeHtml(q.unit) + '</span>' +
         '</div>';
 
-      // Enter キーで回答
-      setTimeout(function() {
-        var input = document.getElementById("answer-value");
-        if (input) {
-          input.focus();
-          input.addEventListener("keydown", function(e) {
-            if (e.key === "Enter") {
-              document.getElementById("btn-answer").click();
-            }
-          });
-        }
-      }, 100);
+      // Enter キーで回答。
+      //
+      // 以前は setTimeout(100ms) の中で addEventListener していたが、
+      // 2つの不具合があった。どちらも「速く解ける人ほど踏む」形で、
+      // 速度を測る道具としては当たりどころが悪い。
+      //   ① 100ms 以内に次の問題へ進むと、前の問題のタイマーが
+      //      「次の問題の入力欄」にリスナを貼る。そこへ次の問題自身の
+      //      タイマーも貼るのでリスナが積み上がり、Enter 1回で
+      //      btn-answer.click() が何度も走った（実測で2回・3回・4回）。
+      //   ② 逆に、問題が出てから 100ms の間は Enter がまったく効かない。
+      //
+      // 入力欄は毎問 innerHTML で作り直されるので、ここで直接
+      // onkeydown に代入すれば積み上がらないし、待つ必要もない。
+      var input = area.querySelector("#answer-value");
+      if (input) {
+        input.onkeydown = function(e) {
+          if (e.key === "Enter") document.getElementById("btn-answer").click();
+        };
+        // フォーカスだけは描画後に当てる必要があるので遅延させる。
+        // リスナは既に貼ってあるので、ここが遅れても Enter は効く。
+        setTimeout(function() {
+          var el = document.getElementById("answer-value");
+          if (el) el.focus();
+        }, 0);
+      }
     }
   }
 
