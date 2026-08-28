@@ -1473,6 +1473,79 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 「最も〜なものはどれか」の答えが1つに定まるか ---
+//
+// 【なぜ必要か】
+// table_max_01 は同点のとき表の先頭を拾っており、**正解が2つ以上ある問題が
+// 28.2%** あった。「1月の平均気温が最も高い都市はどこか」に答えが複数ある状態で、
+// 別の都市を選んだ人が不正解にされていた。
+//
+// これは正解位置の偏りとして間接的に現れた（先頭が有利になる）が、
+// 偏りの検査で捕まえるのは筋が悪い。実測で 5.5〜7.9σ と閾値5.0のすぐ上にしか
+// 出ず、下振れした回は取り逃す（実際に1回すり抜けた）。
+// **症状ではなく、一意性そのものを直接見る。**
+//
+// 【2つの独立した経路】
+//   経路A … 生成器が正解として返したラベル
+//   経路B … 解説に並んでいる数値から導き直した最大／最小
+// 経路Bで最大が複数あれば、問いに答えが複数あることになる。
+{
+  const SAMPLES = 400;
+  const MAXWORD = /最も(高|大き|多)/;
+  const MINWORD = /最も(低|小さ|少な)/;
+
+  let checked = 0, tied = 0, mismatched = 0, unparsed = 0;
+  const examples = [];
+
+  for (const t of TEMPLATES) {
+    for (let i = 0; i < SAMPLES; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !Array.isArray(q.choices)) continue;
+      // ラベルを選ばせる問題だけが対象。数値を答える問題は同点でも答えは1つ
+      if (q.choices.every(c => !isNaN(Number(c)))) continue;
+      const wantMax = MAXWORD.test(q.text), wantMin = MINWORD.test(q.text);
+      if (!wantMax && !wantMin) continue;
+
+      // 解説に並ぶ「ラベル: 数値」を拾う。選択肢にあるラベルだけを見る
+      const vals = new Map();
+      for (const line of String(q.explanation || "").split("\n")) {
+        const m = line.match(/^\s*(.+?)\s*[:：]\s*(-?[\d,]+)/);
+        if (!m) continue;
+        const label = m[1].trim();
+        if (q.choices.indexOf(label) === -1) continue;
+        if (!vals.has(label)) vals.set(label, parseFloat(m[2].replace(/,/g, "")));
+      }
+      if (vals.size < 2) { unparsed++; continue; }
+
+      checked++;
+      const nums = [...vals.values()];
+      const best = wantMax ? Math.max(...nums) : Math.min(...nums);
+      const winners = [...vals.entries()].filter(([, v]) => v === best).map(([k]) => k);
+
+      if (winners.length > 1) {
+        tied++;
+        if (examples.length < 3) examples.push(`${t.id}: ${winners.join(" と ")} が同値(${best}) で並んでいる`);
+      } else if (winners[0] !== q.choices[q.correctAnswer]) {
+        mismatched++;
+        if (examples.length < 3) examples.push(`${t.id}: 正解は「${q.choices[q.correctAnswer]}」だが解説の値では「${winners[0]}」`);
+      }
+    }
+  }
+
+  cov.covered("「最も〜」を問う問題", checked, 100);
+  cov.skipped("解説から値を読み取れなかった問題", unparsed, "ラベルと数値の並びが無い");
+
+  console.log(`\n「最も〜」の答えの一意性: ${checked.toLocaleString()}問を解説の数値から導き直して検証`);
+  if (checked && tied + mismatched === 0) {
+    console.log("   ✅ すべて該当が1つに定まり、生成器の正解と一致");
+  } else {
+    console.log(`   ❌ 同値で並んでいる（正解が複数） ${tied} / 正解不一致 ${mismatched} / 検証数 ${checked}`);
+    for (const e of examples) console.log(`   - ${e}`);
+    process.exitCode = 1;
+  }
+}
+
+
 // --- 検査対象の内訳。合否より先に「何件見たか」を出す ---
 console.log("\n検査した対象の内訳");
 cov.print();
