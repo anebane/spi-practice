@@ -640,6 +640,11 @@
     }
   }
 
+  // 数値の答えを突き合わせる桁。
+  // test/generator.spec.js がこの値を読み、実際に出題される答えの刻みより
+  // 十分細かいことを検査する（1つの事実を2箇所に手で書かないため）。
+  var ANSWER_DECIMALS = 4;
+
   // --- 回答判定 ---
   function checkAnswer(userAnswer, correctAnswer, answerType) {
     if (userAnswer === null) return false;
@@ -658,7 +663,17 @@
     }
 
     // number
-    return Math.abs(userAnswer - correctAnswer) < 0.15;
+    //
+    // ⚠️ ここは以前 Math.abs(userAnswer - correctAnswer) < 0.15 だった。
+    //    絶対値の許容幅は「答えが小さいほど甘くなる」。濃度算は答えが
+    //    0.1刻みで並ぶので、正解が 8 のときに 7.9 と入力しても正解に
+    //    なっていた（実測6テンプレート）。利用者が間違えたのに
+    //    「正解」と表示されるので、学習教材として実害がある。
+    //
+    //    答えは整数か小数第1位までしか出ないので、桁を決めて丸め、
+    //    値そのものの一致を要求する。残す幅は浮動小数の誤差ぶんだけ。
+    var unit = Math.pow(10, ANSWER_DECIMALS);
+    return Math.round(userAnswer * unit) === Math.round(correctAnswer * unit);
   }
 
   // --- 回答記録 ---

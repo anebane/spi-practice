@@ -1421,6 +1421,83 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 答えの判定の細かさが、答えの刻みより細かいか ---
+//
+// app.js は以前 Math.abs(userAnswer - correctAnswer) < 0.15 で判定していた。
+// 絶対値の許容幅は「答えが小さいほど甘くなる」。濃度算は答えが0.1刻みで
+// 並ぶので、正解が 8 のときに 7.9 と入力しても正解になっていた。
+// 間違えた人に「正解」と表示するのは、学習教材として最悪の壊れ方。
+//
+// ⚠️ 判定の細かさ（app.js）と答えの刻み（テンプレート）は別々の場所にある。
+//    どちらかだけを動かすと静かに壊れるので、app.js から実際の値を読んで
+//    突き合わせる。ここに数字を手で書き写すと、2箇所に同じ事実を持つことになる。
+{
+  const appRaw = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+  // コメント行を落としてから見る。旧コードを引用した注釈まで拾ってしまい、
+  // 直したのに落ち続ける（実際に自分の説明文を検出した）。
+  // 誤検知を出す検査は、そのうち無視されるようになる。
+  const appSrc = appRaw.split("\n").filter(l => !/^\s*\/\//.test(l)).join("\n");
+
+  const decM = appSrc.match(/var\s+ANSWER_DECIMALS\s*=\s*(\d+)\s*;/);
+  if (!decM) {
+    fail("app.js", "判定の桁が読めない",
+      "ANSWER_DECIMALS が見つからない。判定の細かさを検査できないので、この検査は意味を持たない");
+  }
+
+  // 絶対値の許容幅に戻っていないか。戻ると答えが小さいほど甘くなる。
+  if (/Math\.abs\(\s*userAnswer\s*-\s*correctAnswer\s*\)\s*<\s*[\d.]+/.test(appSrc)) {
+    fail("app.js", "判定が絶対値の許容幅に戻っている",
+      "答えが小さいほど甘くなる。濃度算では隣の値まで正解になる");
+  }
+
+  if (decM) {
+    const decimals = +decM[1];
+    // 丸めて一致を要求するので、実質の許容幅は半目盛り。
+    const halfUnit = 0.5 * Math.pow(10, -decimals);
+    const N = 300;
+    let checked = 0, tooClose = 0;
+    const samples = [];
+
+    for (const t of TEMPLATES) {
+      if (t.answerType === "choice" || t.answerType === "fraction") continue;
+      const vals = new Set();
+      for (let i = 0; i < N; i++) {
+        const q = GEN.generateQuestion(t);
+        if (!q) continue;
+        const a = q.correctAnswer;
+        if (typeof a === "number" && Number.isFinite(a)) vals.add(a);
+      }
+      if (vals.size < 2) continue;
+      checked++;
+      const arr = [...vals].sort((x, y) => x - y);
+      let minGap = Infinity, pair = null;
+      for (let i = 1; i < arr.length; i++) {
+        const g = arr[i] - arr[i - 1];
+        if (g > 1e-9 && g < minGap) { minGap = g; pair = [arr[i - 1], arr[i]]; }
+      }
+      // 隣り合う正解の間隔が許容幅の2倍以下だと、片方を入力しても
+      // もう片方の正解として通ってしまう。
+      if (minGap <= halfUnit * 2) {
+        tooClose++;
+        if (samples.length < 4) {
+          samples.push(`${t.id}: 最小間隔 ${minGap.toFixed(4)}（${pair[0]} と ${pair[1]}）`);
+        }
+      }
+    }
+
+    // 0件だと「甘い判定が無い」ではなく「1つも見ていない」。
+    cov.covered("答えの刻みを調べたテンプレート", checked, 30);
+    console.log(`\n答えの判定の細かさ: ${checked}テンプレートを検査（判定は小数第${decimals}位・実質±${halfUnit}）`);
+    if (!tooClose) {
+      console.log("   ✅ どのテンプレートも、隣り合う正解が判定の幅より離れている");
+    } else {
+      fail("答えの判定", "判定が答えの刻みより粗い",
+        `${tooClose}テンプレートで、誤答が正解と判定されうる: ${samples.join(" / ")}`);
+      console.log(`   ❌ ${tooClose}テンプレートで誤答が正解になる`);
+    }
+  }
+}
+
 // --- 設問に書かれた比・分数が約分されているか ---
 //
 // 「A:B = 2:2」「□ × 4/6 = 16」は、比や分数の書き方として誤っている。
