@@ -9,7 +9,11 @@ jobs:
   generator:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 が要る。sw.js の VERSION 上げ忘れ検査が履歴を遡るため。
+      # 既定の浅いクローンだと判定できず、pwa.spec.js が「検査できない」で落ちる。
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

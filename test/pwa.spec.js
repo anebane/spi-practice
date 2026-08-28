@@ -124,6 +124,78 @@ if (/offline\.html/.test(read("sitemap.xml"))) {
   fail("sitemap.xml", "offline.htmlを登録している", "noindexページをサイトマップに入れない");
 }
 
+// ---- 5. 配信アセットを変えたのに sw.js の VERSION を上げていないか ----
+//
+// staleWhileRevalidate は caches.match(req) をキャッシュ名なしで呼ぶ。
+// この形はキャッシュを作成順に検索するので、PRECACHE（install で最初に作られる）に
+// 載っているURLは常に古い版が先に見つかる。裏で取った新しい版は RUNTIME に
+// 入るだけで二度と読まれない。**VERSION を上げない限り永久に旧版が配られる。**
+//
+// 上げ忘れは画面上まったく無症状で、開発者の手元では（Service Worker を
+// 登録していないので）正常に見える。気づくのは利用者から「直っていない」と
+// 言われたときになる。機械で止める。
+{
+  const cp = require("child_process");
+  const git = (args) => {
+    const r = cp.spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
+    return r.status === 0 ? (r.stdout || "").trim() : null;
+  };
+
+  const swSrc = read("sw.js");
+  const blk = swSrc.match(/const PRECACHE_URLS = \[([\s\S]*?)\];/);
+  const offm = swSrc.match(/const OFFLINE_URL = "([^"]+)"/);
+  const urls = blk ? [...blk[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+  if (offm) urls.push(offm[1]);
+
+  // URL → リポジトリ内の相対パス。ディレクトリURLは index.html に落ちる。
+  const assetPaths = [...new Set(urls.map((u) => {
+    const abs = resolveUrl(u);
+    return path.relative(ROOT, abs);
+  }))].filter((p) => p && !p.startsWith(".."));
+
+  const shallow = git(["rev-parse", "--is-shallow-repository"]);
+  if (shallow === null) {
+    console.log("   ℹ️ gitが使えないため VERSION の上げ忘れ検査はスキップしました");
+  } else if (shallow === "true") {
+    // 浅いクローンだと履歴を遡れず、判定できない。黙って緑にすると
+    // 「検査しているつもり」になるので、はっきり出す。
+    fail("sw.js", "VERSION検査ができない", "浅いクローンです。CIでは actions/checkout に fetch-depth: 0 を指定してください");
+  } else {
+    // 作業ツリーに未コミットのアセット変更があるか
+    const dirtyAssets = (git(["status", "--porcelain", "--"].concat(assetPaths)) || "")
+      .split("\n").map((l) => l.replace(/^..\s+/, "").trim()).filter(Boolean);
+    const versionTouchedNow = /^[+-]const VERSION = /m.test(git(["diff", "HEAD", "--", "sw.js"]) || "");
+
+    if (versionTouchedNow) {
+      // 作業ツリーで VERSION を上げている。これから入るコミットで解消されるので、
+      // 過去の上げ忘れも含めて指摘しない。
+    } else if (dirtyAssets.length) {
+      fail("sw.js", "VERSIONを上げずに配信アセットを変更している",
+        `${dirtyAssets.join(", ")} が未コミットで変更されています。VERSION を上げないと再訪問者に旧版が配られ続けます`);
+    } else {
+      // コミット済みの履歴で見る。
+      // アセットを最後に変えたコミットが、VERSION を最後に変えたコミットより
+      // 新しければ上げ忘れ。
+      const cAssets = git(["log", "-1", "--format=%H", "--"].concat(assetPaths));
+      // -S は出現回数の増減しか見ないので、値だけ変わる VERSION 行には効かない。-G を使う。
+      const cVersion = git(["log", "-1", "--format=%H", "-G", "^const VERSION = ", "--", "sw.js"]);
+      if (!cAssets) {
+        console.log("   ℹ️ アセットの変更履歴が取れず、VERSION検査はスキップしました");
+      } else if (!cVersion) {
+        fail("sw.js", "VERSIONを変更したコミットが履歴に無い", "検査が成立しません");
+      } else {
+        const ok = cp.spawnSync("git", ["merge-base", "--is-ancestor", cAssets, cVersion],
+          { cwd: ROOT, encoding: "utf8" }).status === 0;
+        if (!ok) {
+          const when = git(["log", "-1", "--format=%h %ad %s", "--date=short", cAssets]);
+          fail("sw.js", "VERSIONを上げずに配信アセットを変更したコミットがある",
+            `${when} 以降 VERSION が据え置きです。再訪問者に旧版が配られ続けます`);
+        }
+      }
+    }
+  }
+}
+
 console.log(`PWA構成を検査（${pages.length}ページ / manifest / sw.js）`);
 if (!failures.length) {
   console.log("✅ 問題なし");

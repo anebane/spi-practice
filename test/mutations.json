@@ -182,5 +182,13 @@
     "find": "    state.answers.forEach(function(a) { if (a && a.isCorrect) totalCorrect++; });",
     "replace": "    state.questions.forEach(function(q) { if (q.correct) totalCorrect++; });",
     "expect": "app"
+  },
+  {
+    "name": "配信アセットを変えて VERSION を据え置く",
+    "why": "プリキャッシュ対象は caches.match が作成順に探すため、VERSION を上げないと再訪問者に旧版が永久に配られる。画面上は無症状",
+    "file": "style.css",
+    "find": ".result-actions {",
+    "replace": ".result-actions { /* mutation */",
+    "expect": "pwa"
   }
 ]
