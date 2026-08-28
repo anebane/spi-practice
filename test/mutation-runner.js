@@ -53,6 +53,7 @@ const LOCK = path.join(__dirname, ".mutation-runner.lock");
 const BUILT = path.join(ROOT, "questions.js");
 
 const SPECS = {
+  affiliate: "test/affiliate.spec.js",
   app: "test/app.spec.js",
   deeplink: "test/deeplink.spec.js",
   generator: "test/generator.spec.js",

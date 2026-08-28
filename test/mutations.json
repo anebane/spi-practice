@@ -254,5 +254,77 @@
     "find": "        answer: maxCity,",
     "replace": "        answer: tableData.rows[0],",
     "expect": "generator"
+  },
+  {
+    "name": "PR表記の行を消す",
+    "why": "景表法（ステマ規制）の表示義務と、広告主が明記した提携維持の条件。ここが唯一の防波堤",
+    "file": "affiliate.js",
+    "find": "    host.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
+    "replace": "    // (PR表記を消す変異)",
+    "expect": "affiliate"
+  },
+  {
+    "name": "PR表記をリンクより後ろに動かす",
+    "why": "表記は「リンクの直上」に要る。存在するだけでは要件を満たさない",
+    "file": "affiliate.js",
+    "find": "    host.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
+    "replace": "    setTimeout(function(){}, 0);",
+    "expect": "affiliate"
+  },
+  {
+    "name": "対象属性の注記を必須にしない",
+    "why": "注記の無い枠ができる。キミスカに既卒が申し込むと全件否認される",
+    "file": "affiliate.js",
+    "find": "    if (needsNote && !opt.note) {",
+    "replace": "    if (false && needsNote && !opt.note) {",
+    "expect": "affiliate"
+  },
+  {
+    "name": "affiliate_view から audience を落とす",
+    "why": "どちらの層が反応したかを後から言えなくなる。出し分けの効果測定が死ぬ",
+    "file": "affiliate.js",
+    "find": "      creative_count: ids.length,\n      audience: aud || \"unknown\"",
+    "replace": "      creative_count: ids.length",
+    "expect": "affiliate"
+  },
+  {
+    "name": "affiliate_click から audience を落とす",
+    "why": "クリックした層が分からなくなる。承認・否認の原因を切り分けられない",
+    "file": "affiliate.js",
+    "find": "          audience: p.audience\n        });",
+    "replace": "        });",
+    "expect": "affiliate"
+  },
+  {
+    "name": "ASPの計測imgを出さない",
+    "why": "配布物のセットを崩すと、クリックはASPに届かず成果が計上されない",
+    "file": "affiliate.js",
+    "find": "      item.appendChild(img);",
+    "replace": "      void img;",
+    "expect": "affiliate"
+  },
+  {
+    "name": "素材が空でも枠を描いてしまう",
+    "why": "中身の無い枠が出て、affiliate_view だけが水増しされる",
+    "file": "affiliate.js",
+    "find": "    if (!ids.length) { host.style.display = \"none\"; return false; }",
+    "replace": "    if (!ids.length) { return false; }",
+    "expect": "affiliate"
+  },
+  {
+    "name": "affiliate: 検査対象の素材を1つも集めない",
+    "why": "0件ガードが無いと、素材が消えたときに全項目が素通りして緑になる",
+    "file": "test/affiliate.spec.js",
+    "find": "  const ids = Object.keys(P);",
+    "replace": "  const ids = [];",
+    "expect": "affiliate"
+  },
+  {
+    "name": "アクセストレードのリンクをHTMLに直書きする",
+    "why": "ASPごとにドメインが違う。A8しか見ていないと他のASPの直書き経路が開いたまま",
+    "file": "index.html",
+    "find": "      <div id=\"affiliate-result\" style=\"display:none\"></div>",
+    "replace": "      <div id=\"affiliate-result\" style=\"display:none\"></div>\n      <a href=\"https://h.accesstrade.net/sp/cc?rk=0100omb800oxvd\">直書き</a>",
+    "expect": "html"
   }
 ]

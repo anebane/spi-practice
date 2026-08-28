@@ -64,6 +64,19 @@ var Affiliate = (function () {
     var ids = (opt.programs || []).filter(function (id) { return PROGRAMS[id]; });
     if (!ids.length) { host.style.display = "none"; return false; }
 
+    // 対象属性の注記は呼び出し側が渡す作りなので、渡し忘れると
+    // 「注記の無い枠」ができる。これは見た目の問題ではなく収益の問題で、
+    // キミスカ（学生限定）に既卒が申し込むと全件否認される。
+    // 渡し忘れたら描かない。開いたまま出すより、出さないほうが損が小さい。
+    var needsNote = ids.some(function (id) { return !!PROGRAMS[id].audience; });
+    if (needsNote && !opt.note) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Affiliate.render: audience を持つ案件には note が要ります: " + ids.join(", "));
+      }
+      host.style.display = "none";
+      return false;
+    }
+
     host.innerHTML = "";
     host.className = "af-block";
     host.style.display = "";
@@ -116,10 +129,13 @@ var Affiliate = (function () {
     //    ただし否認条件の回避に必要なので、消さない・リンクに隣接させる。
     if (opt.note) host.appendChild(el("p", "af-note", opt.note));
 
+    // audience を乗せないと「どちらの層が反応したか」を後から言えない。
+    // 出し分けの効果測定はこの1個のパラメータに乗っている。
     track("affiliate_view", {
       score_band: opt.band || "unknown",
       placement: opt.placement || "unknown",
-      creative_count: ids.length
+      creative_count: ids.length,
+      audience: aud || "unknown"
     });
     return true;
   }

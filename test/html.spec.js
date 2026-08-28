@@ -70,7 +70,10 @@ for (const p of pages) {
   //    広告主が「広告表示がない場合、提携を解除する可能性」と明記した
   //    提携維持の条件でもある。リンクは affiliate.js の PROGRAMS だけに置き、
   //    PR表記を必ず伴う render() 経由でしか出せないようにする。
-  for (const m of html.matchAll(/(px\.a8\.net|www\d*\.a8\.net|a8mat=)/g)) {
+  //    ASPごとにドメインが違う。A8だけを見ていると、他のASPの素材を
+  //    直書きする経路が開いたままになる（アクセストレードで実際に空いていた）。
+  //    ASPを増やしたらここに足す。
+  for (const m of html.matchAll(/(px\.a8\.net|www\d*\.a8\.net|a8mat=|h\.accesstrade\.net|accesstrade\.net\/sp\/(?:cc|rr))/g)) {
     fail(p, "広告リンクの直書き", `${m[1]} … affiliate.js の render() 経由で出してください`);
   }
 
