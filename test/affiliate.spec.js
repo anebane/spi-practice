@@ -184,9 +184,35 @@ function checkNoteAfterEveryLink(host, where, programs) {
   const h = loadAffiliate();
   const host = h.makeHost();
   const drawn = h.Affiliate.renderAll(host, { percent: 80, placement: "test" });
-  if (!drawn) {
-    cov.skipped("属性ごとの枠", 0, "描かれた枠が0（素材が未投入）");
+
+  // 素材が1件も無いうちは枠が0でも正常なので見送る。
+  // ⚠️ ただし「素材があるのに枠が0」は異常。ここを一律に見送っていたため、
+  //    属性の定義（AUDIENCES）を空にしても、どの検査も落ちなかった。
+  //    素材の有無で分けずに見送ると、枠を作る仕組みごと消えても緑になる。
+  const P = h.Affiliate._programs;
+  const wantAuds = [...new Set(Object.keys(P).map(id => P[id].audience).filter(Boolean))];
+
+  if (!drawn && !wantAuds.length) {
+    cov.skipped("属性ごとの枠", 0, "audience を持つ素材がまだ無い");
+  } else if (!drawn) {
+    fail("属性ごとの枠が1つも出ない",
+      `素材は ${wantAuds.join(" / ")} を持っているのに枠が0。属性ごとの出し分けが働いていない`);
   } else {
+    // 素材が持つ属性は、すべて枠になっていなければならない。
+    // 片方の属性の枠が消えると、その層には広告が出ないまま誰も気づかない。
+    const sel = h.Affiliate.selectByAudience(80);
+    const gotAuds = sel.blocks.map(b => b.audience);
+    for (const a of wantAuds) {
+      if (gotAuds.indexOf(a) === -1) {
+        fail("属性の枠が欠けている", `${a} の素材があるのに、その属性の枠が作られない`);
+      }
+    }
+    for (const b of sel.blocks) {
+      if (!b.heading || !String(b.heading).trim()) {
+        fail("枠の見出しが無い", `${b.audience} の枠に見出しが無い。どちらの層向けか読み手に分からない`);
+      }
+    }
+
     const n = checkPrBeforeEveryLink(host, "renderAll");
     const flat = flatten(host);
     const prs = flat.filter(x => PR_RE.test(x.text) && AD_RE.test(x.text)).length;
