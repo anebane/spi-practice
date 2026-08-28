@@ -413,8 +413,11 @@ if (failures.length) process.exitCode = 1;
   }
 
   console.log(`\n順序推論の解の一意性: ${checked.toLocaleString()}問を総当たりで検証`);
+  // checked が0だと「1問も検証していない」のに緑になる。
+  // 生成が全滅したり、問題文の書式が変わってパースできなくなったときに、
+  // 静かに合格してしまう。他のセクションと同じく0件を失敗にする。
   const bad = zero + multi + mismatch + unparsed;
-  if (bad === 0) {
+  if (checked && bad === 0) {
     console.log("   ✅ すべて解がちょうど1通り、答えも一致");
   } else {
     console.log(`   ❌ 解なし ${zero} / 解が複数 ${multi} / 答え不一致 ${mismatch} / パース不能 ${unparsed}`);
@@ -522,7 +525,7 @@ if (failures.length) process.exitCode = 1;
 // 順序推論と同じく、生成器を信用せず問題文をパースして判定し直す。
 {
   const t = TEMPLATES.find(x => x.id === "suiron_statement_01");
-  let checked = 0, zero = 0, multi = 0, mismatch = 0;
+  let checked = 0, zero = 0, multi = 0, mismatch = 0, unparsed = 0;
   if (t) {
     for (let i = 0; i < 600; i++) {
       const q = GEN.generateQuestion(t);
@@ -532,7 +535,9 @@ if (failures.length) process.exitCode = 1;
         const m = l.match(/^・(.+?)の発言:「(.+?)は嘘つき(だ|ではない)」$/);
         return m ? { by: m[1], about: m[2], claimsLiar: m[3] === "だ" } : null;
       }).filter(Boolean);
-      if (stmts.length !== names.length) continue;
+      // 発言の書式が変わると全件ここで落ちる。無言で continue すると
+      // 1問も検証しないまま緑になるので、数えて失敗にする。
+      if (stmts.length !== names.length) { unparsed++; continue; }
 
       const ok = names.filter(cand => stmts.every(st => {
         const speakerLiar = st.by === cand;
@@ -546,10 +551,10 @@ if (failures.length) process.exitCode = 1;
     }
   }
   console.log(`\n嘘つき問題の一意性: ${checked}問を全パターンで検証`);
-  if (zero + multi + mismatch === 0) {
+  if (checked && zero + multi + mismatch + unparsed === 0) {
     console.log("   ✅ すべて整合する仮定がちょうど1通り、答えも一致");
   } else {
-    console.log(`   ❌ 解なし ${zero} / 複数 ${multi} / 答え不一致 ${mismatch}`);
+    console.log(`   ❌ 解なし ${zero} / 複数 ${multi} / 答え不一致 ${mismatch} / パース不能 ${unparsed} / 検証数 ${checked}`);
     process.exitCode = 1;
   }
 }
@@ -816,7 +821,7 @@ if (failures.length) process.exitCode = 1;
         continue;
       }
       if (p[0] === p[1]) problems.push(`関係「${rel}」に同語のペア: ${JSON.stringify(p)}`);
-      for (const key of [p.join(" "), p.slice().sort().join(" ")]) {
+      for (const key of [p.join(" "), p.slice().sort().join(" ")]) {
         if (owner.has(key) && owner.get(key) !== rel) {
           problems.push(`「${p.join(" : ")}」が「${owner.get(key)}」と「${rel}」の両方に属している`);
         }

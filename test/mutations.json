@@ -190,5 +190,13 @@
     "find": ".result-actions {",
     "replace": ".result-actions { /* mutation */",
     "expect": "pwa"
+  },
+  {
+    "name": "嘘つき問題の発言の書式を変える",
+    "why": "検証テストのパーサが全件外れる。0件ガードが無いと「0問を検証して合格」になり静かに緑になる",
+    "file": "src/questions/_base.js",
+    "find": "\"の発言:「\"",
+    "replace": "\"のコメント:「\"",
+    "expect": "generator"
   }
 ]
