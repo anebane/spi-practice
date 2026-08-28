@@ -478,5 +478,61 @@
     "find": "      if (Math.max(v.a, v.b) >= v.total) return false;\n      return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;\n    }\n  });\n\n  // 集合: 最小値",
     "replace": "      return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;\n    }\n  });\n\n  // 集合: 最小値",
     "expect": "generator"
+  },
+  {
+    "name": "判定の桁の名前を変えて読めなくする",
+    "why": "generator.spec.js が app.js から判定の細かさを読めなくなる。読めないまま緑になると、判定と答えの刻みの突き合わせが丸ごと空回りする",
+    "file": "app.js",
+    "find": "  var ANSWER_DECIMALS = 4;",
+    "replace": "  var ANSWER_DECIMALS_RENAMED = 4;",
+    "expect": "generator"
+  },
+  {
+    "name": "答えの判定を絶対値の許容幅に戻す",
+    "why": "絶対値の幅は答えが小さいほど甘くなる。濃度算は0.1刻みなので、正解が8のとき7.9でも正解と表示される",
+    "file": "app.js",
+    "find": "    return Math.round(userAnswer * unit) === Math.round(correctAnswer * unit);",
+    "replace": "    return Math.abs(userAnswer - correctAnswer) < 0.15;",
+    "expect": "generator"
+  },
+  {
+    "name": "答えの判定の桁を粗くする",
+    "why": "判定の細かさが答えの刻みを下回ると、誤答が正解と判定される",
+    "file": "app.js",
+    "find": "  var ANSWER_DECIMALS = 4;",
+    "replace": "  var ANSWER_DECIMALS = 0;",
+    "expect": "generator"
+  },
+  {
+    "name": "四則逆算で未約分の分数を出す",
+    "why": "「□ × 4/6 = 16」は分数の書き方として誤っている。答えは正しく出るので答えを見る検査では捕まらない",
+    "file": "src/questions/11-shisoku.js",
+    "find": "      if (gcd(v.num, v.den) !== 1) return false;",
+    "replace": "      if (false && gcd(v.num, v.den) !== 1) return false;",
+    "expect": "generator"
+  },
+  {
+    "name": "設問に2つの単位を書く",
+    "why": "「何時間何分かかるか。（分単位で答えよ）」は前半が「3時間20分」を、後半が「200」を求めていて二通りに読める",
+    "file": "src/questions/05-sokudo.js",
+    "find": "、何分かかるか。\"",
+    "replace": "、何時間何分かかるか。（分単位で答えよ）\"",
+    "expect": "generator"
+  },
+  {
+    "name": "リーグ戦の問いの文面を変えて読めなくする",
+    "why": "問題文から問い先を取り出せないと、推論の要否を1問も見ないまま緑になる",
+    "file": "src/questions/01-suiron.js",
+    "find": "{{who}}の成績は何勝何敗か。\"",
+    "replace": "{{who}}の成績を答えよ。\"",
+    "expect": "generator"
+  },
+  {
+    "name": "リーグ戦で推論不要の開示を許す",
+    "why": "問い先の全対戦が条件に並ぶと、数えるだけで答えが出る。答えは正しいので答えを見る検査では捕まらない",
+    "file": "src/questions/_base.js",
+    "find": "    if (ownBeats >= n - 1) continue;",
+    "replace": "    if (ownBeats >= n + 1) continue;",
+    "expect": "generator"
   }
 ]
