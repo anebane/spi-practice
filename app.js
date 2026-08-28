@@ -38,7 +38,12 @@
   function shareOnX() {
     var totalCorrect = 0;
     var totalQuestions = state.questions.length;
-    state.questions.forEach(function(q) { if (q.correct) totalCorrect++; });
+    // 正誤は answers 側にある（{ userAnswer, isCorrect, timeSpent, skipped }）。
+    // 以前は state.questions の q.correct を数えていたが、生成される問題に
+    // correct というプロパティは存在しないので、**常に0%** になっていた。
+    // 90%取った人がシェアしても「0% (0/20問正解)」と投稿される状態で、
+    // シェアの動機を完全に潰していた。例外が出ないので気づけない類。
+    state.answers.forEach(function(a) { if (a && a.isCorrect) totalCorrect++; });
     var percent = Math.round((totalCorrect / totalQuestions) * 100);
     var text = "SPI非言語 模擬試験で " + percent + "% (" + totalCorrect + "/" + totalQuestions + "問正解) でした！"
       + "\n無料・登録不要で何度でも練習できる"

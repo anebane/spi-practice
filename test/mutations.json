@@ -174,5 +174,13 @@
     "find": "<input type=\"checkbox\" value=\"13\" checked><span>規則性・方角</span>",
     "replace": "<input type=\"checkbox\" value=\"13\" checked><span>推論</span>",
     "expect": "html"
+  },
+  {
+    "name": "シェアの点数を questions 側から数える（常に0%に戻す）",
+    "why": "生成される問題に correct プロパティは無いので、シェア文面が常に0%になる。90%取った人が「0%」と投稿する",
+    "file": "app.js",
+    "find": "    state.answers.forEach(function(a) { if (a && a.isCorrect) totalCorrect++; });",
+    "replace": "    state.questions.forEach(function(q) { if (q.correct) totalCorrect++; });",
+    "expect": "app"
   }
 ]

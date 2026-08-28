@@ -253,10 +253,48 @@ run("?cat= の解除", () => {
   if (!cats.length) fail("?cat= の解除", "出題されていない");
 });
 
+// --- 13. シェアの点数が結果画面と一致する ---
+//
+//     以前は state.questions の q.correct を数えていたが、生成される問題に
+//     correct というプロパティは無く、**常に0%** になっていた。
+//     90%取った人が「0% (0/20問正解)」と投稿する状態で、シェアの動機を潰す。
+//     例外も落ちも起きないので、投稿されたものを見るまで気づけない。
+//
+//     2つの独立した経路で同じ点数を言わせて突き合わせる:
+//       経路A … exam_finish（結果画面の集計）
+//       経路B … share_x（シェア文面の集計）
+run("シェアの点数", () => {
+  let maxCorrect = 0, compared = 0;
+  // 問題は毎回生成されるので、どの選び方で何問正解になるかは決まらない。
+  // 選択肢の振り方を何通りか試して、正解が出るケースを含める。
+  for (const step of [1, 2, 3, 4, 5, 6]) {
+    const h = createHarness({ questionCount: 10 });
+    h.start();
+    for (let i = 0; i < 30 && !h.onResult(); i++) {
+      h.user.selectedChoice = (i * step) % 4;
+      h.byId("btn-answer").click();
+    }
+    h.byId("btn-share-x").click();
+
+    const fin = h.find("exam_finish"), sh = h.find("share_x");
+    if (!fin || !sh) { fail("シェアの点数", `イベントが出ていない（step=${step}）`); continue; }
+    compared++;
+    maxCorrect = Math.max(maxCorrect, fin.params.correct_count);
+    if (fin.params.score_percent !== sh.params.score_percent) {
+      fail("シェアの点数",
+        `結果画面 ${fin.params.score_percent}% に対しシェアが ${sh.params.score_percent}%（step=${step}）`);
+    }
+  }
+  // 全部0点だと「0%同士で一致」してしまい、常に0%を返すバグを見逃す。
+  // どこかで1問以上正解している必要がある（特定のstepに縛ると生成の揺れで落ちる）。
+  if (!compared) fail("シェアの点数", "1件も比較できていない");
+  else if (maxCorrect === 0) fail("シェアの点数", "どの組み合わせでも正解0問で、検査が空回りしている");
+});
+
 // ============================================================
 // 出力
 // ============================================================
-console.log("app.js の計測: 12項目を検査（DOMをスタブして本物の app.js を駆動）");
+console.log("app.js の計測: 13項目を検査（DOMをスタブして本物の app.js を駆動）");
 if (!failures.length) {
   console.log("   ✅ exam_start と exam_finish は必ず1対1。連打しても増えない。exam_id も対応する");
 } else {
