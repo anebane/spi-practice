@@ -67,10 +67,26 @@ const failures = [];
 const fail = (name, detail) => failures.push({ name, detail });
 
 /** src/questions/ を触ったら questions.js を作り直す。 */
+// 再ビルドを意図的に失敗させる自己検査の口。
+// 「復元の失敗が原因として名指しされるか」を、実際に失敗させて確かめるために要る。
+// 例: MUTATION_RUNNER_BREAKBUILD=2 → 復元中の再ビルドを2回失敗したことにする
+//     （ファイルには触らないので、ツリーは汚れない）
+// 変異を当てるときのビルドは壊さない。壊すとそこで continue して復元の検査に届かない。
+let breakBuild = parseInt(process.env.MUTATION_RUNNER_BREAKBUILD || "0", 10) || 0;
+let restoringNow = false;
+
 function rebuildIfNeeded(file) {
-  if (file.indexOf("src/questions/") !== 0) return true;
+  if (file.indexOf("src/questions/") !== 0) return { ok: true };
+  if (restoringNow && breakBuild > 0) {
+    breakBuild--;
+    return { ok: false, status: 99, detail: "自己検査: 再ビルドを失敗したことにした" };
+  }
   const r = cp.spawnSync("node", ["tools/build-questions.js"], { cwd: ROOT, encoding: "utf8" });
-  return r.status === 0;
+  if (r.status === 0) return { ok: true };
+  // 失敗の理由を捨てない。捨てると「食い違っている」という症状しか残らない。
+  const detail = ((r.stderr || "") + (r.stdout || "")).trim().split("\n").slice(-3).join(" / ")
+              || (r.error ? r.error.message : "出力なし");
+  return { ok: false, status: r.status, detail };
 }
 
 // ============================================================
@@ -110,14 +126,39 @@ function releaseLock() {
 // ============================================================
 let active = null;      // いま変異を当てているファイル { abs, file, original }
 
+// 復元は「戻した」だけでは終わっていない。ソースを書き戻しても再ビルドが失敗すると
+// questions.js に変異が残る。そのとき見えるのは「開始時の中身と食い違っている」という
+// 症状だけで、原因（再ビルドの失敗）は消える。ここで戻り値を見て、原因を名指しする。
+// 戻り値: null = 成功 / 文字列 = 失敗の理由
 function restoreActive() {
-  if (!active) return;
+  if (!active) return null;
   const a = active;
   active = null;
   try {
     fs.writeFileSync(a.abs, a.original);
-    rebuildIfNeeded(a.file);
-  } catch (e) { /* 復元中の失敗は握るしかない。次回起動がロックで気づかせる */ }
+  } catch (e) {
+    return `ソースの書き戻しに失敗した（${a.file}）: ${e.message}`;
+  }
+  // 書き戻しても中身が違うなら、他プロセスが同じファイルを触っている。
+  let back;
+  try { back = fs.readFileSync(a.abs, "utf8"); }
+  catch (e) { return `書き戻したソースを読み直せない（${a.file}）: ${e.message}`; }
+  if (back !== a.original) {
+    return `ソースを書き戻したのに中身が違う（${a.file}）。他のプロセスが同じファイルを触っている`;
+  }
+  // 再ビルドは失敗しうる。一度だけやり直し、それでも駄目なら理由を返す。
+  restoringNow = true;
+  try {
+    for (let i = 0; i < 2; i++) {
+      const r = rebuildIfNeeded(a.file);
+      if (r.ok) return null;
+      if (i === 1) {
+        return `${a.file} は戻したが questions.js の再生成に2回とも失敗した`
+             + `（EXIT=${r.status}）: ${r.detail}`;
+      }
+    }
+  } finally { restoringNow = false; }
+  return null;
 }
 
 let bailing = false;
@@ -267,7 +308,8 @@ for (const m of mutations) {
   try {
     active = { abs, file: m.file, original };
     fs.writeFileSync(abs, original.replace(m.find, m.replace));
-    if (!rebuildIfNeeded(m.file)) { fail(m.name, "変異後のビルドに失敗した"); continue; }
+    const built = rebuildIfNeeded(m.file);
+    if (!built.ok) { fail(m.name, `変異後のビルドに失敗した（EXIT=${built.status}）: ${built.detail}`); continue; }
 
     const r = cp.spawnSync("node", [specRel], { cwd: ROOT, encoding: "utf8" });
     ran++;
@@ -296,7 +338,10 @@ for (const m of mutations) {
       results.push({ name: m.name, spec: m.expect, ok: true });
     }
   } finally {
-    restoreActive();
+    // 復元の失敗は、それ自体を名指しする。これを飛ばすと下の drift が
+    // 「食い違っている」という症状だけを見せ、原因が分からなくなる。
+    const why = restoreActive();
+    if (why) fail(m.name, `復元に失敗した: ${why}`);
     const drift = changedFromSnapshot();
     if (drift.length) fail(m.name, `この変異のあと、開始時の中身と食い違っている: ${drift.join(", ")}`);
   }
