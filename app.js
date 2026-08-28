@@ -247,7 +247,8 @@
 
     // startExam を直接渡すと click イベントが options として入ってくる。
     // いまは害が無いが、options を見るようになったので明示的に包む。
-    document.getElementById("btn-start").addEventListener("click", function() { startExam(); });
+    // 試験画面に入っていれば、もう開始は済んでいる
+    onPressOnce("btn-start", function () { return onScreen("exam"); }, function() { startExam(); });
   }
 
   // ?cat= で指定されたが、トップの出題分野チェックボックスには載せていない分野。
@@ -639,6 +640,41 @@
       return parseFloat(input.value);
     }
   }
+
+  // 連打・二度押しを吸収する。
+  //
+  // 「開始」「もう一度」「解説を見る」「シェア」「誤りを報告」は、押しても
+  // 対象が変わらない。2回押すと同じ対象の記録が2つ残る（実測で
+  // retry_exam / review_start / share_x / report_error が2倍になった）。
+  // 開始は exam_id が別になるが、1つ目の試験は完走しないまま消えるので、
+  // exam_start が水増しされ完走率が下がる。
+  //
+  // ⚠️ 時間で切ってはいけない。最初 700ms の窓で切ったところ、
+  //    「開始→完走→再挑戦」を素早く繰り返す経路が窓に飲み込まれ、
+  //    3回目の試験が始まらなくなった（検査が捕まえた）。
+  //    利用者が速いのか二度押しなのかは、時間では区別できない。
+  //
+  // ⚠️ 「回答して次へ」「次の問題」は2回目が別の対象に効くので守らない。
+  //    守ると、速く解く人の2問目が消える。
+  //
+  // 代わりに「その操作がもう済んでいるか」を対象の同一性で見る。
+  //   画面が変わる操作 … もう目的の画面にいるなら二度押し
+  //   画面が変わらない操作 … 同じ対象を既に記録済みなら二度押し
+  function onPressOnce(id, alreadyDone, fn) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("click", function (e) {
+      if (alreadyDone()) return;
+      fn(e);
+    });
+  }
+
+  function onScreen(name) {
+    return screens[name] && screens[name].classList.contains("active");
+  }
+
+  var sharedExamId = null;     // シェア済みの試験
+  var reportedIndex = null;    // 誤り報告済みの問題
 
   // 数値の答えを突き合わせる桁。
   // test/generator.spec.js がこの値を読み、実際に出題される答えの刻みより
@@ -1246,12 +1282,12 @@
     document.getElementById("peek-backdrop").addEventListener("click", closePeekAndNext);
 
     // 結果画面ボタン
-    document.getElementById("btn-review").addEventListener("click", showReview);
+    onPressOnce("btn-review", function () { return onScreen("review"); }, showReview);
 
     // 再挑戦は2種類ある。どちらが押されたかを variant で区別する。
     // これを付けずに両方足すと、再挑戦率が動いたときに
     // 「文言が効いたのか、軽い口が効いたのか」を後から言えなくなる。
-    document.getElementById("btn-retry").addEventListener("click", function() {
+    onPressOnce("btn-retry", function () { return onScreen("exam"); }, function() {
       trackEvent("retry_exam", {
         variant: "same",
         question_count: state.questions.length
@@ -1259,7 +1295,7 @@
       startExam();
     });
 
-    document.getElementById("btn-retry-short").addEventListener("click", function() {
+    onPressOnce("btn-retry-short", function () { return onScreen("exam"); }, function() {
       trackEvent("retry_exam", {
         variant: "short",
         question_count: SHORT_RETRY_COUNT
@@ -1294,12 +1330,14 @@
     });
 
     // Xシェアボタン
-    document.getElementById("btn-share-x").addEventListener("click", function() {
+    onPressOnce("btn-share-x", function () { return sharedExamId === state.examId; }, function() {
+      sharedExamId = state.examId;
       shareOnX();
     });
 
     // 誤り報告ボタン
-    document.getElementById("btn-report-error").addEventListener("click", function() {
+    onPressOnce("btn-report-error", function () { return reportedIndex === reviewIndex; }, function() {
+      reportedIndex = reviewIndex;
       openReportForm(reviewIndex);
       // 利用者からの誤り報告は最も強い信号。どのテンプレートかが分からないと
       // 直しようがないので、必ず templateId を送る。

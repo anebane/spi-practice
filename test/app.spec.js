@@ -376,6 +376,64 @@ run("離脱: 試験外では飛ばない", () => {
 });
 
 // ============================================================
+// 連打・二度押し
+//
+// 押しても対象が変わらない操作は、2回押しても記録が1つでなければならない。
+// 実測で retry_exam / review_start / share_x / report_error が2倍になり、
+// 開始は exam_start が2つ出て1つ目の試験が完走しないまま消えていた。
+//
+// ⚠️ 「回答して次へ」「次の問題」は2回目が別の対象に効くので守らない。
+//    守ると速く解く人の2問目が消える。ここで一緒に禁じないことが大事。
+// ============================================================
+
+// --- 15. 対象が変わらない操作は2回押しても記録が増えない ---
+run("連打: 対象が変わらない操作", () => {
+  const atStart  = () => createHarness({ questionCount: 10 });
+  const atExam   = () => { const h = atStart(); h.start(); return h; };
+  const atResult = () => { const h = atExam(); for (let i = 0; i < 40 && !h.onResult(); i++) h.answerOne(); return h; };
+  const atReview = () => { const h = atResult(); h.byId("btn-review").click(); return h; };
+
+  const guarded = [
+    ["btn-start",        atStart,  "exam_start"],
+    ["btn-review",       atResult, "review_start"],
+    ["btn-retry",        atResult, "retry_exam"],
+    ["btn-retry-short",  atResult, "retry_exam"],
+    ["btn-share-x",      atResult, "share_x"],
+    ["btn-report-error", atReview, "report_error"]
+  ];
+  let checked = 0;
+  for (const [id, setup, ev] of guarded) {
+    const h = setup();
+    h.reset();
+    h.byId(id).click();
+    const once = h.count(ev);
+    h.byId(id).click();
+    const twice = h.count(ev);
+    checked++;
+    if (once !== 1) { fail("連打", `${id}: 1回押して ${ev} が ${once}件（1件であるべき）`); continue; }
+    if (twice !== 1) fail("連打", `${id}: 2回押すと ${ev} が ${twice}件になる。同じ対象が二重に記録される`);
+  }
+  cov.covered("連打を確かめた操作", checked, 6);
+});
+
+// --- 16. 別の対象に効く操作は、2回目も記録される ---
+//     連打ガードを広げすぎると、速く解く人の2問目が消える。
+//     「守らないこと」も検査しないと、あとから雑に広げられる。
+run("連打: 別の対象に効く操作は止めない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.reset();
+  h.answerOne();
+  const once = h.count("question_answer");
+  h.answerOne();
+  const twice = h.count("question_answer");
+  if (once !== 1) fail("連打", `1問答えて question_answer が ${once}件`);
+  if (twice !== 2) {
+    fail("連打", `2問答えたのに question_answer が ${twice}件。連打ガードが別の問題まで飲み込んでいる`);
+  }
+});
+
+// ============================================================
 // 出力
 // ============================================================
 cov.covered("実行した検査項目", ranCases, 10);
