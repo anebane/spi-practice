@@ -825,6 +825,26 @@ function buildLeaguePuzzle(n, targetWins) {
       : 5 + Math.floor(Math.random() * 3);              // 5〜7個
     var conds = discl.slice(0, count);
 
+    // 3.5) 推論が要らない開示の組を捨てる。
+    //
+    // ⚠️ 答えは正しいので、答えを見る検査では捕まらない。
+    //    壊れているのは答えではなく「問い」のほう。
+    //
+    //   型A: 問い先が関わる対戦の勝敗がすべて書かれている
+    //        → 数えるだけで成績が出る。答えが問題文に書いてあるのと同じ
+    //   型B: 問い先以外の全チームの成績が書かれている
+    //        → 全勝ち数の合計は試合数なので、引き算するだけで出る
+    //
+    //   実測で型A 40.2% / 型B 20.8%（合わせて61.0%）が推論不要だった。
+    var ownBeats = 0, otherRecs = 0;
+    for (var ci = 0; ci < conds.length; ci++) {
+      var cc = conds[ci];
+      if (cc.t === "beat" && (cc.a === who || cc.b === who)) ownBeats++;
+      else if (cc.t === "rec" && cc.team !== who) otherRecs++;
+    }
+    if (ownBeats >= n - 1) continue;
+    if (otherRecs >= n - 1) continue;
+
     // 4) 条件を満たす結果を全列挙
     var sols = [];
     for (var mask = 0; mask < data.total; mask++) {
@@ -2953,7 +2973,7 @@ var TRAIN_SCENES = [
     category: "速度算",
     categoryId: 5,
     difficulty: 1,
-    templateText: "{{distance}}kmの道のりを時速{{speed}}kmで進むと、何時間何分かかるか。（分単位で答えよ）",
+    templateText: "{{distance}}kmの道のりを時速{{speed}}kmで進むと、何分かかるか。",
     variables: {
       distance: { type: "int", min: 10, max: 100, step: 5 },
       speed: { type: "choice", options: [4, 5, 6, 10, 12, 15, 20] }
@@ -3885,6 +3905,9 @@ var CONSEC_SCENES = [
     explanationTemplate: "【考え方】\n比で分ける問題は「比の合計」で割って「各部分の比」をかけます。\n\n【解法】\n① 比の合計:\n  A:B = {{ratioA}}:{{ratioB}}\n  合計 = {{ratioA}} + {{ratioB}} = {{ratioSum}}\n\n② Aの値:\n  A = {{total}} × {{ratioA}} / {{ratioSum}} = {{answer}}\n\n【ポイント】\n・比で分ける = 全体 × (自分の比 / 比の合計)\n・A:B = 2:3 なら Aは全体の 2/5\n・比の各要素は「全体に対する割合」と考えてもよい",
     timeLimitSec: 90,
     validate: function(v) {
+      // 比は約分した形でしか書かない（「3:6」は「1:2」と書くのが正しい）。
+      var gcd = function(x, y) { while (y) { var t = x % y; x = y; y = t; } return x; };
+      if (gcd(v.ratioA, v.ratioB) !== 1) return false;
       return v.ratioA !== v.ratioB && Number.isInteger(v.total * v.ratioA / (v.ratioA + v.ratioB));
     }
   });
@@ -3982,6 +4005,11 @@ var CONSEC_SCENES = [
     explanationTemplate: "【考え方】\n2つの比を「連比」にまとめる問題。\n共通の項（ここではB）の値を揃えます。\n\n【解法】\n① 2つの比を確認:\n  A:B = {{ab1}}:{{ab2}}\n  B:C = {{bc1}}:{{bc2}}\n\n② Bの値を揃える（最小公倍数に）:\n  A:B:C = {{a}}:{{b}}:{{c}}\n\n③ Bの取り分:\n  {{total}} × {{b}} / ({{a}}+{{b}}+{{c}}) = {{answer}}円\n\n【ポイント】\n・連比のコツ: 共通の文字（B）を最小公倍数に揃える\n・A:B=2:3、B:C=3:4 → B=3で揃う → A:B:C=2:3:4\n・A:B=2:3、B:C=2:5 → B=6に揃える → A:B:C=4:6:15",
     timeLimitSec: 120,
     validate: function(v) {
+      // 比は約分した形でしか書かない。「A:B = 2:2」「3:3」「2:4」は
+      // 比として書き方が誤っている（実測41.6%が未約分だった）。
+      var gcd = function(x, y) { while (y) { var t = x % y; x = y; y = t; } return x; };
+      if (gcd(v.ab1, v.ab2) !== 1) return false;
+      if (gcd(v.bc1, v.bc2) !== 1) return false;
       var a = v.ab1 * v.bc1;
       var b = v.ab2 * v.bc1;
       var c = v.ab2 * v.bc2;
@@ -4017,6 +4045,9 @@ var CONSEC_SCENES = [
     explanationTemplate: "【考え方】\n「比で分けてから増減率をかける」複合問題。\n①比から人数を求める → ②各群に増減率を適用 → ③合計\n\n【解法】\n① 去年の男女の人数（比で分ける）:\n  男性: {{population}} × {{maleRatio}}/{{totalRatio}} = {{male}}人\n  女性: {{population}} × {{femaleRatio}}/{{totalRatio}} = {{female}}人\n\n② 今年の人数（増減率を適用）:\n  男性: {{male}} × (1+{{maleChange}}/100) = {{newMale}}人\n  女性: {{female}} × (1-{{femaleChange}}/100) = {{newFemale}}人\n\n③ 今年の人口:\n  {{newMale}} + {{newFemale}} = {{answer}}人\n\n【ポイント】\n・比 → 実数に変換してから増減を計算する\n・男女で増減率が違う → 全体の増減率は単純平均にならない\n・人口問題はSPIで頻出（比+割合の複合問題）",
     timeLimitSec: 150,
     validate: function(v) {
+      // 男女比も約分した形でしか書かない（「3:3」は「1:1」）。
+      var gcd = function(x, y) { while (y) { var t = x % y; x = y; y = t; } return x; };
+      if (gcd(v.maleRatio, v.femaleRatio) !== 1) return false;
       var totalRatio = v.maleRatio + v.femaleRatio;
       var male = v.population * v.maleRatio / totalRatio;
       var female = v.population - male;
@@ -5031,7 +5062,9 @@ var PERM_EXCLUDE_SCENES = [
     formats: ["webtesting", "testcenter"],
     category: "四則逆算",
     categoryId: 11,
-    difficulty: 3,
+    // 逆数を掛け戻す1手だけで、割合・比の逆算（difficulty 2）と手数が同じ。
+    // 3にすると、複数の条件を組み合わせる問題と同じ重みで表示される。
+    difficulty: 2,
     templateText: "□ × {{num}}/{{den}} = {{c}}",
     variables: {
       num: { type: "choice", options: [2, 3, 4, 5] },
@@ -5039,7 +5072,13 @@ var PERM_EXCLUDE_SCENES = [
       c: { type: "int", min: 8, max: 80, step: 4 }
     },
     answerType: "choice",
-    validate: function(v) { return v.num < v.den && (v.c * v.den) % v.num === 0; },
+    validate: function(v) {
+      // 分数は約分した形でしか出さない。「4/6」「3/9」は
+      // 四則逆算で問う形として誤っている（実測41.6%が未約分だった）。
+      var gcd = function(x, y) { while (y) { var t = x % y; x = y; y = t; } return x; };
+      if (gcd(v.num, v.den) !== 1) return false;
+      return v.num < v.den && (v.c * v.den) % v.num === 0;
+    },
     answerFormula: function(v) { return v.c * v.den / v.num; },
     distractors: function(v, ans) {
       return [Math.round(v.c * v.num / v.den), v.c, Math.round(ans / 2), ans * 2, v.c * v.num, ans + v.c];

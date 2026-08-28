@@ -1421,6 +1421,147 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 設問に書かれた比・分数が約分されているか ---
+//
+// 「A:B = 2:2」「□ × 4/6 = 16」は、比や分数の書き方として誤っている。
+// 答えは正しく出るので、答えを見る検査では捕まらない。実測41.6%が未約分だった。
+//
+// 問題文そのものを読む。利用者が見る文面で判断したいのと、
+// 内部の変数名がテンプレートごとに違うため。
+{
+  const gcd = (a, b) => { while (b) { const t = a % b; a = b; b = t; } return a; };
+  const N = 200;
+  let checked = 0, bad = 0;
+  const samples = [];
+
+  for (const t of TEMPLATES) {
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !q.text) continue;
+      const text = String(q.text);
+      let sawAny = false, sawBad = false;
+
+      // 比（a:b）。時刻（9:30）と紛れないよう、比の記述がある文だけを見る。
+      if (/[:：]\s*\d/.test(text) && /比/.test(text + String(t.category || ""))) {
+        for (const m of text.matchAll(/(\d+)\s*[:：]\s*(\d+)/g)) {
+          const a = +m[1], b = +m[2];
+          if (a < 1 || b < 1) continue;
+          sawAny = true;
+          if (gcd(a, b) > 1) { sawBad = true; samples.push(`${t.id}: ${a}:${b}`); }
+        }
+      }
+      // 分数（a/b）。単位の「km/h」等と紛れないよう、両側が数字のものだけ。
+      for (const m of text.matchAll(/(?<![\d.])(\d+)\s*\/\s*(\d+)(?![\d.])/g)) {
+        const a = +m[1], b = +m[2];
+        if (a < 1 || b < 1) continue;
+        sawAny = true;
+        if (gcd(a, b) > 1) { sawBad = true; samples.push(`${t.id}: ${a}/${b}`); }
+      }
+      if (sawAny) checked++;
+      if (sawBad) bad++;
+    }
+  }
+
+  // 0件だと「未約分が無い」ではなく「1つも見ていない」。
+  cov.covered("比・分数を含む設問", checked, 100);
+  console.log(`\n設問の比・分数が約分されているか: ${checked}問を検査`);
+  if (!bad) {
+    console.log("   ✅ すべて約分された形で書かれている");
+  } else {
+    fail("設問の比・分数", "約分されていない",
+      `${bad}問（${(bad / checked * 100).toFixed(1)}%）: ${[...new Set(samples)].slice(0, 6).join(" / ")}`);
+    console.log(`   ❌ 未約分 ${bad}問`);
+  }
+}
+
+// --- 設問が2つの単位を同時に問っていないか ---
+//
+// 「何時間何分かかるか。（分単位で答えよ）」は、前半が「3時間20分」形式を求め、
+// 後半が「200」を求めていて、読んだ人が二通りに解釈できる。
+// 答えが1つの単位の数値なら、問いも同じ単位に揃っていなければならない。
+//
+// 選択式は「2勝1敗」のように選択肢そのものが複合なので対象外。
+{
+  const UNITS = ["時間", "分", "秒", "日", "円", "人", "個", "km", "m", "%",
+                 "通り", "本", "枚", "冊", "g", "kg", "L"];
+  let checked = 0;
+  for (const t of TEMPLATES) {
+    if (t.answerType === "choice") continue;      // 選択肢が複合の形は正常
+    const txt = String(t.templateText || "");
+    if (!txt) continue;
+    checked++;
+    const asked = UNITS.filter(u => txt.indexOf("何" + u) >= 0);
+    if (asked.length > 1) {
+      fail(t.id, "設問が2つの単位を問っている",
+        `${asked.join(" / ")} … 答えは ${JSON.stringify(t.unit)} の1つ。読んだ人が二通りに解釈できる`);
+    }
+  }
+  // 0件だと「食い違いが無い」ではなく「1つも見ていない」。
+  cov.covered("設問の単位を調べたテンプレート", checked, 40);
+  console.log(`\n設問が問う単位: ${checked}テンプレートを検査`);
+}
+
+// --- リーグ戦: 推論が要る問題になっているか ---
+//
+// 答えが正しくても、条件を読むだけで答えが出るなら推論問題ではない。
+// 実測で61.0%がそうだった（型A 40.2% / 型B 20.8%）。難易度3の表示とも乖離する。
+//
+//   型A: 問い先が関わる対戦の勝敗がすべて書かれている → 数えるだけ
+//   型B: 問い先以外の全チームの成績が書かれている → 合計から引くだけ
+//
+// ⚠️ 壊れているのは答えではなく「問い」のほうなので、
+//    答えを見る検査（一意性・正解一致）では原理的に捕まらない。
+//    問題文そのものを読む。
+{
+  const t = TEMPLATES.find(x => x.id === "suiron_league_01");
+  const N = 400;
+  let checked = 0, typeA = 0, typeB = 0, unparsed = 0;
+  const samples = [];
+
+  for (let i = 0; t && i < N; i++) {
+    const q = GEN.generateQuestion(t);
+    if (!q) continue;
+    const head = String(q.text).match(/^(.+?) の(\d)チームが/);
+    const whoM = String(q.text).match(/\n\n(.+?)の成績は何勝何敗か。/);
+    if (!head || !whoM) { unparsed++; continue; }
+    const nTeams = +head[2];
+    const who = whoM[1].trim();
+    const conds = String(q.text).split("\n").filter(l => l.startsWith("・"));
+    checked++;
+
+    // 問い先が関わる対戦のうち、勝敗が直接書かれているもの
+    const own = new Set();
+    let otherRecs = 0;
+    for (const l of conds) {
+      const b = l.match(/^・(.+?)は(.+?)に勝った$/);
+      if (b) { if (b[1] === who) own.add(b[2]); else if (b[2] === who) own.add(b[1]); continue; }
+      const r = l.match(/^・(.+?)は\d勝\d敗だった$/);
+      if (r && r[1] !== who) otherRecs++;
+    }
+    if (own.size >= nTeams - 1) {
+      typeA++;
+      if (samples.length < 2) samples.push(`型A（全対戦が直書き）: ${who} / ${conds.join(" ")}`);
+    } else if (otherRecs >= nTeams - 1) {
+      typeB++;
+      if (samples.length < 2) samples.push(`型B（他全チームの成績が直書き）: ${who} / ${conds.join(" ")}`);
+    }
+  }
+
+  // 0件だと「推論不要が無い」ではなく「1問も見ていない」。
+  // 問題文の読み取りが壊れただけでも起こるので、ここで止める。
+  cov.covered("リーグ戦で推論の要否を調べた問題", checked, 100);
+  if (unparsed) fail("suiron_league_01", "問題文を読めない", `${unparsed}問で見出しか問い先を取り出せない`);
+
+  console.log(`\nリーグ戦の推論の要否: ${checked}問を検証`);
+  if (typeA + typeB === 0) {
+    console.log("   ✅ すべて条件を組み合わせないと答えが出ない");
+  } else {
+    fail("suiron_league_01", "推論が要らない",
+      `${typeA + typeB}問（型A ${typeA} / 型B ${typeB} = ${((typeA + typeB) / checked * 100).toFixed(1)}%）: ${samples.join(" / ")}`);
+    console.log(`   ❌ 推論不要 ${typeA + typeB}問（型A ${typeA} / 型B ${typeB}）`);
+  }
+}
+
 // --- 円卓: 「向かいは誰か」の答えが1人に定まるか ---
 //
 // 円卓には2種類の対称性がある。

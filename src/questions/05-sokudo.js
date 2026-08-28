@@ -97,7 +97,7 @@ var TRAIN_SCENES = [
     category: "速度算",
     categoryId: 5,
     difficulty: 1,
-    templateText: "{{distance}}kmの道のりを時速{{speed}}kmで進むと、何時間何分かかるか。（分単位で答えよ）",
+    templateText: "{{distance}}kmの道のりを時速{{speed}}kmで進むと、何分かかるか。",
     variables: {
       distance: { type: "int", min: 10, max: 100, step: 5 },
       speed: { type: "choice", options: [4, 5, 6, 10, 12, 15, 20] }

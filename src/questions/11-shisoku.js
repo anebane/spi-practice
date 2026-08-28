@@ -160,7 +160,9 @@
     formats: ["webtesting", "testcenter"],
     category: "四則逆算",
     categoryId: 11,
-    difficulty: 3,
+    // 逆数を掛け戻す1手だけで、割合・比の逆算（difficulty 2）と手数が同じ。
+    // 3にすると、複数の条件を組み合わせる問題と同じ重みで表示される。
+    difficulty: 2,
     templateText: "□ × {{num}}/{{den}} = {{c}}",
     variables: {
       num: { type: "choice", options: [2, 3, 4, 5] },
@@ -168,7 +170,13 @@
       c: { type: "int", min: 8, max: 80, step: 4 }
     },
     answerType: "choice",
-    validate: function(v) { return v.num < v.den && (v.c * v.den) % v.num === 0; },
+    validate: function(v) {
+      // 分数は約分した形でしか出さない。「4/6」「3/9」は
+      // 四則逆算で問う形として誤っている（実測41.6%が未約分だった）。
+      var gcd = function(x, y) { while (y) { var t = x % y; x = y; y = t; } return x; };
+      if (gcd(v.num, v.den) !== 1) return false;
+      return v.num < v.den && (v.c * v.den) % v.num === 0;
+    },
     answerFormula: function(v) { return v.c * v.den / v.num; },
     distractors: function(v, ans) {
       return [Math.round(v.c * v.num / v.den), v.c, Math.round(ans / 2), ans * 2, v.c * v.num, ans + v.c];
