@@ -21,17 +21,27 @@
  * 「壊しても落ちない」ではなく「壊せていない」のに合格扱いになる。
  * **それ自体が見逃し**なので、一致数がちょうど1でなければ即失敗にする。
  *
- * 【復元】
- * ソースを戻すだけでは足りない。src/questions/ を触る変異は questions.js を
- * 作り直す必要があり、戻し忘れると次のテストが古い成果物で走る（昨日踏んだ）。
- * 復元後にビルド成果物まで照合する。
+ * 【途中で死んでも壊さないための3点】
+ * このランナーは作業ファイルを書き換えて戻す。途中で止まると変異が残り、
+ * 次の実行が汚染された状態から始まって原因不明の失敗を出す。実際に
+ * 2026-08-28、外部からタイムアウトで殺されて4ファイルが汚染され、
+ * 別セッションで「修正済みの退行が再現しない」という調査に時間を取られた。
+ *   1. ロックファイル … 同時に2つ走らせない
+ *   2. 例外での復元 … finally と exit ハンドラで必ず戻す
+ *   3. 開始時に対象ファイルが汚れていたら拒否 … 復元の基準が作れないため
  *
- * 【⚠️ 同時に走らせないこと】
- * このランナーは作業ファイルを書き換えて戻す。同じリポジトリを書き換える
- * 別のプロセス（別のランナー、手作業の破壊スクリプト、ビルド）が並行して
- * いると、互いの復元を上書きし合って汚染が残る。実際にそれで
- * src/questions/12-gengo.js に変異が残り、原因究明に時間を取られた。
- * 症状が実行ごとに変わるのが特徴で、単独で走らせると再現しない。
+ * ⚠️ シグナルについて、実測で分かったこと。
+ *    このランナーは最初から最後まで同期処理（spawnSync）なので、
+ *    **イベントループが回らず、シグナルハンドラは途中では走らない。**
+ *    SIGTERM/SIGINT を受けてもその場では止まらず、最後まで走りきってから
+ *    通常どおり復元して終わる（自己検査で確認済み。結果は「汚染なし」）。
+ *    「シグナルで即座に復元して止まる」とは書けない。
+ *
+ * ⚠️ SIGKILL(-9) は捕まえられない。実際に外から強制終了させたところ、
+ *    変異が1件残り questions.js もソースと不一致になった。
+ *    このときは 1 と 3 が効く。ロックが残るので次回起動が
+ *    「前回が異常終了した形跡がある」と言って止まり、対象ファイルが
+ *    汚れているのでどちらにせよ起動しない。実測で確認した。
  */
 const fs = require("fs");
 const path = require("path");
@@ -39,6 +49,8 @@ const cp = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
 const MUTATIONS = path.join(__dirname, "mutations.json");
+const LOCK = path.join(__dirname, ".mutation-runner.lock");
+const BUILT = path.join(ROOT, "questions.js");
 
 const SPECS = {
   app: "test/app.spec.js",
@@ -61,33 +73,152 @@ function rebuildIfNeeded(file) {
   return r.status === 0;
 }
 
-/**
- * 開始時点の中身を丸ごと控えておく。
- *
- * git の差分で復元を確かめると、**開始時に既に変更されていたファイルは
- * 「もともと汚れている」扱いになり、その後どう壊れても気づけない。**
- * 実際 questions.js を未コミットのまま走らせたところ、ビルド成果物に変異が
- * 残ったまま「復元できた」と報告した（ソースは正しいのに成果物だけ汚染）。
- * git ではなく中身そのもので照合する。
- */
-const BUILT = path.join(ROOT, "questions.js");
+// ============================================================
+// 1. ロック（同時実行の防止）
+// ============================================================
+function processAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === "EPERM"; }
+}
+
+function acquireLock() {
+  try {
+    fs.writeFileSync(LOCK, String(process.pid), { flag: "wx" });
+    return { ok: true };
+  } catch (e) {
+    if (e.code !== "EEXIST") return { ok: false, why: `ロックを作成できません: ${e.message}` };
+    const pid = parseInt(fs.readFileSync(LOCK, "utf8").trim(), 10);
+    if (pid && processAlive(pid)) {
+      return { ok: false, why: `別のランナー（PID ${pid}）が実行中です。同時に走らせると互いの復元を上書きします` };
+    }
+    return {
+      ok: false,
+      why: `前回の実行（PID ${pid || "不明"}）が異常終了した形跡があります。`
+         + `作業ツリーに変異が残っていないか確認し、${path.relative(ROOT, LOCK)} を削除してから再実行してください`
+    };
+  }
+}
+
+let lockHeld = false;
+function releaseLock() {
+  if (!lockHeld) return;
+  try { fs.unlinkSync(LOCK); } catch (e) {}
+  lockHeld = false;
+}
+
+// ============================================================
+// 2. 復元（シグナル・例外でも必ず戻す）
+// ============================================================
+let active = null;      // いま変異を当てているファイル { abs, file, original }
+
+function restoreActive() {
+  if (!active) return;
+  const a = active;
+  active = null;
+  try {
+    fs.writeFileSync(a.abs, a.original);
+    rebuildIfNeeded(a.file);
+  } catch (e) { /* 復元中の失敗は握るしかない。次回起動がロックで気づかせる */ }
+}
+
+let bailing = false;
+function bail(reason, code) {
+  if (bailing) return;
+  bailing = true;
+  restoreActive();
+  releaseLock();
+  console.error(`\n⚠️ ${reason} 変異を復元してから終了しました。`);
+  process.exit(code);
+}
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+  process.on(sig, () => bail(`${sig} を受け取りました。`, 130));
+}
+process.on("uncaughtException", (e) => {
+  restoreActive(); releaseLock();
+  console.error(e);
+  process.exit(1);
+});
+process.on("exit", () => { restoreActive(); releaseLock(); });
+
+// ============================================================
+// 3. 開始前の点検
+// ============================================================
 const watchedFiles = [...new Set(mutations.map(m => path.join(ROOT, m.file)))].concat([BUILT]);
+const watchedRel = watchedFiles.map(f => path.relative(ROOT, f));
+
+function preflight() {
+  const g = cp.spawnSync("git", ["status", "--porcelain", "--"].concat(watchedRel),
+    { cwd: ROOT, encoding: "utf8" });
+  if (g.status !== 0) {
+    console.log("   ℹ️ git が使えないため、開始前の作業ツリー点検はスキップしました");
+    return { ok: true };
+  }
+  const dirty = (g.stdout || "").split("\n").map(l => l.replace(/^..\s+/, "").trim()).filter(Boolean);
+  if (dirty.length) {
+    // 止めるだけでは「なぜ動かないのか」で終わる。何が汚れていて、
+    // どう戻すのかまで出す。前回の異常終了で変異が残っている場合、
+    // 汚染そのものは誰かが戻すまで残り続けるため。
+    const lines = [
+      "変異の対象ファイルに未コミットの変更があります。復元の基準が作れないので実行しません。",
+      "",
+      "     汚れているファイル:"
+    ];
+    for (const f of dirty) lines.push(`       - ${f}`);
+    lines.push("");
+    lines.push("     前回の実行が強制終了された場合、変異が残ったままの可能性があります。");
+    lines.push("     意図した変更が無いなら、次で元に戻せます:");
+    lines.push(`       git checkout -- ${dirty.join(" ")}`);
+    if (dirty.some(f => f.indexOf("src/questions/") === 0)) {
+      lines.push("       node tools/build-questions.js   # questions.js を作り直す");
+    }
+    lines.push("");
+    lines.push("     意図した変更なら、コミットしてから再実行してください。");
+    return { ok: false, why: lines.join("\n") };
+  }
+  return { ok: true };
+}
+
+const lock = acquireLock();
+if (!lock.ok) {
+  console.log("破壊テスト: 起動しませんでした");
+  console.log(`   ❌ ${lock.why}`);
+  process.exit(1);
+}
+lockHeld = true;
+
+const pre = preflight();
+if (!pre.ok) {
+  console.log("破壊テスト: 起動しませんでした");
+  console.log(`   ❌ ${pre.why}`);
+  process.exit(1);
+}
+
+// 開始時点の中身を控える。git ではなく中身で照合する。
+// git の差分で確かめると、開始時に既に変更されていたファイルは
+// 「もともと汚れている」扱いになり、その後どう壊れても気づけない。
 const snapshot = new Map();
 for (const f of watchedFiles) {
   if (fs.existsSync(f)) snapshot.set(f, fs.readFileSync(f, "utf8"));
 }
-
-/** 開始時点の中身と食い違っているファイル。 */
 function changedFromSnapshot() {
   const out = [];
   for (const [f, content] of snapshot) {
-    if (!fs.existsSync(f) || fs.readFileSync(f, "utf8") !== content) {
-      out.push(path.relative(ROOT, f));
-    }
+    const rel = path.relative(ROOT, f);
+    if (!fs.existsSync(f)) { out.push(`${rel}（消えている）`); continue; }
+    const now = fs.readFileSync(f, "utf8");
+    if (now === content) continue;
+    // 「食い違っている」だけでは何が起きたのか分からない。
+    // 最初に違う位置とその周辺を出して、変異が残ったのか別物なのかを見分ける。
+    let i = 0;
+    while (i < now.length && i < content.length && now[i] === content[i]) i++;
+    const near = JSON.stringify(now.slice(Math.max(0, i - 30), i + 40));
+    out.push(`${rel}（${content.length}→${now.length}バイト / 相違位置 ${i} 付近: ${near}）`);
   }
   return out;
 }
 
+// ============================================================
+// 4. 実行
+// ============================================================
 let ran = 0, skipped = 0;
 const results = [];
 
@@ -100,6 +231,30 @@ for (const m of mutations) {
   const specRel = SPECS[m.expect];
   if (!specRel) { fail(m.name, `expect が不正: ${m.expect}（${Object.keys(SPECS).join("/")}）`); continue; }
 
+  // --- 変異を当てる前に、外から書き換えられていないかを見る ---
+  //
+  // 自分で戻したはずのファイルが、次の変異までの間に別の中身になっていることが
+  // 実際に起きた（エディタが古いバッファを保存した等、リポジトリ外の要因）。
+  // そのまま続けると、以降の変異すべてが「食い違っている」と報告されて
+  // 本当の原因が埋もれ、汚染も残ったままになる。
+  // 気づいた時点で止めて、何が起きたかと戻し方を出す。
+  {
+    const drift = changedFromSnapshot();
+    if (drift.length) {
+      const files = [...snapshot.keys()].map(f => path.relative(ROOT, f));
+      console.log(`破壊テスト: ${m.name} の直前で中断しました`);
+      console.log("   ❌ このランナー以外が対象ファイルを書き換えています。");
+      for (const d of drift) console.log(`      - ${d}`);
+      console.log("");
+      console.log("   実行中にエディタや別のプロセスが同じファイルを保存していないか確認してください。");
+      console.log("   戻すには:");
+      console.log(`     git checkout -- ${files.join(" ")}`);
+      console.log("     node tools/build-questions.js");
+      releaseLock();
+      process.exit(1);
+    }
+  }
+
   const original = fs.readFileSync(abs, "utf8");
 
   // --- find がちょうど1箇所に一致するか ---
@@ -109,13 +264,30 @@ for (const m of mutations) {
     continue;
   }
 
-  let restored = false;
   try {
+    active = { abs, file: m.file, original };
     fs.writeFileSync(abs, original.replace(m.find, m.replace));
     if (!rebuildIfNeeded(m.file)) { fail(m.name, "変異後のビルドに失敗した"); continue; }
 
     const r = cp.spawnSync("node", [specRel], { cwd: ROOT, encoding: "utf8" });
     ran++;
+
+    // --- 自己検査用の中断フック ---
+    // 「途中で死んでも復元される」を確かめるための口。
+    // 他プロセスを殺す手段に頼らず、変異を当てたまま落ちられるようにしておく。
+    // 例: MUTATION_RUNNER_ABORT=1  → 1件目のあとに例外で落ちる
+    if (process.env.MUTATION_RUNNER_ABORT
+        && ran === parseInt(process.env.MUTATION_RUNNER_ABORT, 10)) {
+      throw new Error("自己検査: 変異を当てたまま例外で落ちる");
+    }
+
+    // 外部からの書き換えを検出できるかを確かめる口。
+    // 例: MUTATION_RUNNER_TAMPER=1 → 1件目のあとに別のファイルを勝手に書き換える
+    if (process.env.MUTATION_RUNNER_TAMPER
+        && ran === parseInt(process.env.MUTATION_RUNNER_TAMPER, 10)) {
+      const victim = [...snapshot.keys()].find(f => f !== abs);
+      if (victim) fs.writeFileSync(victim, fs.readFileSync(victim, "utf8") + "\n// 外部からの書き換え\n");
+    }
     if (r.status === 0) {
       const head = (r.stdout || "").trim().split("\n").slice(0, 3).join(" / ");
       fail(m.name, `壊したのに ${specRel} が緑のまま（EXIT=0）。${head}`);
@@ -124,15 +296,7 @@ for (const m of mutations) {
       results.push({ name: m.name, spec: m.expect, ok: true });
     }
   } finally {
-    // --- 必ず戻す ---
-    // ソースを戻すだけでは足りない。作業ツリー全体で確認しないと、
-    // 「戻したつもり」のまま次の変異に進み、汚染が積み上がる。
-    // どの変異で崩れたかを言えるよう、毎回ここで見る。
-    fs.writeFileSync(abs, original);
-    rebuildIfNeeded(m.file);
-    restored = fs.readFileSync(abs, "utf8") === original;
-    if (!restored) fail(m.name, `復元できていない: ${m.file}`);
-
+    restoreActive();
     const drift = changedFromSnapshot();
     if (drift.length) fail(m.name, `この変異のあと、開始時の中身と食い違っている: ${drift.join(", ")}`);
   }
@@ -160,4 +324,5 @@ if (!failures.length) {
   console.log(`\n   ❌ ${failures.length}件`);
   for (const f of failures) console.log(`   - ${f.name}: ${f.detail}`);
 }
+releaseLock();
 process.exit(failures.length ? 1 : 0);

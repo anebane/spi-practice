@@ -9,3 +9,6 @@
 data/gsc/
 data/ga4/
 reports/
+
+# 破壊テストの同時実行を防ぐロック。異常終了すると残り、次回起動が止まる目印になる
+test/.mutation-runner.lock
