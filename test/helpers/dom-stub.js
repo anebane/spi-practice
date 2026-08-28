@@ -78,4 +78,11 @@ function flatten(el, out) {
   return out;
 }
 
-module.exports = { loadAffiliate, flatten, makeEl };
+/** 木を平らにして、要素そのものを順序どおり返す（属性を見たいとき用）。 */
+function walk(el, out) {
+  out = out || [];
+  (el.children || []).forEach(c => { out.push(c); walk(c, out); });
+  return out;
+}
+
+module.exports = { loadAffiliate, flatten, walk, makeEl };

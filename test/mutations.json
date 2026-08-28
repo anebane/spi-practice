@@ -275,8 +275,8 @@
     "name": "対象属性の注記を必須にしない",
     "why": "注記の無い枠ができる。キミスカに既卒が申し込むと全件否認される",
     "file": "affiliate.js",
-    "find": "    if (needsNote && !opt.note) {",
-    "replace": "    if (false && needsNote && !opt.note) {",
+    "find": "    if (missing.length) {",
+    "replace": "    if (false && missing.length) {",
     "expect": "affiliate"
   },
   {
@@ -358,5 +358,61 @@
     "find": "<p class=\"feature-desc\">分野ごとの成績を一覧表示。",
     "replace": "<p class=\"feature-desc\">10分野の成績を一覧表示。",
     "expect": "html"
+  },
+  {
+    "name": "注記を枠の先頭の1つだけに戻す",
+    "why": "2本目のリンクの対象が示されない。ウズウズITとUZUZは成果条件が違う",
+    "file": "affiliate.js",
+    "find": "      if (p.note) item.appendChild(el(\"p\", \"af-note\", p.note));",
+    "replace": "      if (ids.indexOf(id) === 0 && p.note) item.appendChild(el(\"p\", \"af-note\", p.note));",
+    "expect": "affiliate"
+  },
+  {
+    "name": "注記を別の案件のものにする",
+    "why": "表示はされるが成果条件と食い違う。非IT志望がウズウズITに申し込む経路が残る",
+    "file": "affiliate.js",
+    "find": "      if (p.note) item.appendChild(el(\"p\", \"af-note\", p.note));",
+    "replace": "      if (p.note) item.appendChild(el(\"p\", \"af-note\", PROGRAMS[ids[0]].note));",
+    "expect": "affiliate"
+  },
+  {
+    "name": "配布物の referrerpolicy を落とす",
+    "why": "見た目に出ない属性なので、消えても誰も気づかない。アクセストレードの計測が壊れる",
+    "file": "affiliate.js",
+    "find": "      if (p.referrerpolicy) a.setAttribute(\"referrerpolicy\", p.referrerpolicy);",
+    "replace": "      void p.referrerpolicy;",
+    "expect": "affiliate"
+  },
+  {
+    "name": "離脱の記録を beacon に載せない",
+    "why": "離脱時は通常送信が破棄される。イベントは書いたのに1件も届かない",
+    "file": "app.js",
+    "find": "      trigger: trigger,\n      transport_type: \"beacon\"",
+    "replace": "      trigger: trigger",
+    "expect": "app"
+  },
+  {
+    "name": "離脱を exam_id ごとに1回に絞らない",
+    "why": "タブ切替のたびに飛び、離脱率が過大になる",
+    "file": "app.js",
+    "find": "    if (state.abandonSent) return;          // exam_id ごとに1回だけ",
+    "replace": "    if (false) return;",
+    "expect": "app"
+  },
+  {
+    "name": "完走後も離脱として記録する",
+    "why": "完走した人が離脱に混ざり、完走率が壊れる",
+    "file": "app.js",
+    "find": "    if (state.finished) return;             // 完走済み。exam_finish が出ている",
+    "replace": "    if (false) return;",
+    "expect": "app"
+  },
+  {
+    "name": "ページ離脱のハンドラを張らない",
+    "why": "タブを閉じて離れた人が記録されない。もとの穴そのもの",
+    "file": "app.js",
+    "find": "    window.addEventListener(\"pagehide\", function() { reportAbandon(\"pagehide\"); });",
+    "replace": "    void 0;",
+    "expect": "app"
   }
 ]

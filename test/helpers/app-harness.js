@@ -103,9 +103,13 @@ function createHarness(opts) {
     return e;
   });
 
+  // 離脱の計測は document / window のイベントで起きる。noop で捨てていると
+  // 「登録しただけで一度も発火しない」ものを緑と誤判定する。記録して撃てるようにする。
+  const pageHandlers = { doc: {}, win: {} };
   const doc = {
     readyState: "complete",
-    addEventListener: noop,
+    visibilityState: "visible",
+    addEventListener(t, f) { (pageHandlers.doc[t] = pageHandlers.doc[t] || []).push(f); },
     createElement: (tag) => makeEl(""),
     getElementById: byId,
     querySelector(sel, scope) {
@@ -174,6 +178,8 @@ function createHarness(opts) {
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
+  sandbox.addEventListener = (t, f) => { (pageHandlers.win[t] = pageHandlers.win[t] || []).push(f); };
+  sandbox.removeEventListener = noop;
   sandbox.location = { search: search, pathname: "/", href: "http://localhost/" + search };
   sandbox.window.scrollTo = noop;
   sandbox.window.open = noop;
@@ -197,6 +203,17 @@ function createHarness(opts) {
     answerOne() { user.selectedChoice = 0; byId("btn-answer").click(); },
     // 利用者が出題分野のチェックを触ったことにする
     touchCategory() { categoryBoxes[0].dispatchEvent({ type: "change" }); },
+    // 画面を離れる。タブ切り替え（hidden）とページ離脱（pagehide）は別物で、
+    // 前者は戻ってくることがある。取り違えると離脱を過大に数える。
+    hide() {
+      doc.visibilityState = "hidden";
+      (pageHandlers.doc.visibilitychange || []).forEach(f => f({ type: "visibilitychange" }));
+    },
+    show() { doc.visibilityState = "visible"; },
+    leave() { (pageHandlers.win.pagehide || []).forEach(f => f({ type: "pagehide" })); },
+    // 登録そのものが消えていないか（撃てないハンドラは緑にならないが、
+    // 「登録が無い」ことは別途言えたほうが原因が早く分かる）
+    listeners: () => ({ doc: Object.keys(pageHandlers.doc), win: Object.keys(pageHandlers.win) }),
     start() { byId("btn-start").click(); }
   };
 }

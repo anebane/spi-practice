@@ -296,6 +296,86 @@ run("シェアの点数", () => {
 });
 
 // ============================================================
+// 離脱の計測
+//
+// exam_abandon は「設定に戻る」ボタンでしか飛んでおらず、タブを閉じて
+// 離れた人は何も残らなかった（完走率72%に対し離脱イベント0件）。
+// ハンドラを「登録した」だけでは何も保証されないので、実際に撃って確かめる。
+// ============================================================
+
+// --- 10. 途中でページを離れると exam_abandon が飛ぶ ---
+run("離脱: ページを離れる", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.answerOne();
+  if (h.count("exam_abandon") !== 0) fail("離脱", "離れる前から飛んでいる");
+  h.leave();
+  const n = h.count("exam_abandon");
+  if (n !== 1) { fail("離脱", `pagehide で ${n}回（1回であるべき）`); return; }
+  const e = h.find("exam_abandon");
+  if (e.params.questions_answered !== 2) {
+    fail("離脱", `questions_answered=${e.params.questions_answered}（2であるべき）`);
+  }
+  if (e.params.trigger !== "pagehide") fail("離脱", `trigger=${e.params.trigger}`);
+  // 離脱時は通常送信が間に合わない。beacon に載せていないと届かない。
+  if (e.params.transport_type !== "beacon") {
+    fail("離脱", "transport_type が beacon でない。離脱時の送信は破棄される");
+  }
+  if (!e.params.exam_id) fail("離脱", "exam_id が無い。完走と突き合わせられない");
+});
+
+// --- 11. タブ切り替えでも記録するが、exam_id ごとに1回だけ ---
+run("離脱: 何度切り替えても1回", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.hide(); h.show(); h.hide(); h.show();
+  h.leave();
+  const n = h.count("exam_abandon");
+  if (n !== 1) fail("離脱", `切り替え2回＋離脱で ${n}回（1回であるべき）`);
+  const e = h.find("exam_abandon");
+  if (e && e.params.trigger !== "hidden") fail("離脱", `最初の経路は hidden のはず: ${e.params.trigger}`);
+});
+
+// --- 12. 完走したあとは離脱として数えない ---
+run("離脱: 完走後は飛ばない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+  if (!h.onResult()) { fail("離脱", "結果画面に到達しない"); return; }
+  h.reset();
+  h.hide(); h.leave();
+  if (h.count("exam_abandon") !== 0) {
+    fail("離脱", "完走したのに離脱として記録された。完走率が壊れる");
+  }
+});
+
+// --- 13. 「設定に戻る」で離れたあと、閉じても二重に飛ばない ---
+run("離脱: 戻るボタンの後は二重に飛ばない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.byId("btn-back").click();
+  const afterBack = h.count("exam_abandon");
+  if (afterBack !== 1) { fail("離脱", `戻るボタンで ${afterBack}回`); return; }
+  if (h.find("exam_abandon").params.trigger !== "button") fail("離脱", "trigger が button でない");
+  h.leave();
+  if (h.count("exam_abandon") !== 1) fail("離脱", "戻ったあとの離脱で二重に飛んだ");
+});
+
+// --- 14. 試験を始めていなければ飛ばない ---
+run("離脱: 試験外では飛ばない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.leave(); h.hide();
+  if (h.count("exam_abandon") !== 0) fail("離脱", "試験を始めていないのに飛んだ");
+  // ハンドラが1つも登録されていないと、上は「飛ばないから緑」になる。
+  const ls = h.listeners();
+  if (!ls.win.includes("pagehide")) fail("離脱", "pagehide のハンドラが登録されていない");
+  if (!ls.doc.includes("visibilitychange")) fail("離脱", "visibilitychange のハンドラが登録されていない");
+});
+
+// ============================================================
 // 出力
 // ============================================================
 cov.covered("実行した検査項目", ranCases, 10);

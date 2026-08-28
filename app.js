@@ -71,6 +71,7 @@
     isPracticeWaiting: false,  // 練習モードで解説表示中
     isPeeking: false,          // 解説プレビュー中（タイマー一時停止）
     finished: false,           // この試験はもう終了処理を走らせたか（多重実行の防止）
+    abandonSent: false,        // この試験の離脱をもう報告したか（exam_id ごとに1回）
     examId: null               // exam_start と exam_finish を突き合わせるためのID
   };
 
@@ -83,6 +84,46 @@
    * question_id で同じ失敗を一度している（recordAnswer のコメント参照）。
    * これは「開始と終了が1対1になっているか」を後から突き合わせるためだけの値。
    */
+  /**
+   * 試験の途中で画面を離れたことを記録する。
+   *
+   * それまで exam_abandon は「設定に戻る」ボタンでしか飛んでおらず、
+   * タブを閉じて離れた人は何も残らなかった（完走率72%に対して離脱イベント0件）。
+   * 「離脱したこと」は exam_start と exam_finish の差で分かるが、
+   * 「どこで離脱したか」は分からない。この関数はそこだけを埋める。
+   *
+   * ⚠️ 分析するときの重複排除ルール（これを知らないと離脱率を過大に読む）
+   *
+   *   ・exam_id ごとに1回だけ送る。
+   *   ・タブ切り替え（visibilitychange の hidden）は離脱とは限らない。
+   *     戻ってきて完走すると、同じ exam_id に exam_abandon と exam_finish が
+   *     両方残る。
+   *   ・したがって離脱数は exam_abandon の件数ではない。
+   *     exam_id を突き合わせ、exam_finish があるものは離脱として数えないこと。
+   *   ・questions_answered は「そこまで進んだ」という意味に留める。
+   *     離脱地点そのものではない（戻って続きを解いた場合がある）。
+   *   ・trigger === "button" かつ questions_answered > 0 に絞ると、
+   *     2026-08-28 以前の系列を再現できる。
+   *
+   * ⚠️ gtag の通常送信は離脱時に間に合わない（fetch/XHR が破棄される）。
+   *    transport_type: "beacon" を付けて navigator.sendBeacon に載せる。
+   */
+  function reportAbandon(trigger) {
+    if (!state.examId) return;              // 試験に入っていない、または既に離れた
+    if (state.finished) return;             // 完走済み。exam_finish が出ている
+    if (state.abandonSent) return;          // exam_id ごとに1回だけ
+    if (!state.questions.length) return;
+    state.abandonSent = true;
+    trackEvent("exam_abandon", {
+      exam_id: state.examId,
+      questions_answered: state.answers.filter(function(a) { return a; }).length,
+      total_questions: state.questions.length,
+      mode: state.mode,
+      trigger: trigger,
+      transport_type: "beacon"
+    });
+  }
+
   function newExamId() {
     return "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
@@ -116,6 +157,15 @@
           btn.classList.add("active");
         });
       });
+    });
+
+    // 画面を離れたときの離脱記録。
+    // pagehide はページから本当に離れるとき、visibilitychange の hidden は
+    // タブを切り替えたときにも飛ぶ。iOS Safari では pagehide が飛ばないことが
+    // あるので両方を張る。二重に飛ばないのは reportAbandon 側で保証している。
+    window.addEventListener("pagehide", function() { reportAbandon("pagehide"); });
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState === "hidden") reportAbandon("hidden");
     });
 
     // 「対応分野」の見出しと一覧を、出題分野のチェックボックスから作る。
@@ -275,6 +325,7 @@
     state.mode = mode;
     state.isPracticeWaiting = false;
     state.finished = false;          // 前の試験の終了フラグを必ず落とす
+    state.abandonSent = false;       // 離脱の報告も試験ごとに1回に戻す
     state.examId = newExamId();
 
     // 全体制限時間: 1問あたり60秒 × 問題数
@@ -1202,15 +1253,8 @@
     });
 
     document.getElementById("btn-back").addEventListener("click", function() {
-      var answered = state.answers.filter(function(a) { return a; }).length;
-      if (answered > 0 && answered < state.questions.length) {
-        trackEvent("exam_abandon", {
-          exam_id: state.examId,
-          questions_answered: answered,
-          total_questions: state.questions.length,
-          mode: state.mode
-        });
-      }
+      reportAbandon("button");
+      state.examId = null;          // この試験からは離れた。以降の離脱は報告しない
       stopTimer();
       showScreen("start");
     });

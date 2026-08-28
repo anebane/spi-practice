@@ -10,7 +10,7 @@
  * 表記は innerHTML の文字列一致では見ない。問われるのは
  * 「どの枠に」「リンクより前に」出ているかという位置なので、木で見る。
  */
-const { loadAffiliate, flatten } = require("./helpers/dom-stub");
+const { loadAffiliate, flatten, walk } = require("./helpers/dom-stub");
 const { Coverage } = require("./helpers/coverage");
 
 const failures = [];
@@ -33,7 +33,7 @@ const AD_RE = /広告/;
 
   for (const id of ids) {
     const p = P[id];
-    for (const k of ["program", "anchor", "href", "pixel", "lead", "audience"]) {
+    for (const k of ["program", "anchor", "href", "pixel", "lead", "audience", "note"]) {
       if (!p[k]) fail("素材の欠落", `${id}: ${k} がない`);
     }
     // 属性を持たない素材は、どの枠に出してよいか決められない。
@@ -76,6 +76,29 @@ function checkPrBeforeEveryLink(host, where) {
   return links.length;
 }
 
+/**
+ * すべてのリンクの直後に、そのリンク自身の注記があるか。
+ *
+ * 枠に1つでは足りない。同じ「既卒」の枠でも成果条件は案件ごとに違い
+ * （ウズウズIT=20代のIT志望 / UZUZ=第二新卒全般）、まとめた瞬間に
+ * どちらかが嘘になる。表記と同じ理由で、リンクごとに見る。
+ * 直後 = そのリンクより後にある最初の注記までに、別のリンクが無いこと。
+ */
+function checkNoteAfterEveryLink(host, where) {
+  const flat = flatten(host);
+  const links = flat.map((n, i) => ({ n, i })).filter(x => x.n.tag === "A");
+  for (const { i } of links) {
+    let note = null;
+    for (let j = i + 1; j < flat.length; j++) {
+      if (flat[j].tag === "A") break;                       // 次のリンクに入った
+      if (flat[j].cls === "af-note") { note = flat[j]; break; }
+    }
+    if (!note) fail("リンクの直後に対象の注記が無い", `${where}: ${flat[i].text || "(無題)"}`);
+    else if (!note.text.trim()) fail("対象の注記が空", `${where}: ${flat[i].text}`);
+  }
+  return links.length;
+}
+
 {
   const h = loadAffiliate();
   const ids = Object.keys(h.Affiliate._programs);
@@ -86,10 +109,18 @@ function checkPrBeforeEveryLink(host, where) {
     h.reset();
     const host = h.makeHost();
     const ok = h.Affiliate.render(host, {
-      programs: [id], band: "high", placement: "test", note: "対象は…（テスト）"
+      programs: [id], band: "high", placement: "test"
     });
     if (!ok) { fail("描画されない", `${id}: render が false を返した`); continue; }
     checked += checkPrBeforeEveryLink(host, id);
+    checkNoteAfterEveryLink(host, id);
+    // 注記が「その案件のもの」か。別案件の文言が出ていると、
+    // 表示はされているのに成果条件と食い違い、否認される。
+    const shownNote = flatten(host).filter(x => x.cls === "af-note").map(x => x.text);
+    const want = h.Affiliate._programs[id].note;
+    if (shownNote.length !== 1 || shownNote[0] !== want) {
+      fail("注記が案件のものと違う", `${id}: 画面「${shownNote.join(" / ")}」 ≠ 素材「${want}」`);
+    }
   }
   cov.covered("PR表記を確かめたリンク（1本ずつ）", checked, 1);
 }
@@ -112,7 +143,7 @@ function checkPrBeforeEveryLink(host, where) {
   } else {
     const host = h.makeHost();
     const ok = h.Affiliate.render(host, {
-      programs: [pair[0], pair[1]], band: "high", placement: "test", note: "注記"
+      programs: [pair[0], pair[1]], band: "high", placement: "test"
     });
     if (!ok) fail("2本の枠が描けない", pair.join(", "));
     else {
@@ -120,6 +151,14 @@ function checkPrBeforeEveryLink(host, where) {
       if (n !== 2) fail("2本置いたのにリンクが2本でない", `${n}本`);
       const prs = flatten(host).filter(x => PR_RE.test(x.text) && AD_RE.test(x.text)).length;
       if (prs !== 2) fail("2本の枠でPR表記が2つでない", `${prs}個`);
+      checkNoteAfterEveryLink(host, `${pair[0]}+${pair[1]}`);
+      // 同じ枠に成果条件の違う案件が並ぶ。注記が同じ文言なら、まとめた跡である。
+      const notes = flatten(host).filter(x => x.cls === "af-note").map(x => x.text);
+      if (notes.length !== 2) fail("2本の枠で注記が2つでない", `${notes.length}個`);
+      const P = h.Affiliate._programs;
+      if (P[pair[0]].note !== P[pair[1]].note && notes[0] === notes[1]) {
+        fail("案件ごとに注記が分かれていない", `どちらも「${notes[0]}」`);
+      }
       cov.covered("1枠に2本", 2, 2);
     }
   }
@@ -142,7 +181,8 @@ function checkPrBeforeEveryLink(host, where) {
     const notes = flat.filter(x => x.cls === "af-note").length;
     const heads = flat.filter(x => x.cls === "af-head").length;
     if (prs !== n) fail("renderAll のPR表記がリンク数と合わない", `表記 ${prs} / リンク ${n}`);
-    if (notes !== drawn) fail("枠の数だけ注記が出ていない", `注記 ${notes} / 枠 ${drawn}`);
+    checkNoteAfterEveryLink(host, "renderAll");
+    if (notes !== n) fail("リンクの数だけ注記が出ていない", `注記 ${notes} / リンク ${n}`);
     if (heads !== drawn) fail("枠の数だけ見出しが出ていない", `見出し ${heads} / 枠 ${drawn}`);
 
     // 枠ごとに属性が違うなら、計測もその数だけ別々に飛ぶ
@@ -167,10 +207,14 @@ function checkPrBeforeEveryLink(host, where) {
     cov.skipped("注記の必須化", 0, "audience を持つ素材が無い");
   } else {
     const host = h.makeHost();
+    const victim = h.Affiliate._programs[ids[0]];
+    const kept = victim.note;
+    delete victim.note;
     const ok = h.Affiliate.render(host, { programs: [ids[0]], band: "high", placement: "test" });
+    victim.note = kept;
     if (ok) {
       fail("注記なしで描けてしまう",
-        `${ids[0]} は audience=${h.Affiliate._programs[ids[0]].audience} なのに note 無しで render が true を返した`);
+        `${ids[0]} は audience=${victim.audience} なのに note 無しで render が true を返した`);
     }
     if (flatten(host).some(n => n.tag === "A")) {
       fail("注記なしでリンクが出た", ids[0]);
@@ -190,7 +234,7 @@ function checkPrBeforeEveryLink(host, where) {
     cov.skipped("計測の audience", 0, "素材が無い");
   } else {
     const host = h.makeHost();
-    h.Affiliate.render(host, { programs: [ids[0]], band: "high", placement: "test", note: "注記" });
+    h.Affiliate.render(host, { programs: [ids[0]], band: "high", placement: "test" });
 
     const view = h.events.filter(e => e.name === "affiliate_view");
     if (view.length !== 1) fail("affiliate_view の回数", `${view.length}回（1回であるべき）`);
@@ -239,12 +283,23 @@ function checkPrBeforeEveryLink(host, where) {
   for (const id of ids) {
     h.reset();
     const host = h.makeHost();
-    if (!h.Affiliate.render(host, { programs: [id], band: "high", placement: "test", note: "注記" })) continue;
+    if (!h.Affiliate.render(host, { programs: [id], band: "high", placement: "test" })) continue;
     const flat = flatten(host);
     const a = flat.find(x => x.tag === "A");
     const img = flat.find(x => x.tag === "IMG");
     if (!a) { fail("リンクが無い", id); continue; }
     if (!img) fail("計測imgが無い", `${id}: 落とすとASP側の計測が壊れる`);
+    // 配布物に含まれる属性は、そのまま出ていないと計測が壊れる。
+    // rel と referrerpolicy は「見た目に出ない」ので、消えても誰も気づかない。
+    const anchor = walk(host).find(x => x.tagName === "A");
+    const P = h.Affiliate._programs[id];
+    if (anchor && anchor.rel !== "nofollow") fail("rel が配布物と違う", `${id}: ${anchor.rel}`);
+    if (P.referrerpolicy) {
+      const got = anchor && anchor.getAttribute("referrerpolicy");
+      if (got !== P.referrerpolicy) {
+        fail("referrerpolicy が配布物と違う", `${id}: ${got} ≠ ${P.referrerpolicy}`);
+      }
+    }
     n++;
   }
   cov.covered("配布物の検査", n, 1);

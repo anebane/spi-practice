@@ -12,7 +12,13 @@
  */
 var Affiliate = (function () {
 
-  // ASPから配布されたリンクは改変しない（rel と 1x1 の計測imgはセットで必須）
+  // ASPから配布されたリンクは改変しない（rel・referrerpolicy・1x1の計測imgはセットで必須）。
+  //
+  // ⚠️ note（対象の注記）は案件ごとに持つ。枠で1つにしてはいけない。
+  //    同じ「既卒」の枠でも、ウズウズITは20代のIT志望、UZUZは第二新卒全般と
+  //    成果条件が違う。枠共通の注記にすると、ウズウズITに非IT志望が申し込む
+  //    経路が残り、否認される。表記をリンクごとに出す構成にした理由と同じで、
+  //    「1つにまとめると、まとめた分だけ嘘になる」。
   var PROGRAMS = {
     kimisuka_spi: {
       program: "kimisuka",
@@ -20,7 +26,8 @@ var Affiliate = (function () {
       anchor: "キミスカのSPI対策",
       href: "https://px.a8.net/svt/ejp?a8mat=4BAEXK+6FLN3M+24ZO+HZ2R6",
       pixel: "https://www14.a8.net/0.gif?a8mat=4BAEXK+6FLN3M+24ZO+HZ2R6",
-      lead: "適性検査の対策コンテンツが使えるスカウト型の就活サービスです。"
+      lead: "適性検査の対策コンテンツが使えるスカウト型の就活サービスです。",
+      note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
     },
     kimisuka_general: {
       program: "kimisuka",
@@ -28,7 +35,29 @@ var Affiliate = (function () {
       anchor: "就活",
       href: "https://px.a8.net/svt/ejp?a8mat=4BAEXK+6FLN3M+24ZO+HV7V6",
       pixel: "https://www12.a8.net/0.gif?a8mat=4BAEXK+6FLN3M+24ZO+HV7V6",
-      lead: "企業からスカウトが届く就活サービスです。"
+      lead: "企業からスカウトが届く就活サービスです。",
+      note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
+    },
+    // アクセストレード。配布物に referrerpolicy が含まれる（A8には無い）。
+    uzuz_it: {
+      program: "uzuz_it",
+      audience: "career",
+      anchor: "ITエンジニアの就職ならIT特化型就職支援サービス【ウズウズIT】",
+      href: "https://h.accesstrade.net/sp/cc?rk=0100omb800oxvd",
+      pixel: "https://h.accesstrade.net/sp/rr?rk=0100omb800oxvd",
+      referrerpolicy: "no-referrer-when-downgrade",
+      lead: "未経験からITエンジニアを目指す方向けの就職支援サービスです。会員登録は無料です。",
+      note: "対象は20代でITエンジニアを目指す方です。"
+    },
+    uzuz_second: {
+      program: "uzuz",
+      audience: "career",
+      anchor: "第二新卒・既卒・フリーター・ニートの就職サポート【UZUZ】",
+      href: "https://h.accesstrade.net/sp/cc?rk=0100pw7e00oxvd",
+      pixel: "https://h.accesstrade.net/sp/rr?rk=0100pw7e00oxvd",
+      referrerpolicy: "no-referrer-when-downgrade",
+      lead: "第二新卒・既卒の方向けの就職サポートです。会員登録は無料です。",
+      note: "対象は第二新卒・既卒・フリーターの方です。"
     }
   };
 
@@ -56,7 +85,9 @@ var Affiliate = (function () {
    * 広告枠を描画する。PR表記は引数で消せない（意図的に）。
    * @param {Element} host   差し込み先
    * @param {Object} opt     { programs: [id...], band: "high"|"mid"|"low", placement: "result" 等,
-   *                           heading: 見出し, note: 補足 }
+   *                           heading: 見出し }
+   *   対象の注記は PROGRAMS[].note が唯一の出所。引数では渡さない
+   *   （渡す形にすると「渡し忘れた枠」を作れてしまう）。
    */
   function render(host, opt) {
     if (!host) return false;
@@ -64,14 +95,15 @@ var Affiliate = (function () {
     var ids = (opt.programs || []).filter(function (id) { return PROGRAMS[id]; });
     if (!ids.length) { host.style.display = "none"; return false; }
 
-    // 対象属性の注記は呼び出し側が渡す作りなので、渡し忘れると
-    // 「注記の無い枠」ができる。これは見た目の問題ではなく収益の問題で、
+    // 対象の注記が無い案件は出さない。これは見た目の問題ではなく収益の問題で、
     // キミスカ（学生限定）に既卒が申し込むと全件否認される。
-    // 渡し忘れたら描かない。開いたまま出すより、出さないほうが損が小さい。
-    var needsNote = ids.some(function (id) { return !!PROGRAMS[id].audience; });
-    if (needsNote && !opt.note) {
+    // 1件でも欠けていたら枠ごと描かない。開いたまま出すより、出さないほうが損が小さい。
+    var missing = ids.filter(function (id) {
+      return PROGRAMS[id].audience && !PROGRAMS[id].note;
+    });
+    if (missing.length) {
       if (typeof console !== "undefined" && console.error) {
-        console.error("Affiliate.render: audience を持つ案件には note が要ります: " + ids.join(", "));
+        console.error("Affiliate.render: audience を持つ案件には note が要ります: " + missing.join(", "));
       }
       host.style.display = "none";
       return false;
@@ -127,13 +159,15 @@ var Affiliate = (function () {
       img.setAttribute("border", "0");
       item.appendChild(img);
 
+      // 4) 対象の注記はリンクの「下」。上に置くと、対象である人にまで
+      //    「自分は対象外かも」と先に読ませてしまい、クリックを潰す。
+      //    ただし否認条件の回避に必要なので、消さない・リンクに隣接させる。
+      //    案件ごとに置くのは、同じ枠でも成果条件が違うため
+      //    （ウズウズIT=20代のIT志望 / UZUZ=第二新卒全般）。
+      if (p.note) item.appendChild(el("p", "af-note", p.note));
+
       host.appendChild(item);
     });
-
-    // 4) 対象属性の注記はリンクの「下」。上に置くと、対象である学生にまで
-    //    「自分は対象外かも」と先に読ませてしまい、クリックを潰す。
-    //    ただし否認条件の回避に必要なので、消さない・リンクに隣接させる。
-    if (opt.note) host.appendChild(el("p", "af-note", opt.note));
 
     // audience を乗せないと「どちらの層が反応したか」を後から言えない。
     // 出し分けの効果測定はこの1個のパラメータに乗っている。
@@ -152,12 +186,15 @@ var Affiliate = (function () {
    */
   function selectByScore(percent) {
     var band = scoreBand(percent);
-    // 高スコア → 登録完了型 / 低スコア → 面談型 の想定。
-    // 面談型（新卒就職エージェントneo 等）は未承認のため現状は空。
+    // 高スコア → 登録完了型 / 低スコア → 面談型 の想定だが、
+    // 承認済みの3件はいずれも登録型なので現状は帯で差を付けていない。
+    // 面談型（新卒就職エージェントneo / UZUZ 28新卒）は保留。
+    // 既卒枠はウズウズITを先に置く（登録型で単価が最も高い）。
+    var all = ["kimisuka_spi", "uzuz_it", "uzuz_second"];
     var map = {
-      high: ["kimisuka_spi"],
-      mid:  ["kimisuka_spi"],
-      low:  ["kimisuka_spi"],
+      high: all,
+      mid:  all,
+      low:  all,
       unknown: []
     };
     return { band: band, programs: map[band] || [] };
@@ -171,19 +208,11 @@ var Affiliate = (function () {
   // キミスカ（成果条件が学生限定）に既卒を送ると全件否認され、
   // それまでの成果まで失いかねない。だから枠を並べて利用者に選ばせる。
   //
-  // 注記は枠の定義に埋め込む。呼び出し側から渡す形にすると
-  // 「渡し忘れた枠」を作れてしまい、それが否認に直結する。
+  // 注記はここに持たない。案件ごとに成果条件が違うので、枠共通にすると
+  // まとめた分だけ嘘になる（PROGRAMS[].note が唯一の出所）。
   var AUDIENCES = [
-    {
-      audience: "student",
-      heading: "学生の方（2027年卒・2028年卒）",
-      note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
-    },
-    {
-      audience: "career",
-      heading: "既卒・第二新卒・転職をお考えの方",
-      note: "対象は既卒・第二新卒・転職活動中の方です。在学中の方は上の枠をご覧ください。"
-    }
+    { audience: "student", heading: "学生の方（2027年卒・2028年卒）" },
+    { audience: "career",  heading: "既卒・第二新卒・転職をお考えの方" }
   ];
 
   /**
@@ -199,7 +228,7 @@ var Affiliate = (function () {
         return PROGRAMS[id] && PROGRAMS[id].audience === a.audience;
       });
       if (!ids.length) return;
-      blocks.push({ audience: a.audience, heading: a.heading, note: a.note, programs: ids });
+      blocks.push({ audience: a.audience, heading: a.heading, programs: ids });
     });
     return { band: band, blocks: blocks };
   }
@@ -224,8 +253,7 @@ var Affiliate = (function () {
         programs: b.programs,
         band: sel.band,
         placement: opt.placement,
-        heading: b.heading,
-        note: b.note
+        heading: b.heading
       });
       if (ok) drawn++;
     });
