@@ -33,8 +33,30 @@ const GEN = vm.runInContext("QuestionGenerator", ctx);
 const VALID_FORMATS = ["webtesting", "testcenter"];
 
 const failures = [];
+let reportedUpTo = 0;      // ここまでは下の「出力」節で印字済み
+
+/**
+ * 違反を記録する。
+ *
+ * ⚠️ failures は下の「出力」節で1度だけ読まれる。そこから後で fail() を
+ *    呼んでも、印字もされず終了コードにも乗らない（実際、あとから足した
+ *    2つの検査が「❌ 31問で答えが固定」と出力しながら EXIT=0 だった）。
+ *    呼んだら必ず効くように、ここで終了コードを立てる。
+ *    印字漏れは reportLateFailures() が最後に拾う。
+ */
 function fail(tid, rule, detail) {
   failures.push({ tid, rule, detail });
+  process.exitCode = 1;
+}
+
+/** 「出力」節より後に積まれた違反を、最後にまとめて出す。 */
+function reportLateFailures() {
+  const late = failures.slice(reportedUpTo);
+  if (!late.length) return;
+  console.log(`\n❌ 追加の違反 ${late.length}件`);
+  for (const f of late.slice(0, 20)) {
+    console.log(`   - [${f.rule}] ${f.tid}: ${String(f.detail).slice(0, 120)}`);
+  }
 }
 
 /** 答えを数値に正規化する。answerType="fraction" は {numerator,denominator} 形式。 */
@@ -165,6 +187,7 @@ for (const t of TEMPLATES) {
 // --- 出力 ---
 const byRule = {};
 for (const f of failures) (byRule[f.rule] ||= []).push(f);
+reportedUpTo = failures.length;   // ここまでを印字済みとして記録する
 
 console.log(`テンプレート ${TEMPLATES.length}件 x ${ITERATIONS}回 = ${(TEMPLATES.length * ITERATIONS).toLocaleString()}問を検証\n`);
 
@@ -1227,14 +1250,14 @@ if (failures.length) process.exitCode = 1;
     const caught = [];
     checkLine(c.line, "自己検査", caught, null);
     if (!caught.length) {
-      fail("解説の検算（自己検査）", `壊した式を見逃した: ${c.line.trim()} … ${c.why}`);
+      fail(c.line.trim(), "解説の検算（自己検査）", `壊した式を見逃した … ${c.why}`);
     } else selfOk++;
   }
   for (const line of mustPass) {
     const caught = [];
     checkLine(line, "自己検査", caught, null);
     if (caught.length) {
-      fail("解説の検算（自己検査）", `正しい式を誤検知した: ${line.trim()}`);
+      fail(line.trim(), "解説の検算（自己検査）", "正しい式を誤検知した");
     } else selfOk++;
   }
   cov.covered("解説の検算の自己検査", selfOk, selfCases.length + mustPass.length);
@@ -1667,6 +1690,8 @@ if (failures.length) process.exitCode = 1;
 // --- 検査対象の内訳。合否より先に「何件見たか」を出す ---
 console.log("\n検査した対象の内訳");
 cov.print();
+reportLateFailures();
+
 if (cov.failures.length) {
   console.log(`   ❌ 検査対象が足りません ${cov.failures.length}件`);
   for (const p of cov.failures) console.log(`   - ${p}`);
