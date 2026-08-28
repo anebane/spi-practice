@@ -37,6 +37,12 @@ jobs:
       - name: PWA構成（manifest・アイコン・Service Workerのプリキャッシュ）
         run: node test/pwa.spec.js
 
+      # 「押した先が期待した状態になるか」を見る検査。
+      # ?cat=12 が壊れていた（語句の関係を押すと非言語の模試が始まる）のを
+      # 公開直前に偶然見つけた。リンクを増やせば自動で対象が増える。
+      - name: 導線のE2E（?cat= のリンクが実際にその分野を出すか）
+        run: node test/deeplink.spec.js
+
       # 計測の壊れ方は画面上が無症状なので、気づけるのは数か月後の集計になる。
       # exam_start と exam_finish が1対1であることを機械で守る。
       - name: 画面ロジックの計測（exam_start と exam_finish の対応）
