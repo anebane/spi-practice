@@ -12,6 +12,8 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const THEME = "#1a237e";
+const { Coverage } = require("./helpers/coverage");
+const cov = new Coverage();
 const failures = [];
 const fail = (f, rule, detail = "") => failures.push({ f, rule, detail });
 
@@ -107,6 +109,7 @@ function collectPages(dir, base = "") {
   return out;
 }
 const pages = collectPages(".");
+cov.covered("HTMLページ", pages.length, 5);
 for (const p of pages) {
   const html = read(p);
   if (!/<link rel="manifest" href="\/manifest\.json">/.test(html)) fail(p, "manifestへのlinkが無い");
@@ -146,6 +149,7 @@ if (/offline\.html/.test(read("sitemap.xml"))) {
   const offm = swSrc.match(/const OFFLINE_URL = "([^"]+)"/);
   const urls = blk ? [...blk[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
   if (offm) urls.push(offm[1]);
+  cov.covered("プリキャッシュ対象のURL", urls.length, 5);
 
   // URL → リポジトリ内の相対パス。ディレクトリURLは index.html に落ちる。
   const assetPaths = [...new Set(urls.map((u) => {
@@ -155,7 +159,7 @@ if (/offline\.html/.test(read("sitemap.xml"))) {
 
   const shallow = git(["rev-parse", "--is-shallow-repository"]);
   if (shallow === null) {
-    console.log("   ℹ️ gitが使えないため VERSION の上げ忘れ検査はスキップしました");
+    cov.skipped("VERSIONの上げ忘れ検査", 1, "gitが使えない");
   } else if (shallow === "true") {
     // 浅いクローンだと履歴を遡れず、判定できない。黙って緑にすると
     // 「検査しているつもり」になるので、はっきり出す。
@@ -180,7 +184,7 @@ if (/offline\.html/.test(read("sitemap.xml"))) {
       // -S は出現回数の増減しか見ないので、値だけ変わる VERSION 行には効かない。-G を使う。
       const cVersion = git(["log", "-1", "--format=%H", "-G", "^const VERSION = ", "--", "sw.js"]);
       if (!cAssets) {
-        console.log("   ℹ️ アセットの変更履歴が取れず、VERSION検査はスキップしました");
+        cov.skipped("VERSIONの上げ忘れ検査", 1, "アセットの変更履歴が取れない");
       } else if (!cVersion) {
         fail("sw.js", "VERSIONを変更したコミットが履歴に無い", "検査が成立しません");
       } else {
@@ -197,6 +201,8 @@ if (/offline\.html/.test(read("sitemap.xml"))) {
 }
 
 console.log(`PWA構成を検査（${pages.length}ページ / manifest / sw.js）`);
+cov.print();
+for (const p of cov.failures) fail("検査対象", p);
 if (!failures.length) {
   console.log("✅ 問題なし");
 } else {

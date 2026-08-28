@@ -21,7 +21,13 @@ const ctx = vm.createContext({ console, Math, Date, JSON, parseInt, parseFloat, 
 for (const f of ["questions.js", "generator.js"]) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });
 }
+const { Coverage } = require("./helpers/coverage");
+const cov = new Coverage();
+
 const TEMPLATES = vm.runInContext("QUESTION_TEMPLATES", ctx);
+// テンプレートが取れていなければ、以降の検査はすべて空回りする。
+// 「壊れているものが無い」と「何も見ていない」を取り違えないための最初の一線。
+cov.covered("問題テンプレート", TEMPLATES.length, 50);
 const GEN = vm.runInContext("QuestionGenerator", ctx);
 
 const VALID_FORMATS = ["webtesting", "testcenter"];
@@ -412,6 +418,7 @@ if (failures.length) process.exitCode = 1;
     }
   }
 
+  cov.covered("順序推論の一意性で検証した問題", checked, 100);
   console.log(`\n順序推論の解の一意性: ${checked.toLocaleString()}問を総当たりで検証`);
   // checked が0だと「1問も検証していない」のに緑になる。
   // 生成が全滅したり、問題文の書式が変わってパースできなくなったときに、
@@ -550,6 +557,7 @@ if (failures.length) process.exitCode = 1;
       else if (ok[0] !== names[q.correctAnswer]) mismatch++;
     }
   }
+  cov.covered("嘘つき問題の一意性で検証した問題", checked, 100);
   console.log(`\n嘘つき問題の一意性: ${checked}問を全パターンで検証`);
   if (checked && zero + multi + mismatch + unparsed === 0) {
     console.log("   ✅ すべて整合する仮定がちょうど1通り、答えも一致");
@@ -649,6 +657,7 @@ if (failures.length) process.exitCode = 1;
       if (vals.size !== declared) mismatch++;
     }
   }
+  cov.covered("条件からの絞り込みで検証した問題", checked, 100);
   console.log(`\n条件からの絞り込みの検証: ${checked}問を全順列で数え直し`);
   if (checked && zero + mismatch + unparsed === 0) {
     console.log("   ✅ すべて候補の個数が選択肢の正解と一致");
@@ -720,6 +729,7 @@ if (failures.length) process.exitCode = 1;
       else if (ok[0] !== q.correctAnswer) mismatch++;
     }
   }
+  cov.covered("真偽判定で検証した問題", checked, 100);
   console.log(`\n真偽判定の含意検証: ${checked}問をモデル総当たり(${MODELS.length}世界)で判定`);
   if (checked && unknown + notOne + mismatch + noScene === 0) {
     console.log("   ✅ 確実に言える選択肢が常にちょうど1つで、正解と一致");
@@ -781,6 +791,7 @@ if (failures.length) process.exitCode = 1;
       else if (cands[0] !== nums[q.correctAnswer]) mismatch++;
     }
   }
+  cov.covered("数列の規則で検証した問題", checked, 100);
   console.log(`\n数列の規則の一意性: ${checked}問を規則の当てはめで再判定`);
   if (checked && unparsed + ambiguous + none + mismatch + badChoice === 0) {
     console.log("   ✅ すべて読める規則が1つ、予測値も正解と一致（選択肢はすべて正の整数）");
@@ -1169,6 +1180,8 @@ if (failures.length) process.exitCode = 1;
   const totalChains = [...checked.values()].reduce((a, b) => a + b, 0);
   const uncovered = [...checked.entries()].filter(([, n]) => n === 0).map(([id]) => id);
   console.log(`\n解説の計算式の検算: ${TEMPLATES.length}テンプレ x ${N}回 / 式チェーン ${totalChains.toLocaleString()}本`);
+  cov.covered("解説から取り出した式チェーン", totalChains, 1000);
+  cov.skipped("式が取り出せなかったテンプレート", uncovered.length, "解説に数式が無いか、記号が扱えない形");
   if (uncovered.length) {
     console.log(`   ℹ️ 式が1本も取り出せなかったテンプレート ${uncovered.length}件: ${uncovered.join(", ")}`);
     console.log("      （解説に数式が無いか、記号が扱えない形。この検査の対象外）");
@@ -1256,6 +1269,7 @@ if (failures.length) process.exitCode = 1;
     }
   }
 
+  cov.covered("リーグ戦の一意性で検証した問題", checked, 100);
   console.log(`\nリーグ戦の答えの一意性: ${checked}問を全対戦結果の総当たりで検証`);
   if (checked && zero + notOne + mismatch + unparsed + single === 0) {
     console.log("   ✅ すべて成績が1通りに定まり、正解と一致（勝敗表は複数残る形になっている）");
@@ -1359,6 +1373,7 @@ if (failures.length) process.exitCode = 1;
     }
   }
 
+  cov.covered("円卓の一意性で検証した問題", checked, 100);
   console.log(`\n円卓の答えの一意性: ${checked}問を全席順120通りで検証`);
   if (checked && zero + notOne + mismatch + unparsed + mirrorless === 0) {
     console.log("   ✅ すべて向かいが1人に定まり、正解と一致（鏡像も必ず解になっている）");
@@ -1368,5 +1383,16 @@ if (failures.length) process.exitCode = 1;
   }
 }
 
+
+// --- 検査対象の内訳。合否より先に「何件見たか」を出す ---
+console.log("\n検査した対象の内訳");
+cov.print();
+if (cov.failures.length) {
+  console.log(`   ❌ 検査対象が足りません ${cov.failures.length}件`);
+  for (const p of cov.failures) console.log(`   - ${p}`);
+  process.exitCode = 1;
+} else {
+  console.log("   ✅ どの検査も対象を取れている（0件で緑になっていない）");
+}
 
 process.exit(process.exitCode ? 1 : 0);

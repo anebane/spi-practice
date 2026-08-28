@@ -25,11 +25,15 @@ const fail = (rule, detail) => failures.push({ rule, detail });
 
 // DOMスタブは deeplink.spec.js と共有している
 const { createHarness } = require("./helpers/app-harness");
+const { Coverage } = require("./helpers/coverage");
+const cov = new Coverage();
 
 // ============================================================
 // 検査
 // ============================================================
+let ranCases = 0;
 function run(name, fn) {
+  ranCases++;
   try { fn(); } catch (e) { fail(name, "例外: " + e.message); }
 }
 
@@ -294,7 +298,10 @@ run("シェアの点数", () => {
 // ============================================================
 // 出力
 // ============================================================
-console.log("app.js の計測: 13項目を検査（DOMをスタブして本物の app.js を駆動）");
+cov.covered("実行した検査項目", ranCases, 10);
+console.log(`app.js の計測: ${ranCases}項目を検査（DOMをスタブして本物の app.js を駆動）`);
+cov.print();
+for (const p of cov.failures) fail("検査対象", p);
 if (!failures.length) {
   console.log("   ✅ exam_start と exam_finish は必ず1対1。連打しても増えない。exam_id も対応する");
 } else {

@@ -198,5 +198,45 @@
     "find": "\"の発言:「\"",
     "replace": "\"のコメント:「\"",
     "expect": "generator"
+  },
+  {
+    "name": "generator: テンプレート一覧を空にする",
+    "why": "対象が0件でも「壊れているものが無い」と読めてしまう。0件は合格ではない",
+    "file": "test/generator.spec.js",
+    "find": "const TEMPLATES = vm.runInContext(\"QUESTION_TEMPLATES\", ctx);",
+    "replace": "const TEMPLATES = [];",
+    "expect": "generator"
+  },
+  {
+    "name": "deeplink: ?cat= のリンクを1本も拾わないようにする",
+    "why": "リンクを拾う正規表現を間違えると、対象0件のまま静かに緑になる",
+    "file": "test/deeplink.spec.js",
+    "find": "for (const m of html.matchAll(/href=\"[^\"]*[?&]cat=(\\d+)[^\"]*\"/g)) {",
+    "replace": "for (const m of html.matchAll(/href=\"__never__(\\d+)\"/g)) {",
+    "expect": "deeplink"
+  },
+  {
+    "name": "html: 検査対象のページを1つも集めないようにする",
+    "why": "collectPages の除外条件を1つ書き間違えるだけで、全ページ無検査になる",
+    "file": "test/html.spec.js",
+    "find": "const pages = collectPages(\".\");",
+    "replace": "const pages = [];",
+    "expect": "html"
+  },
+  {
+    "name": "pwa: 検査対象のページを1つも集めないようにする",
+    "why": "同上。PWAのタグ検査が全ページ素通りになる",
+    "file": "test/pwa.spec.js",
+    "find": "const pages = collectPages(\".\");",
+    "replace": "const pages = [];",
+    "expect": "pwa"
+  },
+  {
+    "name": "app: 検査項目を1つも実行しないようにする",
+    "why": "run() が呼ばれなければ何も検査していないのに緑になる",
+    "file": "test/app.spec.js",
+    "find": "  ranCases++;",
+    "replace": "  return;",
+    "expect": "app"
   }
 ]

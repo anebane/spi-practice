@@ -26,10 +26,12 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const { createHarness } = require("./helpers/app-harness");
+const { Coverage } = require("./helpers/coverage");
 
 const ROOT = path.join(__dirname, "..");
 const failures = [];
 const fail = (rule, detail) => failures.push({ rule, detail });
+const cov = new Coverage();
 
 // --- サイト内の全HTMLを集める（html.spec.js と同じ範囲） ---
 function collectPages(dir, base = "") {
@@ -75,12 +77,10 @@ const visibleCategories = gridMatch
       .map(m => ({ value: parseInt(m[1], 10), label: m[2] }))
   : [];
 
-if (!visibleCategories.length) {
-  fail("前提", "index.html から出題分野のチェックボックスを読み取れなかった");
-}
-if (!links.size) {
-  fail("前提", "?cat= のリンクが1つも見つからなかった（検査が空回りしている）");
-}
+// 対象が0件なら「リンクは全部正しい」ではなく「何も見ていない」。
+// リンクを拾う正規表現を1つ間違えるだけで、この検査は静かに空になる。
+cov.covered("?cat= のリンク", links.size, 1);
+cov.covered("トップの出題分野の箱", visibleCategories.length, 5);
 
 // --- 経路B: 実際に起動して出題を見る ---
 for (const [id, pages] of [...links.entries()].sort((a, b) => a[0] - b[0])) {
@@ -136,6 +136,8 @@ const list = [...links.entries()].sort((a, b) => a[0] - b[0])
 console.log(`導線のE2E: ?cat= リンク ${links.size}種を実際に起動して検証`);
 console.log(`   対象: ${list}`);
 console.log(`   トップの出題分野の箱: ${visibleCategories.map(c => c.value).join(", ")}`);
+cov.print();
+for (const p of cov.failures) fail("検査対象", p);
 if (!failures.length) {
   console.log("   ✅ すべて「その分野だけ」が出題され、案内文と計測も出る");
 } else {

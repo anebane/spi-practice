@@ -21,7 +21,13 @@ function collectPages(dir, base = "") {
   }
   return out;
 }
+const { Coverage } = require("./helpers/coverage");
+const cov = new Coverage();
+
 const pages = collectPages(".");
+// 検査対象が0件だと「壊れているものが無い」ではなく「何も見ていない」。
+// collectPages の除外条件を1つ書き間違えるだけで起こる。
+cov.covered("HTMLページ", pages.length, 5);
 const failures = [];
 const fail = (f, rule, detail) => failures.push({ f, rule, detail });
 
@@ -133,6 +139,8 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
 }
 
 console.log(`HTML ${pages.length}ページを検査`);
+cov.print();
+for (const p of cov.failures) failures.push({ f: "検査対象", rule: p, detail: "" });
 if (!failures.length) {
   console.log("✅ 問題なし");
 } else {
