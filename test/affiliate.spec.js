@@ -84,17 +84,31 @@ function checkPrBeforeEveryLink(host, where) {
  * どちらかが嘘になる。表記と同じ理由で、リンクごとに見る。
  * 直後 = そのリンクより後にある最初の注記までに、別のリンクが無いこと。
  */
-function checkNoteAfterEveryLink(host, where) {
+function checkNoteAfterEveryLink(host, where, programs) {
+  // アンカーの文言から案件を引く。どの案件のリンクなのかを画面側から特定できるので、
+  // 「注記はあるが別案件のもの」を、素材の並べ方に依存せず言える。
+  //
+  // ⚠️ ここを「2件の注記が同じ文言かどうか」で見ていて取り逃した。
+  //    比べた2件（キミスカ2件）はもともと注記が同一で、差がある前提の比較が
+  //    丸ごと素通りしていた。比較相手ではなく、あるべき値と突き合わせる。
+  const noteByAnchor = new Map();
+  for (const id of Object.keys(programs)) noteByAnchor.set(programs[id].anchor, programs[id].note);
+
   const flat = flatten(host);
   const links = flat.map((n, i) => ({ n, i })).filter(x => x.n.tag === "A");
-  for (const { i } of links) {
+  for (const { n, i } of links) {
     let note = null;
     for (let j = i + 1; j < flat.length; j++) {
       if (flat[j].tag === "A") break;                       // 次のリンクに入った
       if (flat[j].cls === "af-note") { note = flat[j]; break; }
     }
-    if (!note) fail("リンクの直後に対象の注記が無い", `${where}: ${flat[i].text || "(無題)"}`);
-    else if (!note.text.trim()) fail("対象の注記が空", `${where}: ${flat[i].text}`);
+    if (!note) { fail("リンクの直後に対象の注記が無い", `${where}: ${n.text || "(無題)"}`); continue; }
+    if (!note.text.trim()) { fail("対象の注記が空", `${where}: ${n.text}`); continue; }
+    const want = noteByAnchor.get(n.text);
+    if (want === undefined) { fail("アンカーが素材に無い", `${where}: ${n.text}`); continue; }
+    if (note.text !== want) {
+      fail("注記が別の案件のもの", `${where}: 「${n.text}」に「${note.text}」（正しくは「${want}」）`);
+    }
   }
   return links.length;
 }
@@ -113,7 +127,7 @@ function checkNoteAfterEveryLink(host, where) {
     });
     if (!ok) { fail("描画されない", `${id}: render が false を返した`); continue; }
     checked += checkPrBeforeEveryLink(host, id);
-    checkNoteAfterEveryLink(host, id);
+    checkNoteAfterEveryLink(host, id, h.Affiliate._programs);
     // 注記が「その案件のもの」か。別案件の文言が出ていると、
     // 表示はされているのに成果条件と食い違い、否認される。
     const shownNote = flatten(host).filter(x => x.cls === "af-note").map(x => x.text);
@@ -137,7 +151,9 @@ function checkNoteAfterEveryLink(host, where) {
     const a = h.Affiliate._programs[id].audience || "none";
     (sameAud[a] = sameAud[a] || []).push(id);
   }
-  const pair = Object.values(sameAud).find(v => v.length >= 2);
+  const P0 = h.Affiliate._programs;
+  const groups = Object.values(sameAud).filter(v => v.length >= 2);
+  const pair = groups.find(v => P0[v[0]].note !== P0[v[1]].note) || groups[0];
   if (!pair) {
     cov.skipped("1枠に2本", 0, "同じ属性の素材が2件そろっていない");
   } else {
@@ -151,14 +167,10 @@ function checkNoteAfterEveryLink(host, where) {
       if (n !== 2) fail("2本置いたのにリンクが2本でない", `${n}本`);
       const prs = flatten(host).filter(x => PR_RE.test(x.text) && AD_RE.test(x.text)).length;
       if (prs !== 2) fail("2本の枠でPR表記が2つでない", `${prs}個`);
-      checkNoteAfterEveryLink(host, `${pair[0]}+${pair[1]}`);
+      checkNoteAfterEveryLink(host, `${pair[0]}+${pair[1]}`, h.Affiliate._programs);
       // 同じ枠に成果条件の違う案件が並ぶ。注記が同じ文言なら、まとめた跡である。
       const notes = flatten(host).filter(x => x.cls === "af-note").map(x => x.text);
       if (notes.length !== 2) fail("2本の枠で注記が2つでない", `${notes.length}個`);
-      const P = h.Affiliate._programs;
-      if (P[pair[0]].note !== P[pair[1]].note && notes[0] === notes[1]) {
-        fail("案件ごとに注記が分かれていない", `どちらも「${notes[0]}」`);
-      }
       cov.covered("1枠に2本", 2, 2);
     }
   }
@@ -181,7 +193,7 @@ function checkNoteAfterEveryLink(host, where) {
     const notes = flat.filter(x => x.cls === "af-note").length;
     const heads = flat.filter(x => x.cls === "af-head").length;
     if (prs !== n) fail("renderAll のPR表記がリンク数と合わない", `表記 ${prs} / リンク ${n}`);
-    checkNoteAfterEveryLink(host, "renderAll");
+    checkNoteAfterEveryLink(host, "renderAll", h.Affiliate._programs);
     if (notes !== n) fail("リンクの数だけ注記が出ていない", `注記 ${notes} / リンク ${n}`);
     if (heads !== drawn) fail("枠の数だけ見出しが出ていない", `見出し ${heads} / 枠 ${drawn}`);
 

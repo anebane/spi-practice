@@ -336,11 +336,11 @@
     "expect": "affiliate"
   },
   {
-    "name": "属性が空の枠にも別属性の素材を入れる",
+    "name": "枠の属性で素材を絞らない",
     "why": "既卒枠に学生限定の案件が出る。キミスカに既卒が申し込むと全件否認される",
     "file": "affiliate.js",
-    "find": "      if (!ids.length) return;",
-    "replace": "      if (!ids.length) ids = sel.programs;",
+    "find": "        return PROGRAMS[id] && PROGRAMS[id].audience === a.audience;",
+    "replace": "        return !!PROGRAMS[id];",
     "expect": "affiliate"
   },
   {
