@@ -1132,6 +1132,54 @@ if (failures.length) process.exitCode = 1;
   const BLOCK = "√^²³%";
   const CHAIN = /[0-9CP().,!+\-×÷/*=\s]+/g;
 
+  /**
+   * 解説の1行を検査する。見つかった問題は bad に積む。
+   *
+   * 本物の解説と、下の自己検査で同じ関数を通す。別々に書くと
+   * 「検査の検査」が本番と違うものを見ることになる。
+   */
+  function checkLine(line, id, bad, checked) {
+    CHAIN.lastIndex = 0;
+    let m;
+    while ((m = CHAIN.exec(line))) {
+      const run = m[0];
+      if (!run.includes("=")) continue;
+      const before = line[m.index - 1], after = line[m.index + run.length];
+      if ((before && BLOCK.includes(before)) || (after && BLOCK.includes(after))) continue;
+      const parts = run.split("=").map(x => x.trim()).filter(x => x.length);
+      if (parts.length < 2) continue;
+
+      // 同語反復（「5/18 = 5/18」）。
+      // ⚠️ 値の比較では原理的に捕まらない。両辺が同じ式なのだから必ず一致する。
+      //    解説の変数に「値」ではなく「式の文字列」を入れていたときに起きる。
+      for (let k = 1; k < parts.length; k++) {
+        const norm = (x) => x.replace(/\s+/g, "");
+        if (norm(parts[k]) === norm(parts[k - 1])) {
+          if (bad.length < 5000) bad.push({ id, run: run.trim(), a: "同語反復", b: parts[k] });
+          break;
+        }
+      }
+
+      // 解析できない辺は捨てて、残った辺だけを突き合わせる。
+      // 日本語混じりの辺が先頭に来る解説があり、そこで諦めると
+      // 損益算がまるごと検査対象外になってしまう。
+      const vals = [];
+      for (const p of parts) {
+        try { vals.push({ v: evalExpr(p), t: p }); } catch (e) { /* この辺は見ない */ }
+      }
+      if (vals.length < 2) continue;
+      if (checked) checked.set(id, (checked.get(id) || 0) + 1);
+
+      for (let k = 1; k < vals.length; k++) {
+        const tol = Math.max(tolOf(vals[0].t), tolOf(vals[k].t));
+        if (Math.abs(vals[k].v - vals[0].v) > tol + 1e-9) {
+          if (bad.length < 5000) bad.push({ id, run: run.trim(), a: vals[0].v, b: vals[k].v });
+          break;
+        }
+      }
+    }
+  }
+
   const checked = new Map();     // テンプレートID → 検算できたチェーン数
   const bad = [];
 
@@ -1148,55 +1196,48 @@ if (failures.length) process.exitCode = 1;
         else lines.push(raw);
       }
 
-      for (const line of lines) {
-        CHAIN.lastIndex = 0;
-        let m;
-        while ((m = CHAIN.exec(line))) {
-          const run = m[0];
-          if (!run.includes("=")) continue;
-          const before = line[m.index - 1], after = line[m.index + run.length];
-          if ((before && BLOCK.includes(before)) || (after && BLOCK.includes(after))) continue;
-          const parts = run.split("=").map(x => x.trim()).filter(x => x.length);
-          if (parts.length < 2) continue;
-
-          // 同語反復（「5/18 = 5/18」）。
-          //
-          // ⚠️ 値の比較では原理的に捕まらない。両辺が同じ式なのだから必ず一致する。
-          //    解説の変数に「値」ではなく「式の文字列」を入れていたときに起きる。
-          //    利用者から見ると、そこで計算が1歩も進んでいない。
-          for (let k = 1; k < parts.length; k++) {
-            const norm = (x) => x.replace(/\s+/g, "");
-            if (norm(parts[k]) === norm(parts[k - 1])) {
-              if (bad.length < 5000) {
-                bad.push({ id: t.id, run: run.trim(), a: "同語反復", b: parts[k] });
-              }
-              break;
-            }
-          }
-
-          // 解析できない辺は捨てて、残った辺だけを突き合わせる。
-          // 「定価 = 原価 × (1+利益率/100) = 700 × 1.25 = 875」のように
-          // 日本語混じりの辺が先頭に来る解説があり、そこで諦めると
-          // 損益算がまるごと検査対象外になってしまう。
-          // 等号でつながれている以上、解析できた辺どうしは必ず一致するはず。
-          const vals = [];
-          for (const p of parts) {
-            try { vals.push({ v: evalExpr(p), t: p }); } catch (e) { /* この辺は見ない */ }
-          }
-          if (vals.length < 2) continue;
-          checked.set(t.id, checked.get(t.id) + 1);
-
-          for (let k = 1; k < vals.length; k++) {
-            const tol = Math.max(tolOf(vals[0].t), tolOf(vals[k].t));
-            if (Math.abs(vals[k].v - vals[0].v) > tol + 1e-9) {
-              if (bad.length < 5000) bad.push({ id: t.id, run: run.trim(), a: vals[0].v, b: vals[k].v });
-              break;
-            }
-          }
-        }
-      }
+      for (const line of lines) checkLine(line, t.id, bad, checked);
     }
   }
+
+  // --- 検査自身の検査 ---
+  //
+  // ⚠️ テンプレートから丸めを一掃した結果、この検査は「落とすべきものが
+  //    1つも無い」状態になった。そのため許容幅を緩めても何も起きず、
+  //    番人が外れたことに誰も気づけない（実際、許容幅を戻す変異が
+  //    検出されなかった）。
+  //    そこで、わざと壊した解説を食わせて、落ちることを毎回確かめる。
+  //    本番と同じ checkLine を通すので、本番と違うものを見ることはない。
+  const selfCases = [
+    { line: "  1 - 5/18 = 0.72",        why: "丸めた小数（真値 13/18 = 0.7222…）" },
+    { line: "  4.17 × 60 = 250",        why: "整数への丸め（真値 250.2）" },
+    { line: "  2600 / 60 = 43.33",      why: "小数第2位への丸め（真値 43.333…）" },
+    { line: "  1250 × (1 - 25/100) = 938", why: "1円未満の丸め（真値 937.5）" },
+    { line: "  5/18 = 5/18",            why: "同語反復" },
+    { line: "  C(7, 3) = C(7, 3)",      why: "同語反復（組み合わせ）" }
+  ];
+  const mustPass = [
+    "  1/10 × 8 = 4/5",
+    "  1 - 4/5 = 1/5",
+    "  3600 ÷ (75) = 48",
+    "  C(6, 2) = 6 × 5 / 2 = 15"
+  ];
+  let selfOk = 0;
+  for (const c of selfCases) {
+    const caught = [];
+    checkLine(c.line, "自己検査", caught, null);
+    if (!caught.length) {
+      fail("解説の検算（自己検査）", `壊した式を見逃した: ${c.line.trim()} … ${c.why}`);
+    } else selfOk++;
+  }
+  for (const line of mustPass) {
+    const caught = [];
+    checkLine(line, "自己検査", caught, null);
+    if (caught.length) {
+      fail("解説の検算（自己検査）", `正しい式を誤検知した: ${line.trim()}`);
+    } else selfOk++;
+  }
+  cov.covered("解説の検算の自己検査", selfOk, selfCases.length + mustPass.length);
 
   const totalChains = [...checked.values()].reduce((a, b) => a + b, 0);
   const uncovered = [...checked.entries()].filter(([, n]) => n === 0).map(([id]) => id);
