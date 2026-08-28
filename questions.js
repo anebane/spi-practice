@@ -2707,7 +2707,10 @@ var COND_SCENES_P = [
     difficulty: 2,
     templateText: "ある商品を原価{{cost}}円で仕入れ、原価の{{markupRate}}%の利益を見込んで定価をつけた。しかし売れなかったので、定価の{{discountRate}}%引きで販売した。このとき、利益はいくらか。",
     variables: {
-      cost: { type: "int", min: 1000, max: 5000, step: 500 },
+      // 1円未満が出る組を出さない制約を足したぶん、組み合わせが減った
+      // （180組→146組、実測の種類数が163→140でベースラインの下限すれすれ）。
+      // 刻みを細かくして取り戻す。同ファイルの他のテンプレートと同じ100円刻み。
+      cost: { type: "int", min: 1000, max: 5000, step: 100 },
       markupRate: { type: "choice", options: [20, 25, 30, 40, 50] },
       discountRate: { type: "choice", options: [10, 15, 20, 25] }
     },
