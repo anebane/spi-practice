@@ -1,0 +1,921 @@
+{
+  "_readme": [
+    "どの変異でも落ちない失敗経路の台帳。ここに載っている検査は『壊れても気づけない』状態にある。",
+    "新しい検査をこの台帳に足してはいけない。検査を足したら、それを落とす変異を test/mutations.json に足すこと。",
+    "どうしても変異を書けない失敗経路（防御的な例外捕捉など）だけを、理由(why)を添えて登録する。",
+    "台帳は縮む方向にのみ動かす。変異で落ちるようになった項目はランナーが通知するので、そのとき削除する。",
+    "照合の鍵は file + text(行の中身) + nth(同一内容の出現順)。行番号(line)は参考情報で、照合には使わない。"
+  ],
+  "sites": [
+    {
+      "file": "affiliate.spec.js",
+      "line": 37,
+      "nth": 0,
+      "text": "if (!p[k]) fail(\"素材の欠落\", `${id}: ${k} がない`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 42,
+      "nth": 0,
+      "text": "fail(\"audience が不正\", `${id}: ${p.audience}（student / career のみ）`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 48,
+      "nth": 0,
+      "text": "if (a && b && a !== b) fail(\"リンクと計測imgが別の案件\", `${id}: ${a} / ${b}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 66,
+      "nth": 0,
+      "text": "if (!links.length) { fail(\"リンクが無い\", where); return 0; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 106,
+      "nth": 0,
+      "text": "if (!note.text.trim()) { fail(\"対象の注記が空\", `${where}: ${n.text}`); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 108,
+      "nth": 0,
+      "text": "if (want === undefined) { fail(\"アンカーが素材に無い\", `${where}: ${n.text}`); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 128,
+      "nth": 0,
+      "text": "if (!ok) { fail(\"描画されない\", `${id}: render が false を返した`); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 136,
+      "nth": 0,
+      "text": "fail(\"注記が案件のものと違う\", `${id}: 画面「${shownNote.join(\" / \")}」 ≠ 素材「${want}」`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 164,
+      "nth": 0,
+      "text": "if (!ok) fail(\"2本の枠が描けない\", pair.join(\", \"));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 167,
+      "nth": 0,
+      "text": "if (n !== 2) fail(\"2本置いたのにリンクが2本でない\", `${n}本`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 198,
+      "nth": 0,
+      "text": "if (heads !== drawn) fail(\"枠の数だけ見出しが出ていない\", `見出し ${heads} / 枠 ${drawn}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 202,
+      "nth": 0,
+      "text": "if (views.length !== drawn) fail(\"affiliate_view が枠の数と合わない\", `${views.length} / ${drawn}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 252,
+      "nth": 0,
+      "text": "if (view.length !== 1) fail(\"affiliate_view の回数\", `${view.length}回（1回であるべき）`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 263,
+      "nth": 0,
+      "text": "if (!link) fail(\"リンクが無い\", ids[0]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 267,
+      "nth": 0,
+      "text": "if (click.length !== 1) fail(\"affiliate_click の回数\", `${click.length}回`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 281,
+      "nth": 0,
+      "text": "if (ok) fail(\"空でも描いてしまう\", \"programs: [] で render が true\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 284,
+      "nth": 0,
+      "text": "fail(\"出していないのに affiliate_view\", \"表示回数が水増しされる\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 302,
+      "nth": 0,
+      "text": "if (!a) { fail(\"リンクが無い\", id); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "affiliate.spec.js",
+      "line": 308,
+      "nth": 0,
+      "text": "if (anchor && anchor.rel !== \"nofollow\") fail(\"rel が配布物と違う\", `${id}: ${anchor.rel}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 37,
+      "nth": 0,
+      "text": "try { fn(); } catch (e) { fail(name, \"例外: \" + e.message); }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 46,
+      "nth": 0,
+      "text": "if (h.count(\"exam_start\") !== 1) fail(\"通常の試験\", `exam_start が ${h.count(\"exam_start\")}回`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 47,
+      "nth": 0,
+      "text": "if (h.count(\"exam_finish\") !== 1) fail(\"通常の試験\", `exam_finish が ${h.count(\"exam_finish\")}回`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 48,
+      "nth": 0,
+      "text": "if (h.count(\"question_answer\") !== 10) fail(\"通常の試験\", `question_answer が ${h.count(\"question_answer\")}回（10問なので10のはず）`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 62,
+      "nth": 0,
+      "text": "if (f !== 1) fail(\"最終問題での連打\", `exam_finish が ${f}回（1回であるべき）`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 108,
+      "nth": 0,
+      "text": "if (!s.params.exam_id) { fail(\"exam_id\", \"exam_start に exam_id が無い\"); return; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 110,
+      "nth": 0,
+      "text": "fail(\"exam_id\", `start と finish で不一致: ${s.params.exam_id} ≠ ${f.params.exam_id}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 112,
+      "nth": 0,
+      "text": "if (h.count(\"exam_finish\") !== 1) fail(\"exam_id\", `${t + 1}回目の exam_finish が ${h.count(\"exam_finish\")}回`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 126,
+      "nth": 0,
+      "text": "if (h.count(\"exam_start\") !== 1) fail(\"再挑戦\", `2試験目の exam_start が ${h.count(\"exam_start\")}回`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 128,
+      "nth": 0,
+      "text": "if (h.count(\"retry_exam\") !== 1) fail(\"再挑戦\", `retry_exam が ${h.count(\"retry_exam\")}回`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 139,
+      "nth": 0,
+      "text": "if (h.count(\"question_answer\") !== 20) fail(\"再挑戦の2種類\", `1試験目が20問になっていない: ${h.count(\"question_answer\")}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 146,
+      "nth": 0,
+      "text": "if (!r) fail(\"再挑戦の2種類\", \"retry_exam が出ていない（same）\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 148,
+      "nth": 0,
+      "text": "if (r.params.variant !== \"same\") fail(\"再挑戦の2種類\", `variant が same でない: ${r.params.variant}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 149,
+      "nth": 0,
+      "text": "if (r.params.question_count !== 20) fail(\"再挑戦の2種類\", `question_count が 20 でない: ${r.params.question_count}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 158,
+      "nth": 0,
+      "text": "if (!r) fail(\"再挑戦の2種類\", \"retry_exam が出ていない（short）\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 161,
+      "nth": 0,
+      "text": "if (r.params.question_count !== 10) fail(\"再挑戦の2種類\", `question_count が 10 でない: ${r.params.question_count}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 178,
+      "nth": 0,
+      "text": "fail(\"短縮版の出し分け\", \"20問の直後なのに短縮版が隠れている\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 206,
+      "nth": 0,
+      "text": "fail(\"選択欄に無い分野を ?cat= で指定\", `出題された分野が「語句の関係」だけになっていない: ${cats.join(\", \") || \"(出題なし)\"}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 210,
+      "nth": 0,
+      "text": "fail(\"選択欄に無い分野を ?cat= で指定\", `案内文に分野名が出ていない: ${note.textContent}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 214,
+      "nth": 0,
+      "text": "fail(\"選択欄に無い分野を ?cat= で指定\", `category_practice_start が出ていない/IDが違う: ${ev && ev.params.category_id}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 225,
+      "nth": 0,
+      "text": "fail(\"選択欄にある分野の ?cat=\", `「場合の数・確率」だけになっていない: ${cats.join(\", \") || \"(出題なし)\"}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 236,
+      "nth": 0,
+      "text": "fail(\"実在しない ?cat=\", `全分野に戻っていない（出題分野 ${cats.length}種）: ${cats.join(\", \")}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 240,
+      "nth": 0,
+      "text": "fail(\"実在しない ?cat=\", \"実在しないIDなのに案内文を出している\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 255,
+      "nth": 0,
+      "text": "fail(\"?cat= の解除\", \"選択を触ったのに語句の関係に固定されたまま\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 257,
+      "nth": 0,
+      "text": "if (!cats.length) fail(\"?cat= の解除\", \"出題されていない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 284,
+      "nth": 0,
+      "text": "if (!fin || !sh) { fail(\"シェアの点数\", `イベントが出ていない（step=${step}）`); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 294,
+      "nth": 0,
+      "text": "if (!compared) fail(\"シェアの点数\", \"1件も比較できていない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 295,
+      "nth": 0,
+      "text": "else if (maxCorrect === 0) fail(\"シェアの点数\", \"どの組み合わせでも正解0問で、検査が空回りしている\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 312,
+      "nth": 0,
+      "text": "if (h.count(\"exam_abandon\") !== 0) fail(\"離脱\", \"離れる前から飛んでいる\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 318,
+      "nth": 0,
+      "text": "fail(\"離脱\", `questions_answered=${e.params.questions_answered}（2であるべき）`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 320,
+      "nth": 0,
+      "text": "if (e.params.trigger !== \"pagehide\") fail(\"離脱\", `trigger=${e.params.trigger}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 325,
+      "nth": 0,
+      "text": "if (!e.params.exam_id) fail(\"離脱\", \"exam_id が無い。完走と突き合わせられない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 338,
+      "nth": 0,
+      "text": "if (e && e.params.trigger !== \"hidden\") fail(\"離脱\", `最初の経路は hidden のはず: ${e.params.trigger}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 346,
+      "nth": 0,
+      "text": "if (!h.onResult()) { fail(\"離脱\", \"結果画面に到達しない\"); return; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 361,
+      "nth": 0,
+      "text": "if (afterBack !== 1) { fail(\"離脱\", `戻るボタンで ${afterBack}回`); return; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 362,
+      "nth": 0,
+      "text": "if (h.find(\"exam_abandon\").params.trigger !== \"button\") fail(\"離脱\", \"trigger が button でない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 364,
+      "nth": 0,
+      "text": "if (h.count(\"exam_abandon\") !== 1) fail(\"離脱\", \"戻ったあとの離脱で二重に飛んだ\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 371,
+      "nth": 0,
+      "text": "if (h.count(\"exam_abandon\") !== 0) fail(\"離脱\", \"試験を始めていないのに飛んだ\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "app.spec.js",
+      "line": 375,
+      "nth": 0,
+      "text": "if (!ls.doc.includes(\"visibilitychange\")) fail(\"離脱\", \"visibilitychange のハンドラが登録されていない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "deeplink.spec.js",
+      "line": 91,
+      "nth": 0,
+      "text": "fail(\"リンク先の分野が存在しない\", `?cat=${id} （${where}）… その categoryId の問題が1問も無い`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "deeplink.spec.js",
+      "line": 101,
+      "nth": 0,
+      "text": "fail(\"起動できない\", `?cat=${id}（${name} / ${where}）… 例外: ${e.message}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "deeplink.spec.js",
+      "line": 115,
+      "nth": 0,
+      "text": "fail(\"問題数が合わない\", `?cat=${id}（${name}）… 10問のはずが ${answered}問`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 98,
+      "nth": 0,
+      "text": "fail(t.id, \"formats未宣言\", \"対応形式を配列で宣言してください\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 101,
+      "nth": 0,
+      "text": "if (VALID_FORMATS.indexOf(f) === -1) fail(t.id, \"formatsに未知の値\", f);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 106,
+      "nth": 0,
+      "text": "fail(t.id, \"testcenter非対応の回答形式\", `answerType=${t.answerType} / type=${t.type}（テストセンターは選択式）`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 109,
+      "nth": 0,
+      "text": "if (!t.category || !t.categoryId) fail(t.id, \"カテゴリ未設定\", `${t.category}/${t.categoryId}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 110,
+      "nth": 0,
+      "text": "if (![1, 2, 3].includes(t.difficulty)) fail(t.id, \"難易度が1〜3でない\", String(t.difficulty));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 118,
+      "nth": 0,
+      "text": "fail(t.id, \"例外\", `${e.message}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 121,
+      "nth": 0,
+      "text": "if (!q) { fail(t.id, \"生成失敗\", \"generateQuestion が null を返した\"); break; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 125,
+      "nth": 0,
+      "text": "if (/\\{\\{[^}]+\\}\\}/.test(q.text)) fail(t.id, \"未展開の変数(問題文)\", q.text.match(/\\{\\{[^}]+\\}\\}/)[0]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 127,
+      "nth": 0,
+      "text": "fail(t.id, \"未展開の変数(解説)\", q.explanation.match(/\\{\\{[^}]+\\}\\}/)[0]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 130,
+      "nth": 0,
+      "text": "if (!q.text || !q.text.trim()) fail(t.id, \"問題文が空\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 131,
+      "nth": 0,
+      "text": "if (q.explanation !== undefined && !String(q.explanation).trim()) fail(t.id, \"解説が空\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 135,
+      "nth": 0,
+      "text": "fail(t.id, \"答えなし\", String(q.correctAnswer));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 140,
+      "nth": 0,
+      "text": "if (!Array.isArray(q.choices)) fail(t.id, \"選択式なのにchoicesが無い\", String(q.choices));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 142,
+      "nth": 0,
+      "text": "if (n < 2) fail(t.id, \"選択肢が不足\", `${n}個`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 144,
+      "nth": 0,
+      "text": "fail(t.id, \"正解indexが範囲外\", `index=${q.correctAnswer} / 選択肢${n}個`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 146,
+      "nth": 0,
+      "text": "fail(t.id, \"選択肢が重複\", JSON.stringify(q.choices));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 151,
+      "nth": 0,
+      "text": "fail(t.id, \"分母が0\", JSON.stringify(q.correctAnswer));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 153,
+      "nth": 0,
+      "text": "fail(t.id, \"答えが数値でない\", JSON.stringify(q.correctAnswer));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 158,
+      "nth": 0,
+      "text": "fail(t.id, \"ありえない負の値\", `${q.correctAnswer}${q.unit}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 161,
+      "nth": 0,
+      "text": "fail(t.id, \"確率が0〜1の外\", `${answerKey(q.correctAnswer)} = ${v}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 164,
+      "nth": 0,
+      "text": "fail(t.id, \"濃度が0〜100%の外\", `${q.correctAnswer}%`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 169,
+      "nth": 0,
+      "text": "if (d > 1) fail(t.id, \"分数が約分されていない\", answerKey(q.correctAnswer));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 175,
+      "nth": 0,
+      "text": "if (/NaN|undefined|Infinity/.test(q.text)) fail(t.id, \"問題文に不正値\", q.text.match(/NaN|undefined|Infinity/)[0]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 177,
+      "nth": 0,
+      "text": "fail(t.id, \"解説に不正値\", String(q.explanation).match(/NaN|undefined|Infinity/)[0]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 180,
+      "nth": 0,
+      "text": "if (!(q.timeLimitSec > 0)) fail(t.id, \"制限時間が不正\", String(q.timeLimitSec));",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 220,
+      "nth": 0,
+      "text": "if (failures.length) process.exitCode = 1;",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 233,
+      "nth": 0,
+      "text": "if (shortfall) process.exitCode = 1;",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 387,
+      "nth": 1,
+      "text": "process.exitCode = 1;",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 548,
+      "nth": 3,
+      "text": "process.exitCode = 1;",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "generator.spec.js",
+      "line": 1260,
+      "nth": 0,
+      "text": "fail(line.trim(), \"解説の検算（自己検査）\", \"正しい式を誤検知した\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 38,
+      "nth": 0,
+      "text": "if (/anebane\\.github\\.io/.test(html)) fail(p, \"旧ドメインが残っている\", \"anebane.github.io\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 41,
+      "nth": 0,
+      "text": "if (!/<title>[^<]{5,}<\\/title>/.test(html)) fail(p, \"titleが無い/短い\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 42,
+      "nth": 0,
+      "text": "if (!/name=\"description\" content=\"[^\"]{20,}\"/.test(html)) fail(p, \"descriptionが無い/短い\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 43,
+      "nth": 0,
+      "text": "if (!/rel=\"canonical\" href=\"https:\\/\\//.test(html)) fail(p, \"canonicalが無い\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 50,
+      "nth": 0,
+      "text": "if (c[1] !== expect) fail(p, \"canonicalが自分を指していない\", `${c[1]} ≠ ${expect}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 65,
+      "nth": 0,
+      "text": "if (!ok) fail(p, \"リンク先が存在しない\", m[1]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 81,
+      "nth": 0,
+      "text": "if (/\\{\\{[^}]+\\}\\}/.test(html)) fail(p, \"未展開の変数\", html.match(/\\{\\{[^}]+\\}\\}/)[0]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 89,
+      "nth": 0,
+      "text": "if (!fs.existsSync(path.join(ROOT, rel))) fail(\"sitemap.xml\", \"存在しないURLを登録\", m[1]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 114,
+      "nth": 0,
+      "text": "fail(\"index.html\", \"出題分野の選択欄が見つからない\", \"category-select\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 117,
+      "nth": 0,
+      "text": "if (!boxes.length) fail(\"index.html\", \"出題分野のチェックボックスが0件\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 120,
+      "nth": 0,
+      "text": "fail(\"index.html\", \"存在しない分野が選択欄にある\", `value=${id} (${label}) … その categoryId の問題が1問も無い`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 132,
+      "nth": 0,
+      "text": "fail(\"index.html\", \"対応分野の一覧が見つからない\", \"categories-list\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 173,
+      "nth": 0,
+      "text": "if (!head) { fail(p, \"head が見つからない\", \"\"); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "html.spec.js",
+      "line": 175,
+      "nth": 0,
+      "text": "fail(p, \"AdSenseスニペットが head に無い\", `${PUB} を含む <script> が必要`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 39,
+      "nth": 0,
+      "text": "fail(\"manifest.json\", \"JSONとして読めない\", e.message);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 45,
+      "nth": 0,
+      "text": "if (!manifest[k]) fail(\"manifest.json\", \"必須項目が無い\", k);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 48,
+      "nth": 0,
+      "text": "fail(\"manifest.json\", \"theme_colorがHTMLと不一致\", `${manifest.theme_color} ≠ ${THEME}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 51,
+      "nth": 0,
+      "text": "fail(\"manifest.json\", \"displayがstandaloneでない\", manifest.display);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 58,
+      "nth": 0,
+      "text": "if (!fs.existsSync(abs)) { fail(\"manifest.json\", \"アイコンが存在しない\", ic.src); continue; }",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 61,
+      "nth": 0,
+      "text": "if (!actual) fail(\"manifest.json\", \"PNGとして読めない\", ic.src);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 63,
+      "nth": 0,
+      "text": "fail(\"manifest.json\", \"宣言サイズと実寸が違う\", `${ic.src} 宣言${ic.sizes} 実際${actual.w}x${actual.h}`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 69,
+      "nth": 0,
+      "text": "if (!sizes.has(need)) fail(\"manifest.json\", \"purpose:any のアイコンが足りない\", need);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 72,
+      "nth": 0,
+      "text": "fail(\"manifest.json\", \"maskableアイコンが無い\", \"Androidで白い余白付きになる\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 76,
+      "nth": 0,
+      "text": "if (!fs.existsSync(resolveUrl(sc.url))) fail(\"manifest.json\", \"shortcutのURLが存在しない\", sc.url);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 78,
+      "nth": 0,
+      "text": "if (!fs.existsSync(resolveUrl(ic.src))) fail(\"manifest.json\", \"shortcutのアイコンが存在しない\", ic.src);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 87,
+      "nth": 0,
+      "text": "fail(\"sw.js\", \"PRECACHE_URLS が見つからない\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 90,
+      "nth": 0,
+      "text": "if (urls.length < 5) fail(\"sw.js\", \"PRECACHE_URLSが少なすぎる\", `${urls.length}件`);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 92,
+      "nth": 0,
+      "text": "if (!fs.existsSync(resolveUrl(u))) fail(\"sw.js\", \"プリキャッシュ対象が存在しない\", u);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 96,
+      "nth": 0,
+      "text": "if (!off) fail(\"sw.js\", \"OFFLINE_URLが無い\", \"\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 97,
+      "nth": 0,
+      "text": "else if (!fs.existsSync(resolveUrl(off[1]))) fail(\"sw.js\", \"オフラインページが存在しない\", off[1]);",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 115,
+      "nth": 0,
+      "text": "if (!/<link rel=\"manifest\" href=\"\\/manifest\\.json\">/.test(html)) fail(p, \"manifestへのlinkが無い\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 116,
+      "nth": 0,
+      "text": "if (!new RegExp(`<meta name=\"theme-color\" content=\"${THEME}\">`).test(html)) fail(p, \"theme-colorが無い/色が違う\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 117,
+      "nth": 0,
+      "text": "if (!/<link rel=\"apple-touch-icon\"/.test(html)) fail(p, \"apple-touch-iconが無い\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 118,
+      "nth": 0,
+      "text": "if (!/<script src=\"\\/pwa\\.js\"/.test(html)) fail(p, \"pwa.jsを読み込んでいない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 124,
+      "nth": 0,
+      "text": "fail(\"offline.html\", \"noindexが無い\", \"中身の薄いページを検索に出すとサイト評価に響く\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 127,
+      "nth": 0,
+      "text": "fail(\"sitemap.xml\", \"offline.htmlを登録している\", \"noindexページをサイトマップに入れない\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 166,
+      "nth": 0,
+      "text": "fail(\"sw.js\", \"VERSION検査ができない\", \"浅いクローンです。CIでは actions/checkout に fetch-depth: 0 を指定してください\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 189,
+      "nth": 0,
+      "text": "fail(\"sw.js\", \"VERSIONを変更したコミットが履歴に無い\", \"検査が成立しません\");",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    },
+    {
+      "file": "pwa.spec.js",
+      "line": 195,
+      "nth": 0,
+      "text": "fail(\"sw.js\", \"VERSIONを上げずに配信アセットを変更したコミットがある\",",
+      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+    }
+  ]
+}
