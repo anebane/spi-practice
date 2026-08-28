@@ -470,5 +470,13 @@
     "find": "      d.calculation = topTerms.join(\" × \") + (kfact > 1 ? \" / \" + kfact : \"\");",
     "replace": "      d.calculation = \"C(\" + kn + \", \" + kr + \")\";",
     "expect": "generator"
+  },
+  {
+    "name": "集合で片方が全員になる組も出題する",
+    "why": "重なりが1つに固定され、「最も多い場合」と問うても選ぶ余地が無い。答えは正しいので答えを見る検査では捕まらない",
+    "file": "src/questions/03-shugo.js",
+    "find": "      if (Math.max(v.a, v.b) >= v.total) return false;\n      return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;\n    }\n  });\n\n  // 集合: 最小値",
+    "replace": "      return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;\n    }\n  });\n\n  // 集合: 最小値",
+    "expect": "generator"
   }
 ]

@@ -1268,6 +1268,52 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 集合: 「最も多い場合」「少なくとも」が問いとして成立しているか ---
+//
+// 2つの集合の重なりが取りうる範囲は [a+b-全体, min(a,b)]。
+// 片方が全員（max(a,b) === 全体）だと、この幅がゼロに潰れて重なりが
+// 1つに固定される。そのとき「最も多い場合」と問うても選ぶ余地が無く、
+// 最大値を考える問題として成立していない（実測13.5%がこれだった）。
+//
+// ⚠️ 答えは正しいので、答えを見る検査では捕まらない。
+//    壊れているのは答えではなく「問い」のほう。
+{
+  const IDS = ["shugo_2set_03", "shugo_min_01"];   // 「最も多い場合」と「少なくとも」
+  const N = 300;
+  let checked = 0, degenerate = 0;
+  const samples = [];
+
+  for (const t of TEMPLATES.filter(x => IDS.indexOf(x.id) >= 0)) {
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      // 問題文から読む。利用者が見る文面そのものを見たいので、内部の値は使わない。
+      const m = String(q.text).match(/(\d+)人[^0-9]*?(\d+)人[^0-9]*?(\d+)人/);
+      if (!m) continue;
+      const total = +m[1], a = +m[2], b = +m[3];
+      if (!(a <= total && b <= total)) continue;
+      checked++;
+      const hi = Math.min(a, b), lo = Math.max(0, a + b - total);
+      if (hi === lo) {
+        degenerate++;
+        if (samples.length < 3) samples.push(`${t.id}: 全体${total} A${a} B${b} → 重なりは${hi}で固定`);
+      }
+    }
+  }
+
+  // 0件だと「退化が無い」ではなく「1問も見ていない」。文面の読み取りが
+  // 壊れただけでも起こるので、ここで止める。
+  cov.covered("集合の最大・最小で成立を確かめた問題", checked, 100);
+  console.log(`\n集合「最も多い場合／少なくとも」の成立: ${checked}問を検証`);
+  if (degenerate) {
+    fail("集合", "問いが成立していない",
+      `${degenerate}問で重なりが1つに固定されている（${(degenerate / checked * 100).toFixed(1)}%）: ${samples.join(" / ")}`);
+    console.log(`   ❌ ${degenerate}問で答えが固定`);
+  } else {
+    console.log("   ✅ すべて重なりに幅があり、最大・最小を選ぶ意味がある");
+  }
+}
+
 // --- リーグ戦: 問われたチームの成績が1通りに定まるか ---
 //
 // 総当たり・引き分けなしなら、起こりうる結果は各試合の勝者の組み合わせだけ。
