@@ -238,5 +238,21 @@
     "find": "  ranCases++;",
     "replace": "  return;",
     "expect": "app"
+  },
+  {
+    "name": "表の最大値問題で同点の一意化をやめる",
+    "why": "同点だと「最も高い都市」が2つ以上になり正解が複数になる。さらに先頭優先で拾うと正解の位置が前に偏る（実測 [27,23,19,16,15]%・6.1σ）",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "      if (tied.length > 1) {\n        var winner = tied[Math.floor(Math.random() * tied.length)];\n        tableData.data[winner][month] = tiedMax + 1;\n      }\n",
+    "replace": "",
+    "expect": "generator"
+  },
+  {
+    "name": "表の最大値問題で正解を常に先頭にする",
+    "why": "正解の位置が1箇所に固定される。順序の無い選択肢なので既存の順位検査では見えない",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "        answer: maxCity,",
+    "replace": "        answer: tableData.rows[0],",
+    "expect": "generator"
   }
 ]

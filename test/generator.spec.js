@@ -1384,6 +1384,95 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+//
+// 既存の検査（順位）とは見ているものが違う。両方要る。
+//   既存 … 「常に最大を選ぶ」で当たらないか。順序が定義できるものだけが対象
+//   これ … 「常に3番目」「最後は選ばない」で当たらないか。選択式すべてが対象
+//
+// 生の位置の偏りは順序を必要としない。人名でも語句でも
+// 「3番目が正解になりやすい」は成立する。だから既存の除外理由
+// （順序が定義できない）は、この検査には当てはまらない。
+//
+// ⚠️ 選択肢の数ごとにバケツを分ける。
+//    suiron_order_01 は4択と5択が混在し、5番目は4択の問題には存在しない。
+//    混ぜて数えると5番目だけ必ず低く出て、実在しない偏りを報告してしまう。
+//
+// ⚠️ 判定しなかったバケツ数を必ず出す。黙って飛ばすと「0件で緑」になる。
+{
+  const SAMPLES = 1200;      // 1テンプレートあたり
+  const MIN_BUCKET = 200;    // これ未満のバケツは判定しない（標本が足りない）
+  const LO = 0.5, HI = 1.5;  // 一様値の何倍まで許すか
+  const SIGMA = 5;           // 標本誤差の何倍まで許すか
+
+  // 標本誤差より十分ゆるいこと。4択・1200回なら一様値300、標準誤差は約15。
+  // 0.5〜1.5倍（150〜450）は約10標準誤差ぶんの余裕があるので、
+  // ノイズで落ちることはない。きつくすると誤検知になり、
+  // 誤検知を出す検査は無視されるようになる。
+
+  const biased = [];
+  let templatesChecked = 0, bucketsChecked = 0, bucketsSkipped = 0;
+
+  for (const t of TEMPLATES) {
+    const buckets = new Map();          // 選択肢の数 → 位置ごとの回数
+    for (let i = 0; i < SAMPLES; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !Array.isArray(q.choices)) continue;
+      const n = q.choices.length;
+      if (!buckets.has(n)) buckets.set(n, new Array(n).fill(0));
+      const b = buckets.get(n);
+      if (q.correctAnswer >= 0 && q.correctAnswer < n) b[q.correctAnswer]++;
+    }
+    if (!buckets.size) continue;        // 選択式でないテンプレートは対象外
+    templatesChecked++;
+
+    for (const [n, counts] of [...buckets.entries()].sort((a, b2) => a[0] - b2[0])) {
+      const total = counts.reduce((a, b2) => a + b2, 0);
+      if (total < MIN_BUCKET) { bucketsSkipped++; continue; }
+      bucketsChecked++;
+      const uniform = total / n;
+      const pct = counts.map(c => (c / total * 100).toFixed(0) + "%");
+
+      // 判定は2本立て。
+      //
+      // ① 一様値の LO〜HI 倍を外れたら失敗。分かりやすい歯止め。
+      // ② 標本誤差の SIGMA 倍を超えて外れたら失敗。
+      //
+      // ②が要る理由: ①だけだと、標本が多いバケツの本物の偏りを取り逃す。
+      // 実際 table_max_01 は [27,23,19,16,15]% と単調に減る偏りがあり
+      //（同点のとき表の先頭が勝つ実装だった）、「最後は選ばない」で当たる。
+      // それでも最大ずれは36%で、①の50%には届かなかった。
+      // 標本3000回での標準誤差は約22なので、②で見れば9.6σの明確な偏りになる。
+      //
+      // ①を捨てて②だけにしないのは、標本の少ないバケツで σ が大きくなり
+      // 際限なく緩くなるため。逆に①を厳しくすると、標本の少ないバケツが
+      // ノイズで落ちる（suiron_order_01 の5択は266回しか集まらない）。
+      const se = Math.sqrt(total * (1 / n) * (1 - 1 / n));
+      const worstAbs = Math.max(...counts.map(c => Math.abs(c - uniform)));
+      const outsideWindow = counts.some(c => c < uniform * LO || c > uniform * HI);
+      const outsideSigma = worstAbs > SIGMA * se;
+      if (outsideWindow || outsideSigma) {
+        biased.push(
+          `${t.id}（${n}択・${total}回）: [${pct.join(", ")}] 一様なら各${(100 / n).toFixed(0)}%`
+          + `／最大ずれ ${(worstAbs / uniform * 100).toFixed(0)}%・${(worstAbs / se).toFixed(1)}σ`);
+      }
+    }
+  }
+
+  cov.covered("正解位置を調べたテンプレート", templatesChecked, 10);
+  cov.covered("判定したバケツ", bucketsChecked, 10);
+  cov.skipped("標本が足りず判定しなかったバケツ", bucketsSkipped, `${MIN_BUCKET}回未満`);
+
+  console.log(`\n正解の位置の偏り: ${templatesChecked}テンプレ / ${bucketsChecked}バケツ（選択肢の数ごと）`);
+  if (!biased.length) {
+    console.log(`   ✅ どの位置も一様値の${LO}〜${HI}倍に収まっている`);
+  } else {
+    console.log(`   ❌ 位置に偏りのあるバケツ ${biased.length}件`);
+    for (const b of biased) console.log(`   - ${b}`);
+    process.exitCode = 1;
+  }
+}
+
+
 // --- 検査対象の内訳。合否より先に「何件見たか」を出す ---
 console.log("\n検査した対象の内訳");
 cov.print();

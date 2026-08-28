@@ -267,7 +267,11 @@ function resolveWordOddOne(v) {
 
   QUESTION_TEMPLATES.push({
     id: "gengo_relation_01",
-    formats: ["webtesting", "testcenter"],
+    // 二語の関係が出題されるのはテストセンターとペーパーテスト。
+    // WEBテスティングには出題されない（/language/ の説明もそう書いてある）。
+    // ペーパーテストに相当する format 値は用意しない。今の2値で表せない区分を
+    // 増やしても、参照側が無いうちは複雑さが増えるだけなので。
+    formats: ["testcenter"],
     category: "語句の関係",
     categoryId: 12,
     difficulty: 1,
@@ -291,7 +295,7 @@ function resolveWordOddOne(v) {
 
   QUESTION_TEMPLATES.push({
     id: "gengo_relation_02",
-    formats: ["webtesting", "testcenter"],
+    formats: ["testcenter"],
     category: "語句の関係",
     categoryId: 12,
     difficulty: 2,

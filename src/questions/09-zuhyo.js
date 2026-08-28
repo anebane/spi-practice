@@ -144,6 +144,26 @@
     },
     questionGenerator: function(tableData) {
       var month = tableData.cols[Math.floor(Math.random() * tableData.cols.length)];
+
+      // ⚠️ 同点だと「最も高い都市」が2つ以上になり、正解が複数ある問題になる。
+      //    気温は8通りしかないので同点は珍しくなく、実測で28.2%がそうだった。
+      //    さらに元の実装は > で先頭優先に拾っていたため、同点のたびに
+      //    表の上の都市が勝ち、正解の位置が [27,23,19,16,15]% と前に偏っていた
+      //    （「最後の選択肢は選ばない」で当たりやすくなる）。
+      //    同点のときは勝者を無作為に選び、その都市だけ1つ上げて一意にする。
+      //    表はこのあと組み立てるので、表示と答えはずれない。
+      var tiedMax = -Infinity;
+      tableData.rows.forEach(function(city) {
+        if (tableData.data[city][month] > tiedMax) tiedMax = tableData.data[city][month];
+      });
+      var tied = tableData.rows.filter(function(city) {
+        return tableData.data[city][month] === tiedMax;
+      });
+      if (tied.length > 1) {
+        var winner = tied[Math.floor(Math.random() * tied.length)];
+        tableData.data[winner][month] = tiedMax + 1;
+      }
+
       var maxCity = "";
       var maxVal = -100;
       tableData.rows.forEach(function(city) {
