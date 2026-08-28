@@ -534,5 +534,53 @@
     "find": "    if (ownBeats >= n - 1) continue;",
     "replace": "    if (ownBeats >= n + 1) continue;",
     "expect": "generator"
+  },
+  {
+    "name": "連打ガードを常に発動させる",
+    "why": "1回目の押下まで飲み込まれる。利用者が普通に押しても何も起きず、記録も残らない",
+    "file": "app.js",
+    "find": "      if (alreadyDone()) return;",
+    "replace": "      if (true) return;",
+    "expect": "app"
+  },
+  {
+    "name": "連打ガードを外す",
+    "why": "同じ対象の記録が2つ残る。exam_start の水増しは完走率を直接押し下げる",
+    "file": "app.js",
+    "find": "      if (alreadyDone()) return;",
+    "replace": "      if (false && alreadyDone()) return;",
+    "expect": "app"
+  },
+  {
+    "name": "連打ガードを回答ボタンまで広げる",
+    "why": "2回目が別の問題に効く操作まで止まる。速く解く人の2問目が消える",
+    "file": "app.js",
+    "find": "    document.getElementById(\"btn-answer\").addEventListener(\"click\", function() {",
+    "replace": "    onPressOnce(\"btn-answer\", function () { return true; }, function() {",
+    "expect": "app"
+  },
+  {
+    "name": "属性ごとの枠を1つも作らない",
+    "why": "属性の出し分けが丸ごと消える。キミスカ（学生限定）に既卒が申し込むと全件否認される",
+    "file": "affiliate.js",
+    "find": "    AUDIENCES.forEach(function (a) {",
+    "replace": "    [].forEach(function (a) {",
+    "expect": "affiliate"
+  },
+  {
+    "name": "既卒の枠を作らない",
+    "why": "既卒の素材があるのに、その層には広告が出ないまま誰も気づかない",
+    "file": "affiliate.js",
+    "find": "    { audience: \"career\",  heading: \"既卒・第二新卒・転職をお考えの方\" }",
+    "replace": "    { audience: \"career_removed\", heading: \"既卒・第二新卒・転職をお考えの方\" }",
+    "expect": "affiliate"
+  },
+  {
+    "name": "枠の見出しを空にする",
+    "why": "どちらの層向けの枠か読み手に分からなくなる。属性を選ばせる設計が働かない",
+    "file": "affiliate.js",
+    "find": "    { audience: \"student\", heading: \"学生の方（2027年卒・2028年卒）\" },",
+    "replace": "    { audience: \"student\", heading: \"\" },",
+    "expect": "affiliate"
   }
 ]
