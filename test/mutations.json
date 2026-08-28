@@ -1,0 +1,178 @@
+[
+  {
+    "name": "finishExam の冪等ガードを外す",
+    "why": "exam_finish が exam_start を上回っていた本番バグ。最終問題での連打で終了処理が何度も走った",
+    "file": "app.js",
+    "find": "    if (state.finished) return;\n    state.finished = true;\n",
+    "replace": "    state.finished = true;\n",
+    "expect": "app"
+  },
+  {
+    "name": "recordAnswer の終了後ガードを外す",
+    "why": "終了後に届いた回答が記録され question_answer が水増しされる",
+    "file": "app.js",
+    "find": "    if (state.finished) return;\n\n    var q = state.questions[state.currentIndex];",
+    "replace": "    var q = state.questions[state.currentIndex];",
+    "expect": "app"
+  },
+  {
+    "name": "startExam で終了フラグを戻し忘れる",
+    "why": "2試験目が永久に終われなくなる（exam_finish が出なくなる）",
+    "file": "app.js",
+    "find": "    state.finished = false;          // 前の試験の終了フラグを必ず落とす\n",
+    "replace": "",
+    "expect": "app"
+  },
+  {
+    "name": "exam_id を毎回同じ値にする",
+    "why": "開始と終了の突き合わせができなくなる。ズレても気づけない状態に戻る",
+    "file": "app.js",
+    "find": "    return \"e\" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);",
+    "replace": "    return \"fixed-id\";",
+    "expect": "app"
+  },
+  {
+    "name": "再挑戦の variant を両方 same にする",
+    "why": "どちらの再挑戦が押されたか区別できなくなり、効果を後から言えない",
+    "file": "app.js",
+    "find": "        variant: \"short\",",
+    "replace": "        variant: \"same\",",
+    "expect": "app"
+  },
+  {
+    "name": "短縮版で問題数の上書きをやめる",
+    "why": "「10問だけもう一度」が直前と同じ問題数になり、軽い口として機能しない",
+    "file": "app.js",
+    "find": "      startExam({ questionCount: SHORT_RETRY_COUNT });",
+    "replace": "      startExam();",
+    "expect": "app"
+  },
+  {
+    "name": "短縮版の出し分けをやめて常に表示する",
+    "why": "10問の直後に同じ働きのボタンが2つ並ぶ",
+    "file": "app.js",
+    "find": "    if (shortBtn) shortBtn.style.display = totalQuestions > SHORT_RETRY_COUNT ? \"\" : \"none\";",
+    "replace": "    if (shortBtn) shortBtn.style.display = \"\";",
+    "expect": "app"
+  },
+  {
+    "name": "applyCategoryParam を修正前に戻す",
+    "why": "?cat=12 の本番バグ。語句の関係を押すと非言語の模試が始まる",
+    "file": "app.js",
+    "find": "        paramCategoryId = parseInt(want, 10);",
+    "replace": "        paramCategoryId = null;",
+    "expect": "deeplink"
+  },
+  {
+    "name": "分野を絞る案内文を出さない",
+    "why": "その分野だけを出題している事実が利用者に伝わらない",
+    "file": "app.js",
+    "find": "        note.style.display = \"\";",
+    "replace": "        note.style.display = \"none\";",
+    "expect": "deeplink"
+  },
+  {
+    "name": "category_practice_start を飛ばさない",
+    "why": "分野別ページの効果を測る唯一の手がかりが消える",
+    "file": "app.js",
+    "find": "      trackEvent(\"category_practice_start\", { category_id: want });",
+    "replace": "",
+    "expect": "deeplink"
+  },
+  {
+    "name": "リーグ戦の成績の一意性チェックを外す",
+    "why": "答えが2通り以上ある問題が出る",
+    "file": "src/questions/_base.js",
+    "find": "    if (seenW.length !== 1 || seenW[0] !== targetWins) continue;",
+    "replace": "    if (seenW.indexOf(targetWins) === -1) continue;",
+    "expect": "generator"
+  },
+  {
+    "name": "リーグ戦の勝ち数を固定して正解位置を偏らせる",
+    "why": "正解が特定の位置に集まり、選ぶだけで当たるようになる。順位配列が長さ4固定で NaN になり検査が無効化されていた件の再現でもある",
+    "file": "src/questions/_base.js",
+    "find": "  var target = v.targetSeed % n;",
+    "replace": "  var target = (n === 4) ? 2 : v.targetSeed % n;",
+    "expect": "generator"
+  },
+  {
+    "name": "円卓の「向かい」の一意性チェックを外す",
+    "why": "向かいが1人に定まらない問題が出る",
+    "file": "src/questions/_base.js",
+    "find": "      if (opps.length !== 1) continue;",
+    "replace": "      if (opps.length < 1) continue;",
+    "expect": "generator"
+  },
+  {
+    "name": "条件からの絞り込みの正解indexをずらす",
+    "why": "選択肢の正解と、問題文から数え直した候補数が食い違う",
+    "file": "src/questions/01-suiron.js",
+    "find": "      return { choices: [\"1通り\", \"2通り\", \"3通り\", \"4通り\"], correctIndex: v._count - 1 };",
+    "replace": "      return { choices: [\"1通り\", \"2通り\", \"3通り\", \"4通り\"], correctIndex: v._count % 4 };",
+    "expect": "generator"
+  },
+  {
+    "name": "条件からの絞り込みの候補数を固定して正解位置を偏らせる",
+    "why": "正解が常に同じ位置になり、選ぶだけで当たる。rankOf を外すとこの検査から静かに漏れる",
+    "file": "src/questions/_base.js",
+    "find": "      if (vals.length !== target) continue;",
+    "replace": "      if (vals.length !== 2) continue;",
+    "expect": "generator"
+  },
+  {
+    "name": "真偽判定の正解を対偶ではなく裏にすり替える",
+    "why": "確実に言えない選択肢が正解になる",
+    "file": "src/questions/_base.js",
+    "find": "  var correct = attrNegNoun + \"は\" + sc.subNegPred;",
+    "replace": "  var correct = sc.notSubNoun + \"は\" + sc.attrNegPred;",
+    "expect": "generator"
+  },
+  {
+    "name": "数列の答えを1つずらす",
+    "why": "解説の予測値と正解が食い違う",
+    "file": "src/questions/13-kisokusei.js",
+    "find": "    answerFormula: function(v) { return v._answer; },",
+    "replace": "    answerFormula: function(v) { return v._answer + 1; },",
+    "expect": "generator"
+  },
+  {
+    "name": "語ペア辞書の同じペアを2つの関係に入れる",
+    "why": "正解がちょうど1つであることの唯一の担保が崩れる",
+    "file": "src/questions/12-gengo.js",
+    "find": "    [\"爬虫類\", \"ヤモリ\"]\n  ],",
+    "replace": "    [\"爬虫類\", \"ヤモリ\"], [\"自動車\", \"タイヤ\"]\n  ],",
+    "expect": "generator"
+  },
+  {
+    "name": "同じ語を含むペアの同居ガードを無効化する",
+    "why": "「職業:教師」と「教師:生徒」が同じ問題に並び、読み手が混乱する",
+    "file": "src/questions/12-gengo.js",
+    "find": "function wordPairsAllDistinct(pairs) {",
+    "replace": "function wordPairsAllDistinct(pairs) {\n  return true;",
+    "expect": "generator"
+  },
+  {
+    "name": "連続増減の派生変数を古いもの（常に増加）に戻す",
+    "why": "「減少」の問題で解説の途中経過だけが誤る。答えは正しいままなので気づけない",
+    "file": "generator.js",
+    "find": "    // 割合: 連続増減の after1 はテンプレート側の resolve が作る。",
+    "replace": "    if (template.id === \"wariai_consecutive_01\") {\n      d.after1 = Math.round((1 + vars.percent1/100) * 100);\n    }\n    // 割合: 連続増減の after1 はテンプレート側の resolve が作る。",
+    "expect": "generator"
+  },
+  {
+    "name": "四則逆算のパーセント表記を壊れた形に戻す",
+    "why": "5% を 0.5 と書いてしまう。本番に出ていた解説の誤り",
+    "file": "src/questions/11-shisoku.js",
+    "find": "□ = {{b}} ÷ {{aDecimal}}",
+    "replace": "□ = {{b}} ÷ 0.{{a}}",
+    "expect": "generator"
+  },
+  {
+    "name": "出題分野の名前を画面と問題側で食い違わせる",
+    "why": "選んでも1問も出ない分野や、名前だけ古い分野ができる",
+    "file": "index.html",
+    "find": "<input type=\"checkbox\" value=\"13\" checked><span>規則性・方角</span>",
+    "replace": "<input type=\"checkbox\" value=\"13\" checked><span>推論</span>",
+    "expect": "html"
+  }
+]

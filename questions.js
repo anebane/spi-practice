@@ -1912,6 +1912,9 @@ var CIRCLE_SCENES = [
     buildChoices: function(v) {
       return { choices: ["1通り", "2通り", "3通り", "4通り"], correctIndex: v._count - 1 };
     },
+    // 選択肢に大小の順序がある（1通り<2通り<…）ので、正解位置の偏り検査に載せる。
+    // rankOf を渡さないと、この検査の対象から静かに外れる。
+    rankOf: function(s) { return parseInt(String(s), 10); },
     unit: "",
     explanationTemplate: "条件をすべて満たす組み合わせを書き出すと、次の{{solCount}}通りです。\n\n{{solText}}\n\nこのうち{{askLabel}}は {{valueList}} のいずれかなので、考えられるものは{{count}}通りです。\n\n【ポイント】\n・「〜である」と言い切っている条件から先に埋める\n・大小関係だけでは並びが確定しないことがある\n・全体の並びが決まらなくても、問われている値の候補は数え上げられる",
     timeLimitSec: 150
