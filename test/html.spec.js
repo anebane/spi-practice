@@ -122,6 +122,42 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
         fail("index.html", "分野名がテンプレートと不一致", `value=${id}: 画面「${label}」 ≠ 問題側「${nameById.get(id)}」`);
       }
     }
+
+    // 「対応分野」の静的な控えが、チェックボックスとずれていないか。
+    // ここは JS が埋め直すが、JS が動かない利用者にはこの静的な中身が見える。
+    // 「10分野」と書きながら11分野を出題していたのは、同じ事実を2箇所に
+    // 手で書いていたため。控えを置くなら、一致していることを機械的に確かめる。
+    const listed = html.match(/<div class="categories-list" id="categories-list">([^<]*)<\/div>/);
+    if (!listed) {
+      fail("index.html", "対応分野の一覧が見つからない", "categories-list");
+    } else {
+      const shown = listed[1].split("/").map(s => s.trim()).filter(Boolean);
+      const want = boxes.map(b => b[2]);
+      if (shown.join("|") !== want.join("|")) {
+        fail("index.html", "対応分野の一覧がチェックボックスと不一致",
+          `一覧「${shown.join(" / ")}」 ≠ 選択欄「${want.join(" / ")}」`);
+      }
+    }
+
+    // 分野の数を手で書いていないか。書くと分野を足したときにずれる
+    //（「10分野」と書きながら11分野を出題していた）。
+    //
+    // 見るのは画面の本文だけ。head の title / meta は対象外にしている。
+    // さらに、構造化データと同じ文が本文に出ている箇所も対象外にする。
+    // FAQ の回答は JSON-LD と本文が一致していることが要件で、本文だけ直すと
+    // 不整合になる。「片方だけ直せない対（つい）」は、この検査が扱う話ではない。
+    const jsonld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+      .map(m => m[1]).join("\n").replace(/\s+/g, "");
+    const bodyText = (html.match(/<body[\s\S]*<\/body>/) || [""])[0]
+      .replace(/<script[\s\S]*?<\/script>/g, "")
+      .replace(/<[^>]+>/g, "");
+    for (const sentence of bodyText.split(/[。\n]/)) {
+      if (!/\d+\s*分野/.test(sentence)) continue;
+      const packed = sentence.replace(/\s+/g, "");
+      if (packed.length > 10 && jsonld.includes(packed)) continue;   // 構造化データと対
+      fail("index.html", "分野の数が本文に手書きされている",
+        `「${sentence.trim().slice(0, 40)}」… チェックボックスの数から算出してください（app.js の fillCategorySummary）`);
+    }
   }
 }
 

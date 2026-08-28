@@ -118,6 +118,25 @@
       });
     });
 
+    // 「対応分野」の見出しと一覧を、出題分野のチェックボックスから作る。
+    // 数と分野名を手で書くと、分野を足したときにここだけ古くなる
+    //（実際「10分野」と書きながら11分野を出題していた）。
+    // 事実の出所はチェックボックス1箇所だけにする。
+    (function fillCategorySummary() {
+      var boxes = document.querySelectorAll("#category-select input");
+      if (!boxes || !boxes.length) return;
+      var names = [];
+      Array.prototype.forEach.call(boxes, function(cb) {
+        var t = cb.parentElement ? (cb.parentElement.textContent || "").trim() : "";
+        if (t) names.push(t);
+      });
+      if (!names.length) return;
+      var label = document.getElementById("categories-label");
+      var list = document.getElementById("categories-list");
+      if (label) label.textContent = "対応分野（" + names.length + "分野）";
+      if (list) list.textContent = names.join(" / ");
+    })();
+
     // すべて選択/解除
     document.getElementById("select-all").addEventListener("click", function() {
       document.querySelectorAll("#category-select input").forEach(function(cb) {
@@ -880,16 +899,15 @@
     // 試験画面には置かない。AdSenseもこの画面には置かない（テキストが薄く
     // 「価値の低いコンテンツ」判定のリスクがあるため）。役割分担は
     // 結果画面=アフィリエイト / 記事ページ=AdSense。
+    // 属性（新卒 / 既卒・転職）ごとに枠を並べ、利用者に選ばせる。
+    // 属性を推定しないのは収益上の理由で、キミスカの成果条件は学生限定、
+    // 既卒が申し込むと全件否認される。見出し・注記・PR表記は
+    // affiliate.js が枠ごとに必ず出すので、ここからは渡さない
+    //（渡す形にすると「渡し忘れた枠」を作れてしまう）。
     if (typeof Affiliate !== "undefined") {
-      var sel = Affiliate.selectByScore(percent);
-      Affiliate.render(document.getElementById("affiliate-result"), {
-        programs: sel.programs,
-        band: sel.band,
-        placement: "result",
-        // 「学生の方へ」は属性のラベルで、フックになっていなかった。
-        // 属性の明示は note が担うので、見出しは直前の分野別成績に接続させる。
-        heading: "対策を続けるなら",
-        note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
+      Affiliate.renderAll(document.getElementById("affiliate-result"), {
+        percent: percent,
+        placement: "result"
       });
     }
 

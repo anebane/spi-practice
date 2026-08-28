@@ -259,16 +259,16 @@
     "name": "PR表記の行を消す",
     "why": "景表法（ステマ規制）の表示義務と、広告主が明記した提携維持の条件。ここが唯一の防波堤",
     "file": "affiliate.js",
-    "find": "    host.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
-    "replace": "    // (PR表記を消す変異)",
+    "find": "      item.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
+    "replace": "      // (PR表記を消す変異)",
     "expect": "affiliate"
   },
   {
     "name": "PR表記をリンクより後ろに動かす",
     "why": "表記は「リンクの直上」に要る。存在するだけでは要件を満たさない",
     "file": "affiliate.js",
-    "find": "    host.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
-    "replace": "    setTimeout(function(){}, 0);",
+    "find": "      item.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
+    "replace": "      setTimeout(function(){}, 0);",
     "expect": "affiliate"
   },
   {
@@ -325,6 +325,38 @@
     "file": "index.html",
     "find": "      <div id=\"affiliate-result\" style=\"display:none\"></div>",
     "replace": "      <div id=\"affiliate-result\" style=\"display:none\"></div>\n      <a href=\"https://h.accesstrade.net/sp/cc?rk=0100omb800oxvd\">直書き</a>",
+    "expect": "html"
+  },
+  {
+    "name": "PR表記を枠の先頭の1つだけに戻す",
+    "why": "1枠に2本置いたとき2本目のリンクが裸になる。「枠ごとに1つ」で数えていると見えない",
+    "file": "affiliate.js",
+    "find": "      item.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
+    "replace": "      if (ids.indexOf(id) === 0) item.appendChild(el(\"p\", \"af-pr\", \"PR：以下はアフィリエイト広告です。\"));",
+    "expect": "affiliate"
+  },
+  {
+    "name": "属性が空の枠にも別属性の素材を入れる",
+    "why": "既卒枠に学生限定の案件が出る。キミスカに既卒が申し込むと全件否認される",
+    "file": "affiliate.js",
+    "find": "      if (!ids.length) return;",
+    "replace": "      if (!ids.length) ids = sel.programs;",
+    "expect": "affiliate"
+  },
+  {
+    "name": "対応分野の一覧をチェックボックスとずらす",
+    "why": "JSが動かない利用者に、実際の出題分野と違う一覧が見える",
+    "file": "index.html",
+    "find": " / 順列・組み合わせ / 規則性・方角</div>",
+    "replace": " / 順列・組み合わせ</div>",
+    "expect": "html"
+  },
+  {
+    "name": "分野の数を本文に手で書く",
+    "why": "分野を足したときにここだけ古くなる。「10分野」と書きながら11分野を出題していた",
+    "file": "index.html",
+    "find": "<p class=\"feature-desc\">分野ごとの成績を一覧表示。",
+    "replace": "<p class=\"feature-desc\">10分野の成績を一覧表示。",
     "expect": "html"
   }
 ]

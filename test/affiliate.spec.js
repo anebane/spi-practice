@@ -51,57 +51,106 @@ const AD_RE = /広告/;
 }
 
 // ============================================================
-// 1. すべての枠にPR表記が出る（リンクより前に、枠ごとに1つ）
+// 1. すべてのリンクの直前にPR表記がある
+//
+//    「枠ごとに1つ」ではなく「リンクごと」で見る。枠の数え方は構成が変われば
+//    変わる（1枠2リンクにも、2枠にもなる）が、要件は「リンクの直上」であって
+//    枠の数とは関係が無い。枠で数えると、1枠に2本置いた瞬間に
+//    「1つある＝合格」と言いながら2本目が裸になる。
+//
+//    直前 = そのリンクより前にある最後のPR表記との間に、別のリンクが無いこと。
 // ============================================================
+function checkPrBeforeEveryLink(host, where) {
+  const flat = flatten(host);
+  const links = flat.map((n, i) => ({ n, i })).filter(x => x.n.tag === "A");
+  if (!links.length) { fail("リンクが無い", where); return 0; }
+
+  for (const { i } of links) {
+    let ok = false;
+    for (let j = i - 1; j >= 0; j--) {
+      if (flat[j].tag === "A") break;                       // 間に別のリンクがある
+      if (PR_RE.test(flat[j].text) && AD_RE.test(flat[j].text)) { ok = true; break; }
+    }
+    if (!ok) fail("リンクの直前にPR表記が無い", `${where}: ${flat[i].text || "(無題)"} 番目=${i}`);
+  }
+  return links.length;
+}
+
 {
   const h = loadAffiliate();
   const ids = Object.keys(h.Affiliate._programs);
   let checked = 0;
 
+  // 1本ずつ
   for (const id of ids) {
     h.reset();
     const host = h.makeHost();
     const ok = h.Affiliate.render(host, {
-      programs: [id], band: "high", placement: "test",
-      note: "対象は…（テスト）"
+      programs: [id], band: "high", placement: "test", note: "対象は…（テスト）"
     });
     if (!ok) { fail("描画されない", `${id}: render が false を返した`); continue; }
-    checked++;
-
-    const flat = flatten(host);
-    const prs = flat.filter(n => PR_RE.test(n.text) && AD_RE.test(n.text));
-    if (prs.length === 0) {
-      fail("PR表記が無い", `${id}: 「PR」と「広告」を含む要素が枠に1つも無い`);
-      continue;
-    }
-    if (prs.length > 1) fail("PR表記が枠に複数", `${id}: ${prs.length}個`);
-
-    // 位置。リンクより後ろに出る表記は要件を満たさない。
-    const iPr = flat.findIndex(n => PR_RE.test(n.text) && AD_RE.test(n.text));
-    const iLink = flat.findIndex(n => n.tag === "A");
-    if (iLink === -1) fail("リンクが無い", id);
-    else if (iPr > iLink) fail("PR表記がリンクより後ろ", `${id}: 表記 ${iPr} / リンク ${iLink}`);
+    checked += checkPrBeforeEveryLink(host, id);
   }
-  cov.covered("PR表記を確かめた素材", checked, 1);
+  cov.covered("PR表記を確かめたリンク（1本ずつ）", checked, 1);
 }
 
 // ============================================================
-// 2. 枠が2つなら PR表記も2つ（1つにまとめない）
+// 2. 1枠に2本置いても、両方の直前に表記が出る
+//    枠先頭に1つ置く作りだと、ここで2本目が裸になる。
 // ============================================================
 {
   const h = loadAffiliate();
-  const ids = Object.keys(h.Affiliate._programs);
-  if (ids.length < 1) {
-    cov.skipped("2枠のPR表記", 0, "素材が無い");
+  const all = Object.keys(h.Affiliate._programs);
+  const sameAud = {};
+  for (const id of all) {
+    const a = h.Affiliate._programs[id].audience || "none";
+    (sameAud[a] = sameAud[a] || []).push(id);
+  }
+  const pair = Object.values(sameAud).find(v => v.length >= 2);
+  if (!pair) {
+    cov.skipped("1枠に2本", 0, "同じ属性の素材が2件そろっていない");
   } else {
-    const hostA = h.makeHost(), hostB = h.makeHost();
-    h.Affiliate.render(hostA, { programs: [ids[0]], band: "high", placement: "test", note: "注記A" });
-    h.Affiliate.render(hostB, { programs: [ids[0]], band: "high", placement: "test", note: "注記B" });
-    const count = (host) => flatten(host).filter(n => PR_RE.test(n.text) && AD_RE.test(n.text)).length;
-    if (count(hostA) !== 1 || count(hostB) !== 1) {
-      fail("2枠のPR表記", `枠ごとに1つでない: ${count(hostA)} / ${count(hostB)}`);
+    const host = h.makeHost();
+    const ok = h.Affiliate.render(host, {
+      programs: [pair[0], pair[1]], band: "high", placement: "test", note: "注記"
+    });
+    if (!ok) fail("2本の枠が描けない", pair.join(", "));
+    else {
+      const n = checkPrBeforeEveryLink(host, `${pair[0]}+${pair[1]}`);
+      if (n !== 2) fail("2本置いたのにリンクが2本でない", `${n}本`);
+      const prs = flatten(host).filter(x => PR_RE.test(x.text) && AD_RE.test(x.text)).length;
+      if (prs !== 2) fail("2本の枠でPR表記が2つでない", `${prs}個`);
+      cov.covered("1枠に2本", 2, 2);
     }
-    cov.covered("2枠のPR表記", 2, 2);
+  }
+}
+
+// ============================================================
+// 2b. 属性ごとの枠（renderAll）でも、すべてのリンクの直前に表記が出る
+//     注記と見出しも枠の数だけ出る（1つにまとめない）。
+// ============================================================
+{
+  const h = loadAffiliate();
+  const host = h.makeHost();
+  const drawn = h.Affiliate.renderAll(host, { percent: 80, placement: "test" });
+  if (!drawn) {
+    cov.skipped("属性ごとの枠", 0, "描かれた枠が0（素材が未投入）");
+  } else {
+    const n = checkPrBeforeEveryLink(host, "renderAll");
+    const flat = flatten(host);
+    const prs = flat.filter(x => PR_RE.test(x.text) && AD_RE.test(x.text)).length;
+    const notes = flat.filter(x => x.cls === "af-note").length;
+    const heads = flat.filter(x => x.cls === "af-head").length;
+    if (prs !== n) fail("renderAll のPR表記がリンク数と合わない", `表記 ${prs} / リンク ${n}`);
+    if (notes !== drawn) fail("枠の数だけ注記が出ていない", `注記 ${notes} / 枠 ${drawn}`);
+    if (heads !== drawn) fail("枠の数だけ見出しが出ていない", `見出し ${heads} / 枠 ${drawn}`);
+
+    // 枠ごとに属性が違うなら、計測もその数だけ別々に飛ぶ
+    const views = h.events.filter(e => e.name === "affiliate_view");
+    if (views.length !== drawn) fail("affiliate_view が枠の数と合わない", `${views.length} / ${drawn}`);
+    const auds = new Set(views.map(v => v.params.audience));
+    if (auds.size !== drawn) fail("枠ごとに audience が分かれていない", [...auds].join(", "));
+    cov.covered("属性ごとの枠", drawn, 1);
   }
 }
 

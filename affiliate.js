@@ -87,12 +87,15 @@ var Affiliate = (function () {
     var head = el("p", "af-head", opt.heading || (aud === "student" ? "学生の方へ" : "ご案内"));
     host.appendChild(head);
 
-    // 2) PR表記（枠の直上・本文と同等の大きさ）。ここは分岐なしで必ず出す。
-    host.appendChild(el("p", "af-pr", "PR：以下はアフィリエイト広告です。"));
-
     ids.forEach(function (id) {
       var p = PROGRAMS[id];
       var item = el("div", "af-item");
+
+      // 2) PR表記。枠の先頭に1つではなく、リンクごとに出す。
+      //    枠に2本置いたとき、先頭の1つは2本目のリンクに隣接しない。
+      //    要件は「リンクの直上」なので、リンクと同じ数だけ出すのが正しい。
+      //    ここは分岐なしで必ず出す（消せる引数を作らない）。
+      item.appendChild(el("p", "af-pr", "PR：以下はアフィリエイト広告です。"));
 
       // 3) 便益の説明はリンクより先に置く。読んでから押す順序にするため。
       if (p.lead) item.appendChild(el("p", "af-lead", p.lead));
@@ -100,6 +103,9 @@ var Affiliate = (function () {
       var a = document.createElement("a");
       a.href = p.href;
       a.rel = "nofollow";                 // 配布されたまま。改変しない
+      // referrerpolicy はアクセストレードの配布物に含まれる（A8には無い）。
+      // 素材ごとに持たせる。落とすと計測が壊れる側の属性。
+      if (p.referrerpolicy) a.setAttribute("referrerpolicy", p.referrerpolicy);
       a.target = "_blank";
       a.className = "af-link";
       a.textContent = p.anchor;
@@ -157,8 +163,80 @@ var Affiliate = (function () {
     return { band: band, programs: map[band] || [] };
   }
 
+  // ============================================================
+  // 属性ごとの出し分け
+  // ============================================================
+  // 出し分けの主軸は「属性」で、スコア帯は二次。
+  // 属性は推定しない。推定してはいけない理由は収益上のもので、
+  // キミスカ（成果条件が学生限定）に既卒を送ると全件否認され、
+  // それまでの成果まで失いかねない。だから枠を並べて利用者に選ばせる。
+  //
+  // 注記は枠の定義に埋め込む。呼び出し側から渡す形にすると
+  // 「渡し忘れた枠」を作れてしまい、それが否認に直結する。
+  var AUDIENCES = [
+    {
+      audience: "student",
+      heading: "学生の方（2027年卒・2028年卒）",
+      note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
+    },
+    {
+      audience: "career",
+      heading: "既卒・第二新卒・転職をお考えの方",
+      note: "対象は既卒・第二新卒・転職活動中の方です。在学中の方は上の枠をご覧ください。"
+    }
+  ];
+
+  /**
+   * スコア帯を決め、属性ごとの枠を組み立てる。
+   * 素材が1件も無い属性の枠は返さない（空の見出しだけが残るのを防ぐ）。
+   */
+  function selectByAudience(percent) {
+    var band = scoreBand(percent);
+    var sel = selectByScore(percent);
+    var blocks = [];
+    AUDIENCES.forEach(function (a) {
+      var ids = sel.programs.filter(function (id) {
+        return PROGRAMS[id] && PROGRAMS[id].audience === a.audience;
+      });
+      if (!ids.length) return;
+      blocks.push({ audience: a.audience, heading: a.heading, note: a.note, programs: ids });
+    });
+    return { band: band, blocks: blocks };
+  }
+
+  /**
+   * 属性ごとの枠をまとめて描く。枠ごとに子要素を作って render() に渡すので、
+   * PR表記も注記も枠の数だけ出る（1つにまとめない）。
+   */
+  function renderAll(host, opt) {
+    if (!host) return 0;
+    opt = opt || {};
+    var sel = selectByAudience(opt.percent);
+    host.innerHTML = "";
+    if (!sel.blocks.length) { host.style.display = "none"; return 0; }
+    host.style.display = "";
+
+    var drawn = 0;
+    sel.blocks.forEach(function (b) {
+      var slot = document.createElement("div");
+      host.appendChild(slot);
+      var ok = render(slot, {
+        programs: b.programs,
+        band: sel.band,
+        placement: opt.placement,
+        heading: b.heading,
+        note: b.note
+      });
+      if (ok) drawn++;
+    });
+    if (!drawn) host.style.display = "none";
+    return drawn;
+  }
+
   return {
     render: render,
+    renderAll: renderAll,
+    selectByAudience: selectByAudience,
     selectByScore: selectByScore,
     scoreBand: scoreBand,
     _programs: PROGRAMS      // テスト用

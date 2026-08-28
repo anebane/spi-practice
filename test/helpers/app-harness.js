@@ -14,6 +14,25 @@ const vm = require("vm");
 
 const ROOT = path.join(__dirname, "..", "..");
 
+/**
+ * 本物の affiliate.js から公開APIの名前だけを取り、中身を無効化した控えを作る。
+ * 名前を手で並べると、実体に関数が増えたときスタブだけが古くなり、
+ * app.js の呼び出しが「〜 is not a function」で落ちる（実際に落ちた）。
+ */
+function stubAffiliate() {
+  const { loadAffiliate } = require("./dom-stub");
+  const real = loadAffiliate().Affiliate;
+  const stub = {};
+  for (const k of Object.keys(real)) {
+    stub[k] = typeof real[k] === "function" ? () => undefined : real[k];
+  }
+  // app.js が戻り値を使うものだけ、形を保った空を返す
+  stub.selectByScore = () => ({ programs: [], band: "test" });
+  stub.selectByAudience = () => ({ band: "test", blocks: [] });
+  stub.renderAll = () => 0;
+  return stub;
+}
+
 function createHarness(opts) {
   opts = opts || {};
   const questionCount = String(opts.questionCount || 10);
@@ -147,8 +166,11 @@ function createHarness(opts) {
     setTimeout: (fn, ms) => { timeouts.push(fn); return timeouts.length; },
     clearTimeout: noop,
     gtag: (kind, name, params) => { if (kind === "event") events.push({ name, params: params || {} }); },
-    // 広告枠は計測の対象外。app.js が使う形だけ満たすものを置く
-    Affiliate: { render: noop, init: noop, selectByScore: () => ({ programs: [], band: "test" }) }
+    // 広告枠は app.spec の計測の対象外なので中身は動かさない。
+    // ただし「何を持っているか」は本物から取る。手で並べていたら
+    // renderAll を足したときにずれて、app.js の呼び出しが例外で落ちた。
+    // 1つの事実（Affiliate の公開API）を2箇所に書かない。
+    Affiliate: stubAffiliate()
   };
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
