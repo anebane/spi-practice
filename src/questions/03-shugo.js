@@ -130,7 +130,7 @@
       return Math.max(0, v.a + v.b - v.total);
     },
     unit: "人",
-    explanationTemplate: "【考え方】\n「少なくとも何人」= 重複の最小値。AとBの合計が全体を超える分は、\nどうしても重複せざるを得ません（鳩の巣原理）。\n\n【解法】\n① A∩Bの最小値の公式:\n  max(0, A + B - 全体)\n\n② 代入:\n  max(0, {{a}} + {{b}} - {{total}}) = {{answer}}人\n\n③ 理由: {{a}}+{{b}} = {{a}}+{{b}} ですが、全体は{{total}}人しかいない\n  → {{a}}+{{b}}-{{total}}人分は必ずどちらにも属する\n\n【ポイント】\n・鳩の巣原理: n個の箱にn+1個入れると、必ずどこかに2つ入る\n・「少なくとも」→ 最小値の公式 max(0, A+B-全体)\n・「最大」→ min(A, B) とセットで覚える",
+    explanationTemplate: "【考え方】\n「少なくとも何人」= 重複の最小値。AとBの合計が全体を超える分は、\nどうしても重複せざるを得ません（鳩の巣原理）。\n\n【解法】\n① A∩Bの最小値の公式:\n  max(0, A + B - 全体)\n\n② 代入:\n  max(0, {{a}} + {{b}} - {{total}}) = {{answer}}人\n\n③ 理由: {{a}}+{{b}} = {{sumAB}} ですが、全体は{{total}}人しかいない\n  → {{a}}+{{b}}-{{total}}人分は必ずどちらにも属する\n\n【ポイント】\n・鳩の巣原理: n個の箱にn+1個入れると、必ずどこかに2つ入る\n・「少なくとも」→ 最小値の公式 max(0, A+B-全体)\n・「最大」→ min(A, B) とセットで覚える",
     timeLimitSec: 90,
     validate: function(v) {
       return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;

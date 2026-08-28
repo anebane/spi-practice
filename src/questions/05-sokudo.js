@@ -107,7 +107,7 @@ var TRAIN_SCENES = [
       return Math.round(v.distance / v.speed * 60);
     },
     unit: "分",
-    explanationTemplate: "【考え方】\n速度の基本公式「距離 = 速さ × 時間」を変形して時間を求めます。\n\n【解法】\n① 時間 = 距離 / 速さ\n       = {{distance}} / {{speed}}\n       = {{hours}}時間\n\n② 分に変換: {{hours}} × 60 = {{answer}}分\n\n【ポイント】\n・速さの3公式: 距離=速さ×時間、速さ=距離/時間、時間=距離/速さ\n・単位を揃える（km/hならkm、分に変換するなら×60）",
+    explanationTemplate: "【考え方】\n速度の基本公式「距離 = 速さ × 時間」を変形して時間を求めます。\n\n【解法】\n① 時間 = 距離 / 速さ\n       = {{hoursStep}}時間\n\n② 分に変換: {{hours}} × 60 = {{answer}}分\n\n【ポイント】\n・速さの3公式: 距離=速さ×時間、速さ=距離/時間、時間=距離/速さ\n・単位を揃える（km/hならkm、分に変換するなら×60）",
     timeLimitSec: 60,
     validate: function(v) {
       return v.distance % v.speed === 0 || (v.distance * 60 % v.speed === 0);
@@ -188,7 +188,7 @@ var TRAIN_SCENES = [
       return Math.round(totalDist / totalTime);
     },
     unit: "m/分",
-    explanationTemplate: "【考え方】\n往復の平均速度は「総距離÷総時間」で求めます。\n速度の単純平均（(行き+帰り)÷2）ではないので注意！\n\n【解法】\n① 往復の総距離:\n  {{distance}} × 2 = {{totalDist}}m\n\n② 各区間の時間:\n  行き: {{distance}} / {{speedGo}} = {{timeGo}}分\n  帰り: {{distance}} / {{speedBack}} = {{timeBack}}分\n  合計: {{timeGo}} + {{timeBack}} = {{totalTime}}分\n\n③ 平均の速さ = 総距離 / 総時間:\n  {{totalDist}} / {{totalTime}} = {{answer}}m/分\n\n【ポイント】\n・平均速度 = 総距離÷総時間（速度の平均ではない！）\n・例: 行き60m/分、帰り40m/分 → 平均は50ではなく48m/分\n・公式: 2×v1×v2/(v1+v2) で一発計算も可能",
+    explanationTemplate: "【考え方】\n往復の平均速度は「総距離÷総時間」で求めます。\n速度の単純平均（(行き+帰り)÷2）ではないので注意！\n\n【解法】\n① 往復の総距離:\n  {{distance}} × 2 = {{totalDist}}m\n\n② 各区間の時間:\n  行き: {{distance}} / {{speedGo}} = {{timeGo}}分\n  帰り: {{distance}} / {{speedBack}} = {{timeBack}}分\n  合計: {{timeGo}} + {{timeBack}} = {{totalTime}}分\n\n③ 平均の速さ = 総距離 / 総時間:\n  {{totalDist}} ÷ {{totalTimeParen}} = {{answer}}m/分\n\n【ポイント】\n・平均速度 = 総距離÷総時間（速度の平均ではない！）\n・例: 行き60m/分、帰り40m/分 → 平均は50ではなく48m/分\n・公式: 2×v1×v2/(v1+v2) で一発計算も可能",
     timeLimitSec: 120,
     validate: function(v) {
       var totalDist = v.distance * 2;

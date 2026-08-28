@@ -230,7 +230,7 @@ var WORK_SCENES_3 = [
       return Math.round(remaining * v.daysB);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n途中で作業者が交代する問題。\nまずAが進めた分を計算し、残りをBが仕上げる日数を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  1日の仕事量: 1/{{daysA}}\n  {{daysAlone}}日分: {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ Bが残りを仕上げる日数:\n  Bの1日の仕事量: 1/{{daysB}}\n  日数 = ({{remaining}}) ÷ (1/{{daysB}}) = ({{remaining}}) × {{daysB}} = {{answer}}日\n\n【ポイント】\n・「途中交代」→ まず先の人の進捗を計算 → 残りを後の人で\n・残り = 1 - (先の人の日数/全体日数)",
+    explanationTemplate: "【考え方】\n途中で作業者が交代する問題。\nまずAが進めた分を計算し、残りをBが仕上げる日数を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  1日の仕事量: 1/{{daysA}}\n  {{daysAlone}}日分: {{aDoneStep}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ Bが残りを仕上げる日数:\n  Bの1日の仕事量: 1/{{daysB}}\n  日数 = ({{remaining}}) ÷ (1/{{daysB}}) = ({{remaining}}) × {{daysB}} = {{answer}}日\n\n【ポイント】\n・「途中交代」→ まず先の人の進捗を計算 → 残りを後の人で\n・残り = 1 - (先の人の日数/全体日数)",
     timeLimitSec: 120,
     validate: function(v) {
       var remaining = 1 - v.daysAlone / v.daysA;
@@ -363,7 +363,7 @@ var WORK_SCENES_3 = [
       return Math.round(1 / bRate);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n{{b}}の作業速度が未知の逆算問題。\n{{a}}の単独作業→2人の共同作業の情報から{{b}}の速度を求めます。\n\n【解法】\n① 全体を1とする\n\n② {{a}}が{{daysAlone}}日間で進めた量:\n  {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの量:\n  1 - {{aDone}} = {{remaining}}\n\n④ 2人で{{daysTogether}}日かけて残りを完了:\n  (1/{{daysA}} + 1/B) × {{daysTogether}} = {{remaining}}\n\n⑤ {{b}}の1日の仕事量を求める:\n  1/B = {{remaining}}/{{daysTogether}} - 1/{{daysA}}\n\n⑥ {{b}}だけでかかる日数:\n  B = {{answer}}日\n\n【ポイント】\n・「途中から合流」→ 残りの量を方程式で立てる\n・1/B = (残り÷日数) - 1/A → B = その逆数",
+    explanationTemplate: "【考え方】\n{{b}}の作業速度が未知の逆算問題。\n{{a}}の単独作業→2人の共同作業の情報から{{b}}の速度を求めます。\n\n【解法】\n① 全体を1とする（分数のまま計算します）\n\n② {{a}}が{{daysAlone}}日間で進めた量:\n  1/{{daysA}} × {{daysAlone}} = {{aDone}}\n\n③ 残りの量:\n  1 - {{aDone}} = {{remaining}}\n\n④ 2人で{{daysTogether}}日かけて残りを完了:\n  (1/{{daysA}} + 1/B) × {{daysTogether}} = {{remaining}}\n\n⑤ {{b}}の1日の仕事量を求める:\n  1/B = {{remaining}} ÷ {{daysTogether}} - 1/{{daysA}}\n  = {{remPerDay}} - 1/{{daysA}}\n  = {{bRate}}\n\n⑥ {{b}}だけでかかる日数:\n  B = 1 ÷ ({{bRate}}) = {{answer}}日\n\n【ポイント】\n・「途中から合流」→ 残りの量を方程式で立てる\n・1/B = (残り÷日数) - 1/A → B = その逆数",
     timeLimitSec: 150,
     validate: function(v) {
       var remaining = 1 - v.daysAlone / v.daysA;

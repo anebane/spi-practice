@@ -414,5 +414,61 @@
     "find": "    window.addEventListener(\"pagehide\", function() { reportAbandon(\"pagehide\"); });",
     "replace": "    void 0;",
     "expect": "app"
+  },
+  {
+    "name": "解説の許容幅を表示桁から作る（丸めを飲み込む）",
+    "why": "丸めの誤りを構造的に検出できなくなる。1 - 5/18 = 0.72 も 4.17 × 60 = 250 も通っていた",
+    "file": "test/generator.spec.js",
+    "find": "  const tolOf = () => 1e-9;",
+    "replace": "  const tolOf = (t) => (/^-?[\\d,]+\\.(\\d+)$/.test(t.trim()) ? 0.5 * Math.pow(10, -(/\\.(\\d+)$/.exec(t.trim())[1].length)) : (/^-?[\\d,]+$/.test(t.trim()) ? 0.5 : 1e-6));",
+    "expect": "generator"
+  },
+  {
+    "name": "仕事算の残りを小数に落とす",
+    "why": "「全体を1とする」と書いた直後に小数にすると、分数で通す解法が伝わらない",
+    "file": "generator.js",
+    "find": "      d.remaining = fracStr(jA - jAl, jA);         // ③ 残り",
+    "replace": "      d.remaining = Math.round((1 - jAl / jA) * 100) / 100;",
+    "expect": "generator"
+  },
+  {
+    "name": "速度算の時間を小数に丸める",
+    "why": "書いてある式を電卓で追うと合わなくなる（70 / 12 = 5.83、真値 5.8333…）",
+    "file": "generator.js",
+    "find": "      d.hours = fracStr(vars.distance, vars.speed);",
+    "replace": "      d.hours = Math.round(vars.distance / vars.speed * 100) / 100;",
+    "expect": "generator"
+  },
+  {
+    "name": "往復の合計時間を丸めた値どうしで足す",
+    "why": "丸めた値を足すと、そこから先の計算が全部ずれる",
+    "file": "generator.js",
+    "find": "      d.timeGo = fracStr(vars.distance, vars.speedGo);",
+    "replace": "      d.timeGo = Math.round(vars.distance / vars.speedGo * 100) / 100;",
+    "expect": "generator"
+  },
+  {
+    "name": "損益算で1円未満が出る組も出題する",
+    "why": "解説に「1250 × (1 - 25/100) = 938」と書かれる。真値は937.5",
+    "file": "src/questions/04-soneki.js",
+    "find": "      return (v.cost * (100 + v.markupRate) * (100 - v.discountRate)) % 10000 === 0;\n    },\n    explanationTemplate: \"【考え方】\\n「定価で売れず値引き」",
+    "replace": "      return true;\n    },\n    explanationTemplate: \"【考え方】\\n「定価で売れず値引き」",
+    "expect": "generator"
+  },
+  {
+    "name": "確率の約分の行を約分できないときも出す",
+    "why": "「5 / 32 = 5 / 32」という同語反復になり、計算が1歩も進まない",
+    "file": "generator.js",
+    "find": "      return red.replace(/\\s/g, \"\") === raw.replace(/\\s/g, \"\") ? raw : raw + \" = \" + red;",
+    "replace": "      return raw + \" = \" + red;",
+    "expect": "generator"
+  },
+  {
+    "name": "組み合わせの計算を展開せず C(n, r) のまま書く",
+    "why": "「C(10, 5) = C(10, 5) = 252」となり、計算方法が1文字も示されない",
+    "file": "generator.js",
+    "find": "      d.calculation = topTerms.join(\" × \") + (kfact > 1 ? \" / \" + kfact : \"\");",
+    "replace": "      d.calculation = \"C(\" + kn + \", \" + kr + \")\";",
+    "expect": "generator"
   }
 ]

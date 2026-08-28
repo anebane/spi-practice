@@ -1115,12 +1115,18 @@ if (failures.length) process.exitCode = 1;
 
   // 解説は途中経過を丸めて書くことがある（8.33 など）。
   // 小数d桁で書かれていれば ±0.5*10^-d まで許す。式そのものは厳密に見る。
-  const tolOf = (t) => {
-    const x = t.trim();
-    if (/^-?[\d,]+\.(\d+)$/.test(x)) return 0.5 * Math.pow(10, -(/\.(\d+)$/.exec(x)[1].length));
-    if (/^-?[\d,]+$/.test(x)) return 0.5;
-    return 1e-6;
-  };
+  // 許容幅は置かない。浮動小数の誤差ぶんだけ。
+  //
+  // ⚠️ ここは以前「小数d桁で書かれていれば ±0.5*10^-d まで許す」としていた。
+  //    それは丸めを許容する作りで、丸めの誤りを構造的に検出できない。
+  //    実際に「1 - 5/18 = 0.72」（真値 13/18）も「4.17 × 60 = 250」（真値 250.2）も
+  //    許容幅の内側に収まって通っていた。整数の許容幅0.5に至っては、
+  //    1円未満・0.2分のずれを丸ごと飲み込んでいた。
+  //
+  //    直し方は「許容幅を狭める」ではなく「丸めを出さない」。
+  //    割り切れない値は分数で書くか、割り切れる値だけを出題する。
+  //    そのうえでここを厳密にすると、丸めが混ざった瞬間に落ちる。
+  const tolOf = () => 1e-9;
 
   // √ や ^ に接している式は、扱えない記号で切り取られた断片なので見ない
   const BLOCK = "√^²³%";
@@ -1153,6 +1159,21 @@ if (failures.length) process.exitCode = 1;
           const parts = run.split("=").map(x => x.trim()).filter(x => x.length);
           if (parts.length < 2) continue;
 
+          // 同語反復（「5/18 = 5/18」）。
+          //
+          // ⚠️ 値の比較では原理的に捕まらない。両辺が同じ式なのだから必ず一致する。
+          //    解説の変数に「値」ではなく「式の文字列」を入れていたときに起きる。
+          //    利用者から見ると、そこで計算が1歩も進んでいない。
+          for (let k = 1; k < parts.length; k++) {
+            const norm = (x) => x.replace(/\s+/g, "");
+            if (norm(parts[k]) === norm(parts[k - 1])) {
+              if (bad.length < 5000) {
+                bad.push({ id: t.id, run: run.trim(), a: "同語反復", b: parts[k] });
+              }
+              break;
+            }
+          }
+
           // 解析できない辺は捨てて、残った辺だけを突き合わせる。
           // 「定価 = 原価 × (1+利益率/100) = 700 × 1.25 = 875」のように
           // 日本語混じりの辺が先頭に来る解説があり、そこで諦めると
@@ -1168,7 +1189,7 @@ if (failures.length) process.exitCode = 1;
           for (let k = 1; k < vals.length; k++) {
             const tol = Math.max(tolOf(vals[0].t), tolOf(vals[k].t));
             if (Math.abs(vals[k].v - vals[0].v) > tol + 1e-9) {
-              if (bad.length < 20) bad.push({ id: t.id, run: run.trim(), a: vals[0].v, b: vals[k].v });
+              if (bad.length < 5000) bad.push({ id: t.id, run: run.trim(), a: vals[0].v, b: vals[k].v });
               break;
             }
           }
@@ -1189,8 +1210,18 @@ if (failures.length) process.exitCode = 1;
   if (!bad.length) {
     console.log("   ✅ 取り出せた式はすべて左辺と右辺が一致");
   } else {
-    console.log(`   ❌ 計算の合わない式 ${bad.length}件`);
-    for (const b of bad.slice(0, 10)) console.log(`   - ${b.id}: ${b.run.slice(0, 70)}  [${b.a} ≠ ${b.b}]`);
+    // テンプレート別に出す。先頭10件だけ並べると、件数の多い1つに
+    // 埋もれて他のテンプレートが見えない（実際に soneki だけが見えていた）。
+    const byId = new Map();
+    for (const b of bad) {
+      if (!byId.has(b.id)) byId.set(b.id, []);
+      byId.get(b.id).push(b);
+    }
+    console.log(`   ❌ 計算の合わない式 ${bad.length}件 / ${byId.size}テンプレート`);
+    for (const [id, list] of [...byId.entries()].sort((a, b) => b[1].length - a[1].length)) {
+      const e = list[0];
+      console.log(`   - ${id} (${list.length}件): ${e.run.slice(0, 60)}  [${e.a} ≠ ${e.b}]`);
+    }
     process.exitCode = 1;
   }
 }

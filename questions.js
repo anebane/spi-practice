@@ -2222,7 +2222,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「同時に取り出す」問題は組み合わせ(C)を使います。\n確率 = 該当する場合の数 / 全体の場合の数\n\n【解法】\n全体の{{thing}}の数: {{red}} + {{white}} = {{total}}個\n\n① 全体から2個選ぶ場合の数（分母）:\n  C({{total}}, 2) = {{total}} × {{totalM1}} / 2 = {{den}}通り\n\n② {{itemA}}2個を選ぶ場合の数（分子）:\n  C({{red}}, 2) = {{red}} × {{redM1}} / 2 = {{num}}通り\n\n③ 確率 = ②÷① = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・C(n, r) = n! / (r! × (n-r)!) は「n個からr個選ぶ組み合わせ」\n・「同時に取り出す」= 順序を考えない = 組み合わせ",
+    explanationTemplate: "【考え方】\n「同時に取り出す」問題は組み合わせ(C)を使います。\n確率 = 該当する場合の数 / 全体の場合の数\n\n【解法】\n全体の{{thing}}の数: {{red}} + {{white}} = {{total}}個\n\n① 全体から2個選ぶ場合の数（分母）:\n  C({{total}}, 2) = {{total}} × {{totalM1}} / 2 = {{den}}通り\n\n② {{itemA}}2個を選ぶ場合の数（分子）:\n  C({{red}}, 2) = {{red}} × {{redM1}} / 2 = {{num}}通り\n\n③ 確率 = ②÷① = {{probStep}}\n\n【ポイント】\n・C(n, r) = n! / (r! × (n-r)!) は「n個からr個選ぶ組み合わせ」\n・「同時に取り出す」= 順序を考えない = 組み合わせ",
     timeLimitSec: 120
   });
 
@@ -2255,7 +2255,7 @@ var COND_SCENES_P = [
       return { numerator: v._count / g, denominator: 36 / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nサイコロ2個の問題は「全パターンを数えて条件に合うものを探す」が基本。\n全パターンは 6×6 = 36通り（順序を区別する）。\n\n【解法】\n① 全パターン: 6 × 6 = 36通り\n\n② {{phrase}}組み合わせを列挙:\n{{combinations}}\n→ 該当: {{count}}通り\n\n③ 確率 = {{count}} / 36 = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・2つのサイコロは区別して考える（(1,2)と(2,1)は別パターン）\n・合計7が最も出やすい（6通り）、合計2と12が最も出にくい（各1通り）\n・「以上」「以下」は境界を含む。数え落としに注意",
+    explanationTemplate: "【考え方】\nサイコロ2個の問題は「全パターンを数えて条件に合うものを探す」が基本。\n全パターンは 6×6 = 36通り（順序を区別する）。\n\n【解法】\n① 全パターン: 6 × 6 = 36通り\n\n② {{phrase}}組み合わせを列挙:\n{{combinations}}\n→ 該当: {{count}}通り\n\n③ 確率 = {{probStep}}\n\n【ポイント】\n・2つのサイコロは区別して考える（(1,2)と(2,1)は別パターン）\n・合計7が最も出やすい（6通り）、合計2と12が最も出にくい（各1通り）\n・「以上」「以下」は境界を含む。数え落としに注意",
     timeLimitSec: 90
   });
 
@@ -2289,7 +2289,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nコインの問題は「反復試行の確率」。\n全パターン = 2^(回数)、該当パターン = C(回数, {{face}}の回数)。\n\n【解法】\n① 全パターン: 2^{{n}} = {{den}}通り\n  （各回で表or裏の2通り × {{n}}回）\n\n② {{n}}回中{{k}}回だけ{{face}}が出る場合の数:\n  「{{n}}回のうちどの{{k}}回が{{face}}か」を選ぶ → C({{n}}, {{k}}) = {{num}}通り\n\n③ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・反復試行: 各回が独立で同じ確率の試行を繰り返す場合\n・C(n,k) × p^k × (1-p)^(n-k) の公式（コインはp=1/2なので分母が2^n）\n・表と裏は対称なので、どちらを数えても同じ形になる",
+    explanationTemplate: "【考え方】\nコインの問題は「反復試行の確率」。\n全パターン = 2^(回数)、該当パターン = C(回数, {{face}}の回数)。\n\n【解法】\n① 全パターン: 2^{{n}} = {{den}}通り\n  （各回で表or裏の2通り × {{n}}回）\n\n② {{n}}回中{{k}}回だけ{{face}}が出る場合の数:\n  「{{n}}回のうちどの{{k}}回が{{face}}か」を選ぶ → C({{n}}, {{k}}) = {{num}}通り\n\n③ 確率 = {{probStep}}\n\n【ポイント】\n・反復試行: 各回が独立で同じ確率の試行を繰り返す場合\n・C(n,k) × p^k × (1-p)^(n-k) の公式（コインはp=1/2なので分母が2^n）\n・表と裏は対称なので、どちらを数えても同じ形になる",
     timeLimitSec: 120
   });
 
@@ -2330,7 +2330,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nまず条件に合うもの（{{condName}}）の個数を数え、そこから2枚選ぶ組み合わせを求めます。\n\n【解法】\n① 1から{{n}}までの{{condName}}の個数: {{hitCount}}個\n  （{{how}}）\n\n② 全体から2枚選ぶ場合の数（分母）:\n  C({{n}}, 2) = {{den}}通り\n\n③ {{condName}}から2枚選ぶ場合の数（分子）:\n  C({{hitCount}}, 2) = {{num}}通り\n\n④ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・「2枚とも○○」の確率 = C(○○の個数, 2) / C(全体, 2)\n・まず該当する個数を正確に数えるのが最優先",
+    explanationTemplate: "【考え方】\nまず条件に合うもの（{{condName}}）の個数を数え、そこから2枚選ぶ組み合わせを求めます。\n\n【解法】\n① 1から{{n}}までの{{condName}}の個数: {{hitCount}}個\n  （{{how}}）\n\n② 全体から2枚選ぶ場合の数（分母）:\n  C({{n}}, 2) = {{den}}通り\n\n③ {{condName}}から2枚選ぶ場合の数（分子）:\n  C({{hitCount}}, 2) = {{num}}通り\n\n④ 確率 = {{probStep}}\n\n【ポイント】\n・「2枚とも○○」の確率 = C(○○の個数, 2) / C(全体, 2)\n・まず該当する個数を正確に数えるのが最優先",
     timeLimitSec: 120
   });
 
@@ -2398,7 +2398,7 @@ var COND_SCENES_P = [
       return { numerator: diffPairs / g, denominator: allPairs / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「異なる色」を直接数えると場合分けが多いので、\n余事象「同じ色」を使います。異なる色 = 全体 - 同じ色\n\n【解法】\n① 全体: {{red}}+{{white}}+{{blue}} = {{total}}個\n  全ペア数: C({{total}},2) = {{allPairs}}通り\n\n② 同色ペアを数える:\n  C({{red}},2) + C({{white}},2) + C({{blue}},2)\n  = {{samePairs}}通り\n\n③ 異なる色のペア:\n  {{allPairs}} - {{samePairs}} = {{diffPairs}}通り\n\n④ 確率 = {{diffPairs}}/{{allPairs}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・3色以上ある場合は余事象（同色）から求める方が楽\n・同色の場合の数 = 各色のC(個数, 2)の合計",
+    explanationTemplate: "【考え方】\n「異なる色」を直接数えると場合分けが多いので、\n余事象「同じ色」を使います。異なる色 = 全体 - 同じ色\n\n【解法】\n① 全体: {{red}}+{{white}}+{{blue}} = {{total}}個\n  全ペア数: C({{total}},2) = {{allPairs}}通り\n\n② 同色ペアを数える:\n  C({{red}},2) + C({{white}},2) + C({{blue}},2)\n  = {{samePairs}}通り\n\n③ 異なる色のペア:\n  {{allPairs}} - {{samePairs}} = {{diffPairs}}通り\n\n④ 確率 = {{probStep}}\n\n【ポイント】\n・3色以上ある場合は余事象（同色）から求める方が楽\n・同色の場合の数 = 各色のC(個数, 2)の合計",
     timeLimitSec: 120
   });
 
@@ -2440,7 +2440,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合うものをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② 特定の{{k}}つが隣り合う場合:\n  {{k}}つをひとまとめ（1ブロック）にする\n  → ブロック + 残り = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内の並び順: {{k}}! = {{innerPerm}}通り\n  → 隣り合う場合: {{blockPerm}} × {{innerPerm}} = {{adjacent}}通り\n\n③ 確率 = {{adjacent}}/{{allPerm}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽\n・ブロック内の並び順を掛け忘れるのが最も多い間違い",
+    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合うものをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② 特定の{{k}}つが隣り合う場合:\n  {{k}}つをひとまとめ（1ブロック）にする\n  → ブロック + 残り = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内の並び順: {{k}}! = {{innerPerm}}通り\n  → 隣り合う場合: {{blockPerm}} × {{innerPerm}} = {{adjacent}}通り\n\n③ 確率 = {{probStep}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽\n・ブロック内の並び順を掛け忘れるのが最も多い間違い",
     timeLimitSec: 120
   });
 
@@ -2472,7 +2472,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「戻さずに取り出す」= 条件付き確率。1個目の結果で残りの状態が変わります。\n1個目が{{itemA}}と「わかっている」ので、その後の状態で考えます。\n\n【解法】\n① 1個目に{{itemA}}を取り出した後の残り:\n  {{itemA}}: {{red}}-1 = {{redM1}}個、{{itemB}}: {{white}}個 → 合計{{denTotal}}個\n\n② 2個目が{{itemA}}である確率 = {{redM1}} / {{denTotal}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・条件付き確率: P(B|A) = 「Aが起きた後にBが起きる確率」\n・「戻さない」→ 毎回残りの状態が変わる → 全体の数も1個減る",
+    explanationTemplate: "【考え方】\n「戻さずに取り出す」= 条件付き確率。1個目の結果で残りの状態が変わります。\n1個目が{{itemA}}と「わかっている」ので、その後の状態で考えます。\n\n【解法】\n① 1個目に{{itemA}}を取り出した後の残り:\n  {{itemA}}: {{red}}-1 = {{redM1}}個、{{itemB}}: {{white}}個 → 合計{{denTotal}}個\n\n② 2個目が{{itemA}}である確率 = {{probStep}}\n\n【ポイント】\n・条件付き確率: P(B|A) = 「Aが起きた後にBが起きる確率」\n・「戻さない」→ 毎回残りの状態が変わる → 全体の数も1個減る",
     timeLimitSec: 90
   });
 })();
@@ -2609,7 +2609,7 @@ var COND_SCENES_P = [
       return Math.max(0, v.a + v.b - v.total);
     },
     unit: "人",
-    explanationTemplate: "【考え方】\n「少なくとも何人」= 重複の最小値。AとBの合計が全体を超える分は、\nどうしても重複せざるを得ません（鳩の巣原理）。\n\n【解法】\n① A∩Bの最小値の公式:\n  max(0, A + B - 全体)\n\n② 代入:\n  max(0, {{a}} + {{b}} - {{total}}) = {{answer}}人\n\n③ 理由: {{a}}+{{b}} = {{a}}+{{b}} ですが、全体は{{total}}人しかいない\n  → {{a}}+{{b}}-{{total}}人分は必ずどちらにも属する\n\n【ポイント】\n・鳩の巣原理: n個の箱にn+1個入れると、必ずどこかに2つ入る\n・「少なくとも」→ 最小値の公式 max(0, A+B-全体)\n・「最大」→ min(A, B) とセットで覚える",
+    explanationTemplate: "【考え方】\n「少なくとも何人」= 重複の最小値。AとBの合計が全体を超える分は、\nどうしても重複せざるを得ません（鳩の巣原理）。\n\n【解法】\n① A∩Bの最小値の公式:\n  max(0, A + B - 全体)\n\n② 代入:\n  max(0, {{a}} + {{b}} - {{total}}) = {{answer}}人\n\n③ 理由: {{a}}+{{b}} = {{sumAB}} ですが、全体は{{total}}人しかいない\n  → {{a}}+{{b}}-{{total}}人分は必ずどちらにも属する\n\n【ポイント】\n・鳩の巣原理: n個の箱にn+1個入れると、必ずどこかに2つ入る\n・「少なくとも」→ 最小値の公式 max(0, A+B-全体)\n・「最大」→ min(A, B) とセットで覚える",
     timeLimitSec: 90,
     validate: function(v) {
       return v.a <= v.total && v.b <= v.total && v.a + v.b > v.total;
@@ -2688,6 +2688,12 @@ var COND_SCENES_P = [
       return Math.round(salePrice - v.cost);
     },
     unit: "円",
+    validate: function(v) {
+      // 1円未満が出る組は出さない。解説に丸めて書くと、利用者が電卓で
+      // 追ったときに合わなくなる（1250 × (1 - 25/100) = 938、真値は937.5）。
+      // 丸めを許容するのではなく、割り切れる値だけを出す。
+      return (v.cost * (100 + v.markupRate) * (100 - v.discountRate)) % 10000 === 0;
+    },
     explanationTemplate: "【考え方】\n「定価で売れず値引き」は損益算の定番。順番に①定価→②売価→③利益を求めます。\n利益がマイナスなら赤字（損失）です。\n\n【解法】\n① 定価を求める:\n  定価 = {{cost}} × (1 + {{markupRate}}/100) = {{listPrice}}円\n\n② 売価を求める（定価から割引）:\n  売価 = {{listPrice}} × (1 - {{discountRate}}/100) = {{salePrice}}円\n\n③ 利益 = 売価 - 原価:\n  {{salePrice}} - {{cost}} = {{answer}}円\n\n【ポイント】\n・割引は「定価」に対する率、利益率は「原価」に対する率（基準が違う！）\n・利益 = 売価 - 原価（売価は値引き後の実際の販売価格）",
     timeLimitSec: 120
   });
@@ -2736,6 +2742,12 @@ var COND_SCENES_P = [
       return revenue - totalCost;
     },
     unit: "円",
+    validate: function(v) {
+      // 1円未満が出る組は出さない。解説に丸めて書くと、利用者が電卓で
+      // 追ったときに合わなくなる（1250 × (1 - 25/100) = 938、真値は937.5）。
+      // 丸めを許容するのではなく、割り切れる値だけを出す。
+      return (v.cost * (100 + v.markupRate) * (100 - v.discountRate)) % 10000 === 0;
+    },
     explanationTemplate: "【考え方】\n複数個の商品で一部を定価、残りを割引で売る問題。\n全体の利益 = 総売上 - 総仕入れ原価 で求めます。\n\n【解法】\n① 単価を計算:\n  定価 = {{cost}} × (1 + {{markupRate}}/100) = {{listPrice}}円\n  割引価格 = {{listPrice}} × (1 - {{discountRate}}/100) = {{discountPrice}}円\n\n② 総売上を計算:\n  定価販売: {{listPrice}} × {{sold1}}個\n  割引販売: {{discountPrice}} × {{sold2}}個\n  売上合計 = {{revenue}}円\n\n③ 総仕入れ原価:\n  {{cost}} × {{quantity}} = {{totalCost}}円\n\n④ 全体の利益 = {{revenue}} - {{totalCost}} = {{answer}}円\n\n【ポイント】\n・複数パターンの販売は、それぞれの売上を合計してから原価を引く\n・残り個数 = 仕入れ数 - 定価で売れた数 を忘れずに",
     timeLimitSec: 150
   });
@@ -2821,6 +2833,12 @@ var COND_SCENES_P = [
     validate: function(v) {
       var profitA = v.costA * (1+v.markupA/100) * (1-v.discountA/100) - v.costA;
       var profitB = v.costB * (1+v.markupB/100) * (1-v.discountB/100) - v.costB;
+      // 1円未満が出る組は出さない。解説に「1950 × 0.85 = 1658」と丸めて書くと、
+      // 利用者が電卓で追うと合わない（真値は1657.5）。
+      // 丸めを許容するのではなく、割り切れる値だけを出す。
+      var priceA = v.costA * (100 + v.markupA) * (100 - v.discountA);
+      var priceB = v.costB * (100 + v.markupB) * (100 - v.discountB);
+      if (priceA % 10000 !== 0 || priceB % 10000 !== 0) return false;
       return Math.round(profitA) !== Math.round(profitB);
     }
   });
@@ -2935,7 +2953,7 @@ var TRAIN_SCENES = [
       return Math.round(v.distance / v.speed * 60);
     },
     unit: "分",
-    explanationTemplate: "【考え方】\n速度の基本公式「距離 = 速さ × 時間」を変形して時間を求めます。\n\n【解法】\n① 時間 = 距離 / 速さ\n       = {{distance}} / {{speed}}\n       = {{hours}}時間\n\n② 分に変換: {{hours}} × 60 = {{answer}}分\n\n【ポイント】\n・速さの3公式: 距離=速さ×時間、速さ=距離/時間、時間=距離/速さ\n・単位を揃える（km/hならkm、分に変換するなら×60）",
+    explanationTemplate: "【考え方】\n速度の基本公式「距離 = 速さ × 時間」を変形して時間を求めます。\n\n【解法】\n① 時間 = 距離 / 速さ\n       = {{hoursStep}}時間\n\n② 分に変換: {{hours}} × 60 = {{answer}}分\n\n【ポイント】\n・速さの3公式: 距離=速さ×時間、速さ=距離/時間、時間=距離/速さ\n・単位を揃える（km/hならkm、分に変換するなら×60）",
     timeLimitSec: 60,
     validate: function(v) {
       return v.distance % v.speed === 0 || (v.distance * 60 % v.speed === 0);
@@ -3016,7 +3034,7 @@ var TRAIN_SCENES = [
       return Math.round(totalDist / totalTime);
     },
     unit: "m/分",
-    explanationTemplate: "【考え方】\n往復の平均速度は「総距離÷総時間」で求めます。\n速度の単純平均（(行き+帰り)÷2）ではないので注意！\n\n【解法】\n① 往復の総距離:\n  {{distance}} × 2 = {{totalDist}}m\n\n② 各区間の時間:\n  行き: {{distance}} / {{speedGo}} = {{timeGo}}分\n  帰り: {{distance}} / {{speedBack}} = {{timeBack}}分\n  合計: {{timeGo}} + {{timeBack}} = {{totalTime}}分\n\n③ 平均の速さ = 総距離 / 総時間:\n  {{totalDist}} / {{totalTime}} = {{answer}}m/分\n\n【ポイント】\n・平均速度 = 総距離÷総時間（速度の平均ではない！）\n・例: 行き60m/分、帰り40m/分 → 平均は50ではなく48m/分\n・公式: 2×v1×v2/(v1+v2) で一発計算も可能",
+    explanationTemplate: "【考え方】\n往復の平均速度は「総距離÷総時間」で求めます。\n速度の単純平均（(行き+帰り)÷2）ではないので注意！\n\n【解法】\n① 往復の総距離:\n  {{distance}} × 2 = {{totalDist}}m\n\n② 各区間の時間:\n  行き: {{distance}} / {{speedGo}} = {{timeGo}}分\n  帰り: {{distance}} / {{speedBack}} = {{timeBack}}分\n  合計: {{timeGo}} + {{timeBack}} = {{totalTime}}分\n\n③ 平均の速さ = 総距離 / 総時間:\n  {{totalDist}} ÷ {{totalTimeParen}} = {{answer}}m/分\n\n【ポイント】\n・平均速度 = 総距離÷総時間（速度の平均ではない！）\n・例: 行き60m/分、帰り40m/分 → 平均は50ではなく48m/分\n・公式: 2×v1×v2/(v1+v2) で一発計算も可能",
     timeLimitSec: 120,
     validate: function(v) {
       var totalDist = v.distance * 2;
@@ -3362,7 +3380,7 @@ var WORK_SCENES_3 = [
       return Math.round(remaining * v.daysB);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n途中で作業者が交代する問題。\nまずAが進めた分を計算し、残りをBが仕上げる日数を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  1日の仕事量: 1/{{daysA}}\n  {{daysAlone}}日分: {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ Bが残りを仕上げる日数:\n  Bの1日の仕事量: 1/{{daysB}}\n  日数 = ({{remaining}}) ÷ (1/{{daysB}}) = ({{remaining}}) × {{daysB}} = {{answer}}日\n\n【ポイント】\n・「途中交代」→ まず先の人の進捗を計算 → 残りを後の人で\n・残り = 1 - (先の人の日数/全体日数)",
+    explanationTemplate: "【考え方】\n途中で作業者が交代する問題。\nまずAが進めた分を計算し、残りをBが仕上げる日数を求めます。\n\n【解法】\n① 仕事全体を1とする\n\n② Aが{{daysAlone}}日間で進めた仕事量:\n  1日の仕事量: 1/{{daysA}}\n  {{daysAlone}}日分: {{aDoneStep}}\n\n③ 残りの仕事量:\n  1 - {{aDone}} = {{remaining}}\n\n④ Bが残りを仕上げる日数:\n  Bの1日の仕事量: 1/{{daysB}}\n  日数 = ({{remaining}}) ÷ (1/{{daysB}}) = ({{remaining}}) × {{daysB}} = {{answer}}日\n\n【ポイント】\n・「途中交代」→ まず先の人の進捗を計算 → 残りを後の人で\n・残り = 1 - (先の人の日数/全体日数)",
     timeLimitSec: 120,
     validate: function(v) {
       var remaining = 1 - v.daysAlone / v.daysA;
@@ -3495,7 +3513,7 @@ var WORK_SCENES_3 = [
       return Math.round(1 / bRate);
     },
     unit: "日",
-    explanationTemplate: "【考え方】\n{{b}}の作業速度が未知の逆算問題。\n{{a}}の単独作業→2人の共同作業の情報から{{b}}の速度を求めます。\n\n【解法】\n① 全体を1とする\n\n② {{a}}が{{daysAlone}}日間で進めた量:\n  {{daysAlone}}/{{daysA}} = {{aDone}}\n\n③ 残りの量:\n  1 - {{aDone}} = {{remaining}}\n\n④ 2人で{{daysTogether}}日かけて残りを完了:\n  (1/{{daysA}} + 1/B) × {{daysTogether}} = {{remaining}}\n\n⑤ {{b}}の1日の仕事量を求める:\n  1/B = {{remaining}}/{{daysTogether}} - 1/{{daysA}}\n\n⑥ {{b}}だけでかかる日数:\n  B = {{answer}}日\n\n【ポイント】\n・「途中から合流」→ 残りの量を方程式で立てる\n・1/B = (残り÷日数) - 1/A → B = その逆数",
+    explanationTemplate: "【考え方】\n{{b}}の作業速度が未知の逆算問題。\n{{a}}の単独作業→2人の共同作業の情報から{{b}}の速度を求めます。\n\n【解法】\n① 全体を1とする（分数のまま計算します）\n\n② {{a}}が{{daysAlone}}日間で進めた量:\n  1/{{daysA}} × {{daysAlone}} = {{aDone}}\n\n③ 残りの量:\n  1 - {{aDone}} = {{remaining}}\n\n④ 2人で{{daysTogether}}日かけて残りを完了:\n  (1/{{daysA}} + 1/B) × {{daysTogether}} = {{remaining}}\n\n⑤ {{b}}の1日の仕事量を求める:\n  1/B = {{remaining}} ÷ {{daysTogether}} - 1/{{daysA}}\n  = {{remPerDay}} - 1/{{daysA}}\n  = {{bRate}}\n\n⑥ {{b}}だけでかかる日数:\n  B = 1 ÷ ({{bRate}}) = {{answer}}日\n\n【ポイント】\n・「途中から合流」→ 残りの量を方程式で立てる\n・1/B = (残り÷日数) - 1/A → B = その逆数",
     timeLimitSec: 150,
     validate: function(v) {
       var remaining = 1 - v.daysAlone / v.daysA;

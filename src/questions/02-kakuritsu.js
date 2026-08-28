@@ -134,7 +134,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「同時に取り出す」問題は組み合わせ(C)を使います。\n確率 = 該当する場合の数 / 全体の場合の数\n\n【解法】\n全体の{{thing}}の数: {{red}} + {{white}} = {{total}}個\n\n① 全体から2個選ぶ場合の数（分母）:\n  C({{total}}, 2) = {{total}} × {{totalM1}} / 2 = {{den}}通り\n\n② {{itemA}}2個を選ぶ場合の数（分子）:\n  C({{red}}, 2) = {{red}} × {{redM1}} / 2 = {{num}}通り\n\n③ 確率 = ②÷① = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・C(n, r) = n! / (r! × (n-r)!) は「n個からr個選ぶ組み合わせ」\n・「同時に取り出す」= 順序を考えない = 組み合わせ",
+    explanationTemplate: "【考え方】\n「同時に取り出す」問題は組み合わせ(C)を使います。\n確率 = 該当する場合の数 / 全体の場合の数\n\n【解法】\n全体の{{thing}}の数: {{red}} + {{white}} = {{total}}個\n\n① 全体から2個選ぶ場合の数（分母）:\n  C({{total}}, 2) = {{total}} × {{totalM1}} / 2 = {{den}}通り\n\n② {{itemA}}2個を選ぶ場合の数（分子）:\n  C({{red}}, 2) = {{red}} × {{redM1}} / 2 = {{num}}通り\n\n③ 確率 = ②÷① = {{probStep}}\n\n【ポイント】\n・C(n, r) = n! / (r! × (n-r)!) は「n個からr個選ぶ組み合わせ」\n・「同時に取り出す」= 順序を考えない = 組み合わせ",
     timeLimitSec: 120
   });
 
@@ -167,7 +167,7 @@ var COND_SCENES_P = [
       return { numerator: v._count / g, denominator: 36 / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nサイコロ2個の問題は「全パターンを数えて条件に合うものを探す」が基本。\n全パターンは 6×6 = 36通り（順序を区別する）。\n\n【解法】\n① 全パターン: 6 × 6 = 36通り\n\n② {{phrase}}組み合わせを列挙:\n{{combinations}}\n→ 該当: {{count}}通り\n\n③ 確率 = {{count}} / 36 = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・2つのサイコロは区別して考える（(1,2)と(2,1)は別パターン）\n・合計7が最も出やすい（6通り）、合計2と12が最も出にくい（各1通り）\n・「以上」「以下」は境界を含む。数え落としに注意",
+    explanationTemplate: "【考え方】\nサイコロ2個の問題は「全パターンを数えて条件に合うものを探す」が基本。\n全パターンは 6×6 = 36通り（順序を区別する）。\n\n【解法】\n① 全パターン: 6 × 6 = 36通り\n\n② {{phrase}}組み合わせを列挙:\n{{combinations}}\n→ 該当: {{count}}通り\n\n③ 確率 = {{probStep}}\n\n【ポイント】\n・2つのサイコロは区別して考える（(1,2)と(2,1)は別パターン）\n・合計7が最も出やすい（6通り）、合計2と12が最も出にくい（各1通り）\n・「以上」「以下」は境界を含む。数え落としに注意",
     timeLimitSec: 90
   });
 
@@ -201,7 +201,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nコインの問題は「反復試行の確率」。\n全パターン = 2^(回数)、該当パターン = C(回数, {{face}}の回数)。\n\n【解法】\n① 全パターン: 2^{{n}} = {{den}}通り\n  （各回で表or裏の2通り × {{n}}回）\n\n② {{n}}回中{{k}}回だけ{{face}}が出る場合の数:\n  「{{n}}回のうちどの{{k}}回が{{face}}か」を選ぶ → C({{n}}, {{k}}) = {{num}}通り\n\n③ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・反復試行: 各回が独立で同じ確率の試行を繰り返す場合\n・C(n,k) × p^k × (1-p)^(n-k) の公式（コインはp=1/2なので分母が2^n）\n・表と裏は対称なので、どちらを数えても同じ形になる",
+    explanationTemplate: "【考え方】\nコインの問題は「反復試行の確率」。\n全パターン = 2^(回数)、該当パターン = C(回数, {{face}}の回数)。\n\n【解法】\n① 全パターン: 2^{{n}} = {{den}}通り\n  （各回で表or裏の2通り × {{n}}回）\n\n② {{n}}回中{{k}}回だけ{{face}}が出る場合の数:\n  「{{n}}回のうちどの{{k}}回が{{face}}か」を選ぶ → C({{n}}, {{k}}) = {{num}}通り\n\n③ 確率 = {{probStep}}\n\n【ポイント】\n・反復試行: 各回が独立で同じ確率の試行を繰り返す場合\n・C(n,k) × p^k × (1-p)^(n-k) の公式（コインはp=1/2なので分母が2^n）\n・表と裏は対称なので、どちらを数えても同じ形になる",
     timeLimitSec: 120
   });
 
@@ -242,7 +242,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\nまず条件に合うもの（{{condName}}）の個数を数え、そこから2枚選ぶ組み合わせを求めます。\n\n【解法】\n① 1から{{n}}までの{{condName}}の個数: {{hitCount}}個\n  （{{how}}）\n\n② 全体から2枚選ぶ場合の数（分母）:\n  C({{n}}, 2) = {{den}}通り\n\n③ {{condName}}から2枚選ぶ場合の数（分子）:\n  C({{hitCount}}, 2) = {{num}}通り\n\n④ 確率 = {{num}} / {{den}} = {{ansNum}} / {{ansDen}}\n\n【ポイント】\n・「2枚とも○○」の確率 = C(○○の個数, 2) / C(全体, 2)\n・まず該当する個数を正確に数えるのが最優先",
+    explanationTemplate: "【考え方】\nまず条件に合うもの（{{condName}}）の個数を数え、そこから2枚選ぶ組み合わせを求めます。\n\n【解法】\n① 1から{{n}}までの{{condName}}の個数: {{hitCount}}個\n  （{{how}}）\n\n② 全体から2枚選ぶ場合の数（分母）:\n  C({{n}}, 2) = {{den}}通り\n\n③ {{condName}}から2枚選ぶ場合の数（分子）:\n  C({{hitCount}}, 2) = {{num}}通り\n\n④ 確率 = {{probStep}}\n\n【ポイント】\n・「2枚とも○○」の確率 = C(○○の個数, 2) / C(全体, 2)\n・まず該当する個数を正確に数えるのが最優先",
     timeLimitSec: 120
   });
 
@@ -310,7 +310,7 @@ var COND_SCENES_P = [
       return { numerator: diffPairs / g, denominator: allPairs / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「異なる色」を直接数えると場合分けが多いので、\n余事象「同じ色」を使います。異なる色 = 全体 - 同じ色\n\n【解法】\n① 全体: {{red}}+{{white}}+{{blue}} = {{total}}個\n  全ペア数: C({{total}},2) = {{allPairs}}通り\n\n② 同色ペアを数える:\n  C({{red}},2) + C({{white}},2) + C({{blue}},2)\n  = {{samePairs}}通り\n\n③ 異なる色のペア:\n  {{allPairs}} - {{samePairs}} = {{diffPairs}}通り\n\n④ 確率 = {{diffPairs}}/{{allPairs}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・3色以上ある場合は余事象（同色）から求める方が楽\n・同色の場合の数 = 各色のC(個数, 2)の合計",
+    explanationTemplate: "【考え方】\n「異なる色」を直接数えると場合分けが多いので、\n余事象「同じ色」を使います。異なる色 = 全体 - 同じ色\n\n【解法】\n① 全体: {{red}}+{{white}}+{{blue}} = {{total}}個\n  全ペア数: C({{total}},2) = {{allPairs}}通り\n\n② 同色ペアを数える:\n  C({{red}},2) + C({{white}},2) + C({{blue}},2)\n  = {{samePairs}}通り\n\n③ 異なる色のペア:\n  {{allPairs}} - {{samePairs}} = {{diffPairs}}通り\n\n④ 確率 = {{probStep}}\n\n【ポイント】\n・3色以上ある場合は余事象（同色）から求める方が楽\n・同色の場合の数 = 各色のC(個数, 2)の合計",
     timeLimitSec: 120
   });
 
@@ -352,7 +352,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合うものをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② 特定の{{k}}つが隣り合う場合:\n  {{k}}つをひとまとめ（1ブロック）にする\n  → ブロック + 残り = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内の並び順: {{k}}! = {{innerPerm}}通り\n  → 隣り合う場合: {{blockPerm}} × {{innerPerm}} = {{adjacent}}通り\n\n③ 確率 = {{adjacent}}/{{allPerm}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽\n・ブロック内の並び順を掛け忘れるのが最も多い間違い",
+    explanationTemplate: "【考え方】\n「隣り合う確率」は、隣り合うものをまとめて1ブロックと見なすテクニックを使います。\n\n【解法】\n① 全体の並べ方: {{n}}! = {{allPerm}}通り\n\n② 特定の{{k}}つが隣り合う場合:\n  {{k}}つをひとまとめ（1ブロック）にする\n  → ブロック + 残り = {{blocks}}組の並び: {{blocks}}! = {{blockPerm}}通り\n  → ブロック内の並び順: {{k}}! = {{innerPerm}}通り\n  → 隣り合う場合: {{blockPerm}} × {{innerPerm}} = {{adjacent}}通り\n\n③ 確率 = {{probStep}}\n\n【ポイント】\n・「隣り合う」→ まとめて1つとして数え、内部の並びをかける\n・「隣り合わない」→ 1 - 隣り合う確率 で求めるのが楽\n・ブロック内の並び順を掛け忘れるのが最も多い間違い",
     timeLimitSec: 120
   });
 
@@ -384,7 +384,7 @@ var COND_SCENES_P = [
       return { numerator: num / g, denominator: den / g };
     },
     unit: "",
-    explanationTemplate: "【考え方】\n「戻さずに取り出す」= 条件付き確率。1個目の結果で残りの状態が変わります。\n1個目が{{itemA}}と「わかっている」ので、その後の状態で考えます。\n\n【解法】\n① 1個目に{{itemA}}を取り出した後の残り:\n  {{itemA}}: {{red}}-1 = {{redM1}}個、{{itemB}}: {{white}}個 → 合計{{denTotal}}個\n\n② 2個目が{{itemA}}である確率 = {{redM1}} / {{denTotal}} = {{ansNum}}/{{ansDen}}\n\n【ポイント】\n・条件付き確率: P(B|A) = 「Aが起きた後にBが起きる確率」\n・「戻さない」→ 毎回残りの状態が変わる → 全体の数も1個減る",
+    explanationTemplate: "【考え方】\n「戻さずに取り出す」= 条件付き確率。1個目の結果で残りの状態が変わります。\n1個目が{{itemA}}と「わかっている」ので、その後の状態で考えます。\n\n【解法】\n① 1個目に{{itemA}}を取り出した後の残り:\n  {{itemA}}: {{red}}-1 = {{redM1}}個、{{itemB}}: {{white}}個 → 合計{{denTotal}}個\n\n② 2個目が{{itemA}}である確率 = {{probStep}}\n\n【ポイント】\n・条件付き確率: P(B|A) = 「Aが起きた後にBが起きる確率」\n・「戻さない」→ 毎回残りの状態が変わる → 全体の数も1個減る",
     timeLimitSec: 90
   });
 })();

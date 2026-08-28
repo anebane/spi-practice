@@ -40,6 +40,12 @@
       return Math.round(salePrice - v.cost);
     },
     unit: "円",
+    validate: function(v) {
+      // 1円未満が出る組は出さない。解説に丸めて書くと、利用者が電卓で
+      // 追ったときに合わなくなる（1250 × (1 - 25/100) = 938、真値は937.5）。
+      // 丸めを許容するのではなく、割り切れる値だけを出す。
+      return (v.cost * (100 + v.markupRate) * (100 - v.discountRate)) % 10000 === 0;
+    },
     explanationTemplate: "【考え方】\n「定価で売れず値引き」は損益算の定番。順番に①定価→②売価→③利益を求めます。\n利益がマイナスなら赤字（損失）です。\n\n【解法】\n① 定価を求める:\n  定価 = {{cost}} × (1 + {{markupRate}}/100) = {{listPrice}}円\n\n② 売価を求める（定価から割引）:\n  売価 = {{listPrice}} × (1 - {{discountRate}}/100) = {{salePrice}}円\n\n③ 利益 = 売価 - 原価:\n  {{salePrice}} - {{cost}} = {{answer}}円\n\n【ポイント】\n・割引は「定価」に対する率、利益率は「原価」に対する率（基準が違う！）\n・利益 = 売価 - 原価（売価は値引き後の実際の販売価格）",
     timeLimitSec: 120
   });
@@ -88,6 +94,12 @@
       return revenue - totalCost;
     },
     unit: "円",
+    validate: function(v) {
+      // 1円未満が出る組は出さない。解説に丸めて書くと、利用者が電卓で
+      // 追ったときに合わなくなる（1250 × (1 - 25/100) = 938、真値は937.5）。
+      // 丸めを許容するのではなく、割り切れる値だけを出す。
+      return (v.cost * (100 + v.markupRate) * (100 - v.discountRate)) % 10000 === 0;
+    },
     explanationTemplate: "【考え方】\n複数個の商品で一部を定価、残りを割引で売る問題。\n全体の利益 = 総売上 - 総仕入れ原価 で求めます。\n\n【解法】\n① 単価を計算:\n  定価 = {{cost}} × (1 + {{markupRate}}/100) = {{listPrice}}円\n  割引価格 = {{listPrice}} × (1 - {{discountRate}}/100) = {{discountPrice}}円\n\n② 総売上を計算:\n  定価販売: {{listPrice}} × {{sold1}}個\n  割引販売: {{discountPrice}} × {{sold2}}個\n  売上合計 = {{revenue}}円\n\n③ 総仕入れ原価:\n  {{cost}} × {{quantity}} = {{totalCost}}円\n\n④ 全体の利益 = {{revenue}} - {{totalCost}} = {{answer}}円\n\n【ポイント】\n・複数パターンの販売は、それぞれの売上を合計してから原価を引く\n・残り個数 = 仕入れ数 - 定価で売れた数 を忘れずに",
     timeLimitSec: 150
   });
@@ -173,6 +185,12 @@
     validate: function(v) {
       var profitA = v.costA * (1+v.markupA/100) * (1-v.discountA/100) - v.costA;
       var profitB = v.costB * (1+v.markupB/100) * (1-v.discountB/100) - v.costB;
+      // 1円未満が出る組は出さない。解説に「1950 × 0.85 = 1658」と丸めて書くと、
+      // 利用者が電卓で追うと合わない（真値は1657.5）。
+      // 丸めを許容するのではなく、割り切れる値だけを出す。
+      var priceA = v.costA * (100 + v.markupA) * (100 - v.discountA);
+      var priceB = v.costB * (100 + v.markupB) * (100 - v.discountB);
+      if (priceA % 10000 !== 0 || priceB % 10000 !== 0) return false;
       return Math.round(profitA) !== Math.round(profitB);
     }
   });

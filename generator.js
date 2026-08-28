@@ -426,6 +426,49 @@ var QuestionGenerator = (function() {
 
     var d = {};
 
+    // 分数を約分して文字列にする。
+    //
+    // 仕事算は「全体を1とする」と書いた直後に小数へ落としていた
+    // （1 - 5/18 = 0.72）。これでは分数で通す解法そのものが伝わらないうえ、
+    // 途中の丸めで、利用者が電卓で追うと合わない式になる。
+    // 割り切れない値は小数にせず、分数のまま最後まで書く。
+    function fracStr(n, dd) {
+      if (dd < 0) { n = -n; dd = -dd; }
+      var a = Math.abs(n), b = Math.abs(dd);
+      while (b) { var t = a % b; a = b; b = t; }
+      var g = a || 1;
+      n /= g; dd /= g;
+      return dd === 1 ? String(n) : n + "/" + dd;
+    }
+
+    // 「元の分数 = 約分後」の1行。約分できないときは同じ式が2度並んでしまい
+    // （5 / 32 = 5 / 32）、そこで計算が1歩も進まない。
+    // 約分できるときだけ2段で書く。
+    function stepStr(n, dd) {
+      var raw = n + " / " + dd;
+      var red = fracStr(n, dd);
+      return red.replace(/\s/g, "") === raw.replace(/\s/g, "") ? raw : raw + " = " + red;
+    }
+
+    // 集合: 「A+B = A+B ですが全体は…」と書いていて、和が計算されていなかった。
+    if (template.id === "shugo_min_01") {
+      d.sumAB = vars.a + vars.b;
+    }
+
+    // 確率の解説にある「元の分数 = 約分後」の行。
+    // 約分できないと同じ式が2度並び（5 / 32 = 5 / 32）、計算が1歩も進まない。
+    // テンプレートごとに「約分前の分子・分母」がどの変数かだけを持ち、
+    // 2段で書くか1段で書くかは stepStr に任せる。
+    var PROB_PAIRS = {
+      kakuritsu_ball_01:  ["num", "den"],
+      kakuritsu_coin_01:  ["num", "den"],
+      kakuritsu_card_01:  ["num", "den"],
+      kakuritsu_dice_01:  ["count", 36],
+      kakuritsu_ball3_01: ["diffPairs", "allPairs"],
+      kakuritsu_cond_01:  ["redM1", "denTotal"],
+      kakuritsu_arrange_01: ["adjacent", "allPerm"]
+    };
+
     // 共通
     if (answer !== null && answer !== undefined) {
       if (typeof answer === "object" && answer.numerator !== undefined) {
@@ -495,12 +538,16 @@ var QuestionGenerator = (function() {
     }
 
     // 速度算
+    // 速度算。割り切れない時間は小数に丸めず分数で書く。
+    // 「70 / 12 = 5.83」「5.83 × 60 = 350」は、利用者が電卓で追うと合わない
+    // （真値は 5.8333… と 349.8）。分数なら最後まで正確に追える。
     if (template.id === "sokudo_basic_01") {
-      d.hours = Math.round(vars.distance / vars.speed * 100) / 100;
+      d.hours = fracStr(vars.distance, vars.speed);
+      d.hoursStep = stepStr(vars.distance, vars.speed);
     }
     if (template.id === "sokudo_encounter_01") {
       d.totalSpeed = vars.speedA + vars.speedB;
-      d.hours = Math.round(vars.distance / d.totalSpeed * 100) / 100;
+      d.hours = fracStr(vars.distance, d.totalSpeed);
     }
     if (template.id === "sokudo_chase_01") {
       d.gap = vars.speedA * vars.headStart;
@@ -508,21 +555,35 @@ var QuestionGenerator = (function() {
     }
     if (template.id === "sokudo_round_01") {
       d.totalDist = vars.distance * 2;
-      d.timeGo = Math.round(vars.distance / vars.speedGo * 100) / 100;
-      d.timeBack = Math.round(vars.distance / vars.speedBack * 100) / 100;
-      d.totalTime = Math.round((d.timeGo + d.timeBack) * 100) / 100;
+      d.timeGo = fracStr(vars.distance, vars.speedGo);
+      d.timeBack = fracStr(vars.distance, vars.speedBack);
+      // 合計時間は、丸めた表示どうしを足すのではなく通分して1つの分数にする。
+      // 丸めた値を足すと、そこから先の計算が全部ずれる。
+      d.totalTime = fracStr(vars.distance * (vars.speedGo + vars.speedBack),
+                            vars.speedGo * vars.speedBack);
+      // 分数のときだけ括弧を付ける。整数に (75) と書くと読みにくい。
+      // 括弧が要るのは、÷ のあとに分数が来ると左から評価されて別の値になるため。
+      d.totalTimeParen = d.totalTime.indexOf("/") >= 0 ? "(" + d.totalTime + ")" : d.totalTime;
     }
 
     // 仕事算
     if (template.id === "shigoto_basic_01") {
       d.combined = "(" + vars.daysA + " + " + vars.daysB + ") / (" + vars.daysA + " × " + vars.daysB + ")";
     }
+    // 途中交代。ここも分数のまま通す。
+    // aDone/remaining に式の文字列を入れていたため、解説が
+    // 「5/10 = 5/10」「1 - 5/10 = 1 - 5/10」という同語反復になっていた。
     if (template.id === "shigoto_switch_01") {
-      d.aDone = vars.daysAlone + "/" + vars.daysA;
-      d.remaining = "1 - " + d.aDone;
+      d.aDone = fracStr(vars.daysAlone, vars.daysA);
+      d.aDoneStep = stepStr(vars.daysAlone, vars.daysA);
+      d.remaining = fracStr(vars.daysA - vars.daysAlone, vars.daysA);
     }
+    // 3人。combined に式の文字列を入れていたため
+    // 「1/9 + 1/12 + 1/18 = 1/9 + 1/12 + 1/18」という同語反復になっていた。
+    // 合計は通分した1つの分数で書く。
     if (template.id === "shigoto_3people_01") {
-      d.combined = "1/" + vars.daysA + " + 1/" + vars.daysB + " + 1/" + vars.daysC;
+      var p3 = vars.daysB * vars.daysC + vars.daysA * vars.daysC + vars.daysA * vars.daysB;
+      d.combined = fracStr(p3, vars.daysA * vars.daysB * vars.daysC);
     }
 
     // 濃度算
@@ -557,8 +618,15 @@ var QuestionGenerator = (function() {
       for (var pi = 0; pi < vars.r; pi++) calc.push(vars.n - pi);
       d.calculation = calc.join(" × ");
     }
+    // C(n, r) を「実際の計算」に展開する。
+    // ここが "C(n, r)" のままだと解説が「C(10, 5) = C(10, 5) = 252」となり、
+    // 組み合わせの計算方法が1文字も示されない。
     if (template.id === "kumiawase_basic_01") {
-      d.calculation = "C(" + vars.n + ", " + vars.r + ")";
+      var kn = vars.n, kr = vars.r, topTerms = [];
+      for (var ki = 0; ki < kr; ki++) topTerms.push(kn - ki);
+      var kfact = 1;
+      for (var kj = 2; kj <= kr; kj++) kfact *= kj;
+      d.calculation = topTerms.join(" × ") + (kfact > 1 ? " / " + kfact : "");
     }
     // junretsu_cond_01 の派生変数はテンプレート側の resolve が作る。
     // 隣り合う人数 k を可変にしたので、2人固定を前提にした (n-1)! では合わない。
@@ -627,10 +695,16 @@ var QuestionGenerator = (function() {
       d.timeDiff = vars.late + vars.early;
     }
 
-    // 仕事算: 途中合流
+    // 仕事算: 途中合流。すべて分数で書く（小数に落とさない）。
+    //   1/B = 残り÷共同日数 - 1/A
+    //       = (A-alone)/(A×tog) - 1/A
+    //       = (A - alone - tog) / (A×tog)
     if (template.id === "shigoto_join_01") {
-      d.aDone = vars.daysAlone + "/" + vars.daysA;
-      d.remaining = Math.round((1 - vars.daysAlone / vars.daysA) * 100) / 100;
+      var jA = vars.daysA, jAl = vars.daysAlone, jTg = vars.daysTogether;
+      d.aDone     = fracStr(jAl, jA);              // ② Aが進めた量
+      d.remaining = fracStr(jA - jAl, jA);         // ③ 残り
+      d.remPerDay = fracStr(jA - jAl, jA * jTg);   // ⑤ 残り ÷ 共同日数
+      d.bRate     = fracStr(jA - jAl - jTg, jA * jTg); // ⑤ 1/B
     }
 
     // 濃度算: 水追加
@@ -697,6 +771,18 @@ var QuestionGenerator = (function() {
 
     // kakuritsu_arrange_01 の派生変数もテンプレート側の resolve が作る
     // （隣り合う個数 k を可変にしたため）。
+
+    // 派生変数がすべて出そろってから組み立てる（分岐の順序に依存させない）
+    if (PROB_PAIRS[template.id]) {
+      var pr = PROB_PAIRS[template.id];
+      var pick = function (k) {
+        if (typeof k === "number") return k;
+        return d[k] !== undefined ? d[k] : vars[k];
+      };
+      var pn = pick(pr[0]), pd = pick(pr[1]);
+      if (typeof pn === "number" && typeof pd === "number") d.probStep = stepStr(pn, pd);
+    }
+
 
     return d;
   }
