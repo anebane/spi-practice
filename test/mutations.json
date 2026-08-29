@@ -720,11 +720,11 @@
     "expect": "wiring"
   },
   {
-    "name": "CIから破壊テストを外す",
-    "why": "SPECS に登録しても破壊テストが動かない。登録だけして走らない状態になる（--check-ledger の行と区別するため改行まで含める）",
+    "name": "CIから破壊テストの分割実行を外す",
+    "why": "変異を1件も回さなくなる。--check-ledger / --check-mutations / --coverage-check は変異を当てないので、それらが残っていても破壊テストは動いていない",
     "file": ".github/workflows/test.yml",
-    "find": "        run: node test/mutation-runner.js\n",
-    "replace": "        run: echo skipped\n",
+    "find": "        run: node test/mutation-runner.js --shard ${{ matrix.shard }}/4 --coverage-out cov-${{ matrix.shard }}.log",
+    "replace": "        run: echo skipped",
     "expect": "wiring"
   },
   {
@@ -1766,5 +1766,37 @@
     "find": "      conversion: \"signup\",         // 登録で成果。面談は不要",
     "replace": "      conversion: \"とりあえず\",",
     "expect": "affiliate"
+  },
+  {
+    "name": "分割しているのに集約を外す",
+    "why": "未カバーの判定が誰にも行われないまま全部緑になる。各シャードは自分のぶんしか知らない",
+    "file": ".github/workflows/test.yml",
+    "find": "        run: node test/mutation-runner.js --coverage-check cov --expect-shards 4",
+    "replace": "        run: echo skipped",
+    "expect": "wiring"
+  },
+  {
+    "name": "集約からシャード数の突き合わせを外す",
+    "why": "シャードが静かに落ちて発火記録が欠けても「未カバー0件」に見える",
+    "file": ".github/workflows/test.yml",
+    "find": " --coverage-check cov --expect-shards 4",
+    "replace": " --coverage-check cov",
+    "expect": "wiring"
+  },
+  {
+    "name": "集約が期待するシャード数をずらす",
+    "why": "実際に走る本数と食い違うと、記録が欠けていても気づけない",
+    "file": ".github/workflows/test.yml",
+    "find": "--expect-shards 4",
+    "replace": "--expect-shards 3",
+    "expect": "wiring"
+  },
+  {
+    "name": "変異定義の全件検査をCIから外す",
+    "why": "findの一意性は全体でしか判定できない。分割すると各シャードは自分のぶんしか見ない",
+    "file": ".github/workflows/test.yml",
+    "find": "        run: node test/mutation-runner.js --check-mutations",
+    "replace": "        run: echo skipped",
+    "expect": "wiring"
   }
 ]
