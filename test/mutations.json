@@ -1814,5 +1814,37 @@
     "find": "{{water}}gの水に",
     "replace": "{{water}}グラムの水に",
     "expect": "generator"
+  },
+  {
+    "name": "四則逆算の答えをオフバイワンにする",
+    "why": "答えの誤りは選択肢と解説にも同じ値が伝播して内部整合するため、文面の式からの独立再計算でしか捕まらない（濃度算で実測した穴の四則逆算版）",
+    "file": "src/questions/11-shisoku.js",
+    "find": "answerFormula: function(v) { return v.a * v.b; },",
+    "replace": "answerFormula: function(v) { return v.a * v.b + 1; },",
+    "expect": "generator"
+  },
+  {
+    "name": "四則逆算の□を別の記号に変える",
+    "why": "記号や書式を変えると、文面から解き直す検査の型が外れる。黙って0件になると検査が消えたのと同じなので「解き直せない」として表に出す番人",
+    "file": "src/questions/11-shisoku.js",
+    "find": "templateText: \"□ ÷ {{a}} = {{b}}\",",
+    "replace": "templateText: \"◻ ÷ {{a}} = {{b}}\",",
+    "expect": "generator"
+  },
+  {
+    "name": "表の合計の答えをオフバイワンにする",
+    "why": "表の集計の誤りは解説にも同じ値が出て内部整合する。表そのもの（利用者が見るデータ）からの再計算でしか捕まらない",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "の年間売上の合計はいくらか。\",\n        answer: total,",
+    "replace": "の年間売上の合計はいくらか。\",\n        answer: total + 1,",
+    "expect": "generator"
+  },
+  {
+    "name": "表の設問の文言を変えて独立再計算から見えなくする",
+    "why": "設問の言い回しを変えると表の再計算の型が外れる。「解き直せない」として表に出す番人",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "の年間売上の合計はいくらか。",
+    "replace": "の年間売上の総額はいくらか。",
+    "expect": "generator"
   }
 ]

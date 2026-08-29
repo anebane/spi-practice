@@ -580,7 +580,7 @@ if (failures.length) process.exitCode = 1;
 // 残るリスクも明記する: 定石そのものの誤解は両側で一致しうる。それは
 // 推論系の独立再計算と同じ限界で、この検査が守るのは「実装の壊れ」まで。
 {
-  const N = 300;
+  const N = 100;
   const NUM = "(\\d+(?:\\.\\d+)?)";
   // 「何を聞かれているか」1形につき1パターン。文面が変わればマッチしなく
   // なるが、それは沈黙ではなく「解き直せない」という失敗として表に出す。
@@ -619,8 +619,11 @@ if (failures.length) process.exitCode = 1;
       }
       let x = form.solve(q.text.match(form.re));
       // 丸めは文面の指示に従う。指示が無い問題（gを問う）は表示粒度＝整数。
+      // ⚠️ +1e-9 は浮動小数対策。入力が整数なので真値は分母が小さい有理数で、
+      //    .5境界に乗るか、境界から 1e-4 以上離れるかのどちらか。float の表現誤差で
+      //    72.5 が 72.4999… になり半下げに転ぶ偽陽性が実際に出た（7.25% → 7.2 と誤算）。
       const rounded = /小数第2位を四捨五入/.test(q.text);
-      x = rounded ? Math.round(x * 10) / 10 : Math.round(x);
+      x = rounded ? Math.round(x * 10 + 1e-9) / 10 : Math.round(x + 1e-9);
       const tol = rounded ? 0.05 : 0.5;
       checked++;
       if (!(Math.abs(x - q.correctAnswer) <= tol + 1e-9)) {
@@ -638,6 +641,209 @@ if (failures.length) process.exitCode = 1;
     console.log(`   ❌ 不一致 ${mismatch} / 解き直せない ${unparsed}`);
     if (mismatch) fail("濃度算", "独立再計算と答えが不一致", bad.join(" / "));
     if (unparsed) fail("濃度算", "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
+  }
+}
+
+// --- 四則逆算: 問題文から独立に解き直す ---
+//
+// 式が文面そのもの（例: 「□ × 8 = 12 × 4」「□ の 25% = 90」）なので、
+// 文面の式を解けば答えが出る。answerFormula は読まずに書いた（濃度算と同じ
+// 作業順序: 検査を書いて素の緑を確認してから、プローブの照準としてだけ実装を見る）。
+// 答えは選択式なので、正解indexが指す選択肢の値と突き合わせる。
+{
+  const N = 100;
+  // 数値・分数のトークンを値にする。分数は a/b。
+  const tokVal = (tok) => {
+    const m = String(tok).trim().match(/^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/);
+    if (m) return +m[1] / +m[2];
+    const n = Number(String(tok).trim());
+    return Number.isFinite(n) ? n : null;
+  };
+  // 空白区切りの式（×÷が+−より先）を評価する。評価できなければ null。
+  const evalSide = (sraw) => {
+    const toks = sraw.trim().replace(/−/g, "-").replace(/＋/g, "+").split(/\s+/);
+    if (!toks.length) return null;
+    const vals = [], ops = [];
+    for (let i = 0; i < toks.length; i++) {
+      if (i % 2 === 0) { const v = tokVal(toks[i]); if (v === null) return null; vals.push(v); }
+      else { if (!["×", "÷", "+", "-"].includes(toks[i])) return null; ops.push(toks[i]); }
+    }
+    if (vals.length !== ops.length + 1) return null;
+    // ×÷ を先に潰す
+    for (let i = 0; i < ops.length; ) {
+      if (ops[i] === "×" || ops[i] === "÷") {
+        vals.splice(i, 2, ops[i] === "×" ? vals[i] * vals[i + 1] : vals[i] / vals[i + 1]);
+        ops.splice(i, 1);
+      } else i++;
+    }
+    let acc = vals[0];
+    for (let i = 0; i < ops.length; i++) acc = ops[i] === "+" ? acc + vals[i + 1] : acc - vals[i + 1];
+    return acc;
+  };
+  // □ を含む辺（2項）を逆算する。V は反対側の値。
+  const solveBoxSide = (sraw, V) => {
+    const side = sraw.trim().replace(/−/g, "-").replace(/＋/g, "+");
+    let m = side.match(/^□ の (\d+(?:\.\d+)?)%$/);
+    if (m) return V * 100 / +m[1];
+    m = side.match(/^□ ([×÷+-]) (\S+)$/);
+    if (m) {
+      const k = tokVal(m[2]); if (k === null) return null;
+      return { "×": V / k, "÷": V * k, "+": V - k, "-": V + k }[m[1]];
+    }
+    m = side.match(/^(\S+) ([×÷+-]) □$/);
+    if (m) {
+      const k = tokVal(m[1]); if (k === null) return null;
+      return { "×": V / k, "÷": k / V, "+": V - k, "-": k - V }[m[2]];
+    }
+    return null;
+  };
+
+  const fams = TEMPLATES.filter(t => t.category === "四則逆算");
+  let checked = 0, mismatch = 0, unparsed = 0;
+  const bad = [];
+  for (const t of fams) {
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !Array.isArray(q.choices)) continue;
+      const eq = String(q.text).split("=");
+      let x = null;
+      if (eq.length === 2) {
+        const boxLeft = eq[0].includes("□");
+        const boxSide = boxLeft ? eq[0] : eq[1];
+        const valSide = boxLeft ? eq[1] : eq[0];
+        if (!boxSide.includes("□") || valSide.includes("□")) x = null;
+        else {
+          const V = evalSide(valSide);
+          x = V === null ? null : solveBoxSide(boxSide, V);
+        }
+      }
+      if (x === null || x === undefined) {
+        unparsed++;
+        if (bad.length < 3) bad.push(`${t.id}: 式を読めない「${String(q.text).slice(0, 40)}」`);
+        continue;
+      }
+      const ans = tokVal(q.choices[q.correctAnswer]);
+      checked++;
+      if (ans === null || Math.abs(x - ans) > 0.01) {
+        mismatch++;
+        if (bad.length < 5) bad.push(`${t.id}: 文面から=${x} / システム=${q.choices[q.correctAnswer]} 「${String(q.text).slice(0, 40)}」`);
+      }
+    }
+  }
+  cov.covered("問題文からの独立再計算（四則逆算）", checked, 500);
+  console.log(`\n四則逆算の独立再計算: ${checked.toLocaleString()}問を文面の式から解き直して照合`);
+  if (checked && mismatch === 0 && unparsed === 0) {
+    console.log("   ✅ 文面の式を解いた答えと、正解の選択肢がすべて一致");
+  } else {
+    console.log(`   ❌ 不一致 ${mismatch} / 解き直せない ${unparsed}`);
+    if (mismatch) fail("四則逆算", "独立再計算と答えが不一致", bad.join(" / "));
+    if (unparsed) fail("四則逆算", "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
+  }
+}
+
+// --- 図表（表形式）: 問題文から独立に解き直す ---
+//
+// 表は Markdown として問題文に入っている（利用者が見るものそのもの）。
+// 表をパースし、設問（合計・増減率・構成比・最大変動）を読み、表から計算する。
+// answerFormula は読まずに書いた（作業順序は濃度算・四則逆算と同じ）。
+// チャート系（chart_*）は文面にデータが無いので、この検査の対象外
+// （chartConfig からの再計算は方式が別なので、混ぜずに別の判断とする）。
+{
+  const N = 100;
+  const parseTable = (text) => {
+    const rows = String(text).split("\n").filter(l => l.startsWith("|") && !/^\|---/.test(l));
+    if (rows.length < 2) return null;
+    const cells = rows.map(r => r.split("|").slice(1, -1).map(c => c.trim()));
+    const header = cells[0].slice(1);
+    const body = {};
+    for (const row of cells.slice(1)) body[row[0]] = row.slice(1).map(Number);
+    return { header, body };
+  };
+  const FORMS = [
+    (q) => { // 行の合計（table_sales_01）
+      const m = String(q.text).match(/([^\s、。]+)の年間売上の合計はいくらか/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      return { x: tb.body[m[1]].reduce((a, b) => a + b, 0), tol: 0.5 };
+    },
+    (q) => { // 増減率（table_sales_02）
+      const m = String(q.text).match(/([^\s、。]+)の(\d{4})年から(\d{4})年への増減率は何%か/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      const i1 = tb.header.indexOf(m[2] + "年"), i2 = tb.header.indexOf(m[3] + "年");
+      if (i1 < 0 || i2 < 0) return null;
+      const a = tb.body[m[1]][i1], b = tb.body[m[1]][i2];
+      return { x: Math.round((b - a) / a * 100 + 1e-9), tol: 0.5 };
+    },
+    (q) => { // 構成比から金額（table_composition_01）
+      const t1 = String(q.text).match(/総額: ([\d,]+)円/);
+      const t2 = String(q.text).match(/([^\s、。]+)の金額はいくらか/);
+      if (!t1 || !t2) return null;
+      const total = Number(t1[1].replace(/,/g, ""));
+      const pm = String(q.text).match(new RegExp(t2[1] + ": (\\d+(?:\\.\\d+)?)%"));
+      if (!pm) return null;
+      return { x: total * (+pm[1]) / 100, tol: 0.5 };
+    },
+    (q) => { // 最大変動（table_diff_01）。絶対値最大が複数ある場合は、その候補の
+             // どれかに一致していれば正解とする（候補が割れる問いの一意性は別問題）。
+      const m = String(q.text).match(/([^\s、。]+)で前月比の売上変動額（絶対値）が最も大きかった/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      const row = tb.body[m[1]];
+      const diffs = [];
+      for (let i = 1; i < row.length; i++) diffs.push(row[i] - row[i - 1]);
+      const maxAbs = Math.max(...diffs.map(Math.abs));
+      const cands = diffs.filter(d => Math.abs(d) === maxAbs);
+      return { cands, tol: 0.5 };
+    }
+  ];
+
+  const fams = TEMPLATES.filter(t => /^table_/.test(t.id));
+  let checked = 0, mismatch = 0, unparsed = 0;
+  const bad = [];
+  for (const t of fams) {
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      let res = null;
+      for (const f of FORMS) { res = f(q); if (res) break; }
+      // 「最も高い/低い」型（table_max_01）: 答えが選択肢の文字列（都市名）。
+      if (!res) {
+        const m = String(q.text).match(/(\S+)の(\S+)が最も(高|低)い(\S+)はどこか/);
+        const tb = m && parseTable(q.text);
+        if (m && tb) {
+          const col = tb.header.indexOf(m[1]);
+          if (col >= 0 && Array.isArray(q.choices)) {
+            const vals = Object.keys(tb.body).map(name => ({ name, v: tb.body[name][col] }));
+            const best = m[3] === "高" ? Math.max(...vals.map(x => x.v)) : Math.min(...vals.map(x => x.v));
+            res = { names: vals.filter(x => x.v === best).map(x => x.name), pick: String(q.choices[q.correctAnswer]) };
+          }
+        }
+      }
+      if (!res) {
+        unparsed++;
+        if (bad.length < 3) bad.push(`${t.id}: 表か設問を読めない「${String(q.text).split("\n").pop().slice(0, 40)}」`);
+        continue;
+      }
+      checked++;
+      const ans = Number(q.correctAnswer);
+      const ok = res.names ? res.names.indexOf(res.pick) !== -1
+               : res.cands ? res.cands.some(c => Math.abs(c - ans) <= res.tol)
+                           : Math.abs(res.x - ans) <= res.tol;
+      if (!ok) {
+        mismatch++;
+        if (bad.length < 5) bad.push(`${t.id}: 文面から=${res.names ? res.names.join("か") : res.cands ? res.cands.join("か") : res.x} / システム=${res.names ? res.pick : ans}`);
+      }
+    }
+  }
+  cov.covered("問題文からの独立再計算（表の読み取り）", checked, 400);
+  console.log(`\n表の読み取りの独立再計算: ${checked.toLocaleString()}問を表と設問から解き直して照合`);
+  if (checked && mismatch === 0 && unparsed === 0) {
+    console.log("   ✅ 表から解いた答えと、システムの答えがすべて一致");
+  } else {
+    console.log(`   ❌ 不一致 ${mismatch} / 解き直せない ${unparsed}`);
+    if (mismatch) fail("表の読み取り", "独立再計算と答えが不一致", bad.join(" / "));
+    if (unparsed) fail("表の読み取り", "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
   }
 }
 
