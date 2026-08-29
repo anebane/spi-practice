@@ -1726,5 +1726,37 @@
     "find": "      unknown: []",
     "replace": "      unknown: all",
     "expect": "affiliate"
+  },
+  {
+    "name": "面談型の注記から面談の記述を消す",
+    "why": "登録だけで終わったつもりになる。利用者の期待と違い、成果にもならない",
+    "file": "affiliate.js",
+    "find": "      note: \"対象は2027年卒・2028年卒の学生の方です。登録後にキャリアアドバイザーとの面談があります。\"",
+    "replace": "      note: \"対象は2027年卒・2028年卒の学生の方です。\"",
+    "expect": "affiliate"
+  },
+  {
+    "name": "面談型を登録型として宣言する",
+    "why": "成果条件の型がずれると、注記との食い違いを検査できなくなる",
+    "file": "affiliate.js",
+    "find": "      conversion: \"interview\",      // 面談を実施して初めて成果になる",
+    "replace": "      conversion: \"signup\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "投入した素材を出し分けに足し忘れる",
+    "why": "素材はあるのにどの面にも永久に出ない。画面上は何も起きないので気づけない",
+    "file": "affiliate.js",
+    "find": "    var all = [\"kimisuka_spi\", \"neo\", \"uzuz_it\", \"uzuz_second\"];",
+    "replace": "    var all = [\"kimisuka_spi\", \"uzuz_it\", \"uzuz_second\"];",
+    "expect": "affiliate"
+  },
+  {
+    "name": "予備の素材を出してしまう",
+    "why": "使わないと決めた素材が枠に出る。測定の対象がずれる",
+    "file": "affiliate.js",
+    "find": "    var all = [\"kimisuka_spi\", \"neo\", \"uzuz_it\", \"uzuz_second\"];",
+    "replace": "    var all = [\"kimisuka_spi\", \"neo\", \"uzuz_it\", \"uzuz_second\", \"kimisuka_general\"];",
+    "expect": "affiliate"
   }
 ]

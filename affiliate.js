@@ -23,6 +23,8 @@ var Affiliate = (function () {
     kimisuka_spi: {
       program: "kimisuka",
       audience: "student",          // 成果条件が「学生からのお申し込み」限定
+      conversion: "signup",         // 登録で成果。面談は不要
+      active: true,
       anchor: "キミスカのSPI対策",
       href: "https://px.a8.net/svt/ejp?a8mat=4BAEXK+6FLN3M+24ZO+HZ2R6",
       pixel: "https://www14.a8.net/0.gif?a8mat=4BAEXK+6FLN3M+24ZO+HZ2R6",
@@ -32,16 +34,36 @@ var Affiliate = (function () {
     kimisuka_general: {
       program: "kimisuka",
       audience: "student",
+      conversion: "signup",
+      active: false,                // 予備の素材。いまはどの帯にも出していない
       anchor: "就活",
       href: "https://px.a8.net/svt/ejp?a8mat=4BAEXK+6FLN3M+24ZO+HV7V6",
       pixel: "https://www12.a8.net/0.gif?a8mat=4BAEXK+6FLN3M+24ZO+HV7V6",
       lead: "企業からスカウトが届く就活サービスです。",
       note: "対象は2027年卒・2028年卒の学生の方です。既卒・転職活動中の方はお申し込みいただけません。"
     },
+    // A8。成果条件が「面談実施」＝登録だけでは成果にならない面談型。
+    // 素材はアンカーの文言で承認率が5倍以上違った（管理画面の表示）:
+    //   素材001「最短1日で内定獲得可能！…」承認率5%以上  ← これを使う
+    //   素材002「就職エージェントneo」      承認率0.92%
+    // referrerpolicy はA8の配布物には無いので付けない。
+    neo: {
+      program: "neo",
+      audience: "student",
+      conversion: "interview",      // 面談を実施して初めて成果になる
+      active: true,
+      anchor: "最短1日で内定獲得可能！就職エージェントneo",
+      href: "https://px.a8.net/svt/ejp?a8mat=4BAEXK+71MOHE+3Y6M+BWVTE",
+      pixel: "https://www12.a8.net/0.gif?a8mat=4BAEXK+71MOHE+3Y6M+BWVTE",
+      lead: "キャリアアドバイザーとの面談を通じて、選考対策や企業の紹介を受けられます。相談は無料です。",
+      note: "対象は2027年卒・2028年卒の学生の方です。登録後にキャリアアドバイザーとの面談があります。"
+    },
     // アクセストレード。配布物に referrerpolicy が含まれる（A8には無い）。
     uzuz_it: {
       program: "uzuz_it",
       audience: "career",
+      conversion: "signup",
+      active: true,
       anchor: "ITエンジニアの就職ならIT特化型就職支援サービス【ウズウズIT】",
       href: "https://h.accesstrade.net/sp/cc?rk=0100omb800oxvd",
       pixel: "https://h.accesstrade.net/sp/rr?rk=0100omb800oxvd",
@@ -52,6 +74,8 @@ var Affiliate = (function () {
     uzuz_second: {
       program: "uzuz",
       audience: "career",
+      conversion: "signup",
+      active: true,
       anchor: "第二新卒・既卒・フリーター・ニートの就職サポート【UZUZ】",
       href: "https://h.accesstrade.net/sp/cc?rk=0100pw7e00oxvd",
       pixel: "https://h.accesstrade.net/sp/rr?rk=0100pw7e00oxvd",
@@ -189,7 +213,10 @@ var Affiliate = (function () {
     // 承認済みの3件はいずれも登録型なので現状は帯で差を付けていない。
     // 面談型（新卒就職エージェントneo / UZUZ 28新卒）はリンクコード待ち。
     // 既卒枠はウズウズITを先に置く（登録型で単価が最も高い）。
-    var all = ["kimisuka_spi", "uzuz_it", "uzuz_second"];
+    // 枠の中の並び順は、登録型を先・面談型を後ろにする。
+    // 面談型は成果条件が重いぶん成果率が低いので、軽いほうを先に見せる。
+    // ⚠️ 置き換えではなく並べる。どちらの期待値が上かは測って決める。
+    var all = ["kimisuka_spi", "neo", "uzuz_it", "uzuz_second"];
 
     // ⚠️ 「点数が無い面」と「点数を取ろうとして失敗した」を区別する。
     //    記事ページには試験の点数が存在しない（undefined）。これを

@@ -33,7 +33,7 @@ const AD_RE = /広告/;
 
   for (const id of ids) {
     const p = P[id];
-    for (const k of ["program", "anchor", "href", "pixel", "lead", "audience", "note"]) {
+    for (const k of ["program", "anchor", "href", "pixel", "lead", "audience", "note", "conversion"]) {
       if (!p[k]) fail("素材の欠落", `${id}: ${k} がない`);
     }
     // 属性を持たない素材は、どの枠に出してよいか決められない。
@@ -491,6 +491,70 @@ function checkNoteAfterEveryLink(host, where, programs) {
     }
   }
   cov.covered("点数の有無による出し分け", 3, 3);
+}
+
+// --- 成果条件の型と、注記の中身が食い違っていないか ---
+//
+// ⚠️ 成果条件には「登録で成果」と「面談を実施して成果」がある。
+//    面談型を登録型と同じ書き方で出すと、利用者は登録だけで終わったつもりになり、
+//    こちらは成果にならない。利用者にとっても不利益（期待と違う）。
+//    neo（¥22,500・面談実施）は面談型。
+{
+  const h = loadAffiliate();
+  const P = h.Affiliate._programs;
+  const KNOWN = ["signup", "interview"];
+  let checked = 0;
+  for (const id of Object.keys(P)) {
+    const p = P[id];
+    checked++;
+    if (KNOWN.indexOf(p.conversion) === -1) {
+      fail("成果条件の型が不正", `${id}: conversion=${p.conversion}（${KNOWN.join(" / ")} のいずれか）`);
+      continue;
+    }
+    // ⚠️ 片方向だと宣言のほうを偽れる。interview → 注記だけを見ていたので、
+    //    conversion を signup に書き換えると、注記に面談があっても素通りした。
+    //    宣言と注記のどちらを動かしても食い違いが見えるように、両方向で見る。
+    const mentions = /面談|相談/.test(p.note || "");
+    if (p.conversion === "interview" && !mentions) {
+      fail("面談型なのに注記で面談に触れていない",
+        `${id}: 「${p.note}」… 登録だけで終わったつもりになる。成果にもならない`);
+    }
+    if (p.conversion === "signup" && mentions) {
+      fail("登録型と宣言しているのに注記が面談に触れている",
+        `${id}: 「${p.note}」… 成果条件の宣言と、利用者に伝えている内容が食い違う`);
+    }
+  }
+  // 0件だと「食い違いが無い」ではなく「1件も見ていない」。
+  cov.covered("成果条件を調べた素材", checked, 4);
+}
+
+// --- 投入した素材が、実際にどこかの枠に出るか ---
+//
+// ⚠️ PROGRAMS に足しただけで出し分けに足し忘れると、素材は存在するのに
+//    どの面にも永久に出ない。画面上は何も起きないので誰も気づかない。
+//    出さない素材は active: false と明示させる（予備素材と足し忘れを区別する）。
+{
+  const h = loadAffiliate();
+  const P = h.Affiliate._programs;
+  const shown = new Set();
+  for (const pct of [80, 50, 20, undefined]) {
+    for (const b of h.Affiliate.selectByAudience(pct).blocks) {
+      for (const id of b.programs) shown.add(id);
+    }
+  }
+  let checked = 0;
+  for (const id of Object.keys(P)) {
+    checked++;
+    const active = P[id].active === true;
+    if (active && !shown.has(id)) {
+      fail("投入したのに どの枠にも出ない",
+        `${id}: active なのに出し分けの一覧に無い。素材はあるが永久に表示0`);
+    }
+    if (!active && shown.has(id)) {
+      fail("出さないはずの素材が出ている", `${id}: active でないのに枠に出ている`);
+    }
+  }
+  cov.covered("出し分けを調べた素材", checked, 4);
 }
 
 // --- 出力 ---
