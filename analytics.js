@@ -45,10 +45,31 @@
       var onScroll = function () {
         var rect = body.getBoundingClientRect();
         var total = body.offsetHeight - window.innerHeight;
-        if (total <= 0) return;
+
+        // ⚠️ ここは以前 total <= 0 で return していた。
+        //    本文が画面に収まる短い記事ではスクロールが起きないので、
+        //    25% すら送られない。読了率を測っているつもりで、
+        //    「読まれていない」と「そもそも測れていない」が
+        //    区別できない状態になっていた。
+        //
+        //    全文が最初から見えている＝読める状態なので、本文が画面に
+        //    現れた時点で読了として1回だけ送る。
+        //    scrolled を付けて、スクロールして到達した読了と混ぜない。
+        //    分析するときは scrolled で分けること。
+        if (total <= 0) {
+          if (!fired[100] && rect.top < window.innerHeight && rect.bottom > 0) {
+            fired[100] = true;
+            track("article_scroll", { page: slug, percent: 100, scrolled: false });
+          }
+          return;
+        }
+
         var pct = Math.min(100, Math.max(0, Math.round((-rect.top) / total * 100)));
         marks.forEach(function (m) {
-          if (pct >= m && !fired[m]) { fired[m] = true; track("article_scroll", { page: slug, percent: m }); }
+          if (pct >= m && !fired[m]) {
+            fired[m] = true;
+            track("article_scroll", { page: slug, percent: m, scrolled: true });
+          }
         });
       };
       window.addEventListener("scroll", onScroll, { passive: true });

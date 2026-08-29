@@ -65,11 +65,13 @@ const REGISTER = path.join(__dirname, "mutations-uncovered.json"); // 未カバ�
 
 const SPECS = {
   affiliate: "test/affiliate.spec.js",
+  analytics: "test/analytics.spec.js",
   app: "test/app.spec.js",
   deeplink: "test/deeplink.spec.js",
   generator: "test/generator.spec.js",
   html: "test/html.spec.js",
-  pwa: "test/pwa.spec.js"
+  pwa: "test/pwa.spec.js",
+  wiring: "test/wiring.spec.js"
 };
 
 const only = process.argv[2] || null;   // 変異名の一部で絞り込める（開発用）

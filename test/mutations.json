@@ -622,5 +622,53 @@
     "find": "の2分野で構成されます",
     "replace": "の言語と非言語で構成されます",
     "expect": "html"
+  },
+  {
+    "name": "短い記事で読了を送らない",
+    "why": "本文が画面に収まるとスクロールが起きず、25%すら出ない。「読まれていない」と「測れていない」が区別できなくなる",
+    "file": "analytics.js",
+    "find": "          if (!fired[100] && rect.top < window.innerHeight && rect.bottom > 0) {",
+    "replace": "          if (false) {",
+    "expect": "analytics"
+  },
+  {
+    "name": "読了にスクロールの有無を付けない",
+    "why": "スクロールして到達した読了と、最初から全部見えていた読了が混ざる",
+    "file": "analytics.js",
+    "find": "            track(\"article_scroll\", { page: slug, percent: 100, scrolled: false });",
+    "replace": "            track(\"article_scroll\", { page: slug, percent: 100 });",
+    "expect": "analytics"
+  },
+  {
+    "name": "長い記事に短い記事用の経路を通す",
+    "why": "スクロールして到達した読了と、最初から全部見えていた読了が混ざる",
+    "file": "analytics.js",
+    "find": "        if (total <= 0) {",
+    "replace": "        if (true) {",
+    "expect": "analytics"
+  },
+  {
+    "name": "CIから検査を1本外す",
+    "why": "affiliate.spec.js は作られてから一度もCIで実行されていなかった。書いたのに走らない状態を作れてしまう",
+    "file": ".github/workflows/test.yml",
+    "find": "        run: node test/affiliate.spec.js",
+    "replace": "        run: echo skip",
+    "expect": "wiring"
+  },
+  {
+    "name": "破壊テストの対象から検査を1本外す",
+    "why": "SPECS に無い spec は、壊しても落ちるか確かめられず、未カバー検出の対象にもならない",
+    "file": "test/mutation-runner.js",
+    "find": "  analytics: \"test/analytics.spec.js\",",
+    "replace": "  // (analytics を外す変異)",
+    "expect": "wiring"
+  },
+  {
+    "name": "読了の節目を条件なしで送る",
+    "why": "スクロールしていないのに25/50/75/100がすべて送られ、読了率が意味を失う",
+    "file": "analytics.js",
+    "find": "          if (pct >= m && !fired[m]) {",
+    "replace": "          if (!fired[m]) {",
+    "expect": "analytics"
   }
 ]
