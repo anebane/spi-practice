@@ -55,7 +55,16 @@ function createHarness(opts) {
   function makeEl(id) {
     const el = {
       id: id || "",
-      textContent: "", innerHTML: "", value: "", checked: false,
+      textContent: "", _innerHTML: "", value: "", checked: false,
+      // 実ブラウザでは innerHTML で注入した要素が getElementById で見える。
+      // 同じ振る舞いにする: 注入マークアップの id を「実在するID」として登録する。
+      // （空文字での消去は登録を戻さない。完全なDOM木を持たない妥協で、
+      //   その分は「消したはずの要素が見える」方向＝検査が緩む方向ではない）
+      get innerHTML() { return this._innerHTML; },
+      set innerHTML(v) {
+        this._innerHTML = String(v);
+        for (const m of String(v).matchAll(/\bid="([^"]+)"/g)) dynamicIds.add(m[1]);
+      },
       disabled: false, className: "", width: 0, height: 0,
       style: {},
       dataset: {},
@@ -84,7 +93,19 @@ function createHarness(opts) {
   }
 
   const els = new Map();
+  // ⚠️ かつては存在しないIDでも要素を自動生成していた。そのため実画面から
+  //    要素を消しても spec が緑のままだった（幽霊ボタンをクリックして合格）。
+  //    実在の出所は index.html の静的な id と、innerHTML で注入された id の2つ。
+  //    それ以外は「画面に無いものを触った」として名指しで落とす。
+  const staticIds = new Set(
+    [...fs.readFileSync(path.join(ROOT, "index.html"), "utf8").matchAll(/\bid="([^"]+)"/g)].map(m => m[1])
+  );
+  const dynamicIds = new Set();
   const byId = (id) => {
+    if (!staticIds.has(id) && !dynamicIds.has(id)) {
+      throw new Error(`index.html に存在しないID: #${id}。画面から要素が消えたか、IDが変わった`
+        + "（app.js が innerHTML で作る動的要素なら、注入された後にだけ見える）");
+    }
     if (!els.has(id)) els.set(id, makeEl(id));
     return els.get(id);
   };

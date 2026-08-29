@@ -950,5 +950,13 @@
     "find": "    timeLimitSec: 60\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
     "replace": "    timeLimitSec: 0\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
     "expect": "generator"
+  },
+  {
+    "name": "画面から短縮版ボタンの要素を消す",
+    "why": "かつてハーネスが存在しないIDでも要素を自動生成しており、実画面から要素を消しても幽霊ボタンをクリックして spec が緑のままだった（実測で確認した穴）。実DOMのIDに繋いだことを、この変異が落ちることで保証する",
+    "file": "index.html",
+    "find": "id=\"btn-retry-short\"",
+    "replace": "id=\"btn-retry-short-removed\"",
+    "expect": "app"
   }
 ]
