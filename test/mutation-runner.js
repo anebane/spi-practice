@@ -332,6 +332,12 @@ if (!lock.ok) {
 }
 lockHeld = true;
 
+// 計装コピー(.cov-run-*)は preflight より前に消す。SIGKILL で死んだ実行は
+// 「コピー残留」と「ツリー汚染」を同時に残し、汚染が preflight を止める限り
+// コピーも永久に残り続けた（wiring.spec.js の誤検知として表面化。2026-08-29）。
+// ロック取得後なので、生きている別ランナーの作業中コピーを消すことはない。
+cleanupInstrumented();
+
 const pre = preflight();
 if (!pre.ok) {
   console.log("破壊テスト: 起動しませんでした");
@@ -339,9 +345,10 @@ if (!pre.ok) {
   process.exit(1);
 }
 
-// 前回のカバレッジ記録と計装コピーを消す（残っていると前回の発火が混ざる）
+// 前回のカバレッジ記録を消す（残っていると前回の発火が混ざる）。
+// こちらは preflight の後に残す。起動を拒否された場合でも、直前に完走した
+// 全件実行の発火記録は prune-uncovered.js の入力として意味を持ち続けるため。
 if (coverageOn) { try { fs.unlinkSync(COVLOG); } catch (e) {} }
-cleanupInstrumented();
 
 // 開始時点の中身を控える。git ではなく中身で照合する。
 // git の差分で確かめると、開始時に既に変更されていたファイルは

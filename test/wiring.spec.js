@@ -30,8 +30,12 @@ const failures = [];
 const fail = (rule, detail) => failures.push({ rule, detail });
 
 // --- 実体 ---
+// ドットで始まるファイルは除外する。変異ランナーは計装コピー
+// (.cov-run-*.spec.js) を test/ 直下に置き、SIGKILL で死ぬとそれが残る。
+// 残骸をここが「登録されていない検査」と名指しする誤検知が実際に起きた
+// (2026-08-29)。誤検知を出す検査は無視されるようになるので、機械的に塞ぐ。
 const specs = fs.readdirSync(__dirname)
-  .filter(f => f.endsWith(".spec.js"))
+  .filter(f => f.endsWith(".spec.js") && !f.startsWith("."))
   .map(f => "test/" + f)
   .sort();
 
