@@ -139,25 +139,107 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
       }
     }
 
-    // 分野の数を手で書いていないか。書くと分野を足したときにずれる
-    //（「10分野」と書きながら11分野を出題していた）。
-    //
-    // 見るのは画面の本文だけ。head の title / meta は対象外にしている。
-    // さらに、構造化データと同じ文が本文に出ている箇所も対象外にする。
-    // FAQ の回答は JSON-LD と本文が一致していることが要件で、本文だけ直すと
-    // 不整合になる。「片方だけ直せない対（つい）」は、この検査が扱う話ではない。
-    const jsonld = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-      .map(m => m[1]).join("\n").replace(/\s+/g, "");
-    const bodyText = (html.match(/<body[\s\S]*<\/body>/) || [""])[0]
-      .replace(/<script[\s\S]*?<\/script>/g, "")
-      .replace(/<[^>]+>/g, "");
-    for (const sentence of bodyText.split(/[。\n]/)) {
-      if (!/\d+\s*分野/.test(sentence)) continue;
-      const packed = sentence.replace(/\s+/g, "");
-      if (packed.length > 10 && jsonld.includes(packed)) continue;   // 構造化データと対
-      fail("index.html", "分野の数が本文に手書きされている",
-        `「${sentence.trim().slice(0, 40)}」… チェックボックスの数から算出してください（app.js の fillCategorySummary）`);
+  }
+}
+
+
+// --- 分野の数を手で書いていないか（全ページ・head も JSON-LD も含む）---
+//
+// ⚠️ ここは以前「画面の本文だけ」を見ていて、head の title / meta と
+//    構造化データを意図的に対象外にしていた。その除外が再発を許した。
+//    「10分野と書きながら11分野を出題」を本文だけ直したあと、分野が増えて
+//    13になり、meta と JSON-LD は嘘のまま残った。JSON-LD はリッチリザルトと
+//    して検索結果に出るので、本文より影響が大きい。
+//
+// 分野の数は増減する。書いた瞬間から嘘になりうるので、原則として書かない。
+// 画面のラベルは app.js の fillCategorySummary がチェックボックスから算出する。
+//
+// 例外は「当サイトの分野数を指していない一般論」だけ。回数まで固定して
+// 明示する。増えたときに必ず気づくようにするため。
+{
+  const ALLOWED = new Map([
+    // SPIの頻出分野の列挙。直前に10個並べており、当サイトの対応数ではない
+    ["articles/spi-kakomon-pdf.html", { "10分野": 1 }],
+    // SPIが言語・非言語の2分野で構成される、という一般論
+    ["language/index.html", { "2分野": 1 }]
+  ]);
+  let checked = 0, seen = 0;
+  for (const p of pages) {
+    const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+    checked++;
+    const allowed = ALLOWED.get(p) || {};
+    const count = {};
+    for (const m of html.matchAll(/\d+\s*分野/g)) {
+      const token = m[0].replace(/\s+/g, "");
+      count[token] = (count[token] || 0) + 1;
+      seen++;
+      if ((allowed[token] || 0) >= count[token]) continue;
+      const around = html.slice(Math.max(0, m.index - 45), m.index + 45).replace(/\s+/g, " ");
+      fail(p, "分野の数が手で書かれている",
+        `「${token}」… 分野は増減するので書かない（…${around}…）`);
     }
+    // 例外に挙げたのに実物から消えている場合も知らせる。
+    // 消えた例外を残すと、次に同じ記述が復活したとき素通りする。
+    for (const token of Object.keys(allowed)) {
+      if ((count[token] || 0) < allowed[token]) {
+        fail(p, "例外の指定が実物と合わない",
+          `「${token}」を ${allowed[token]}回 許可しているが実物は ${count[token] || 0}回。消えたなら例外も消す`);
+      }
+    }
+  }
+  // 0件だと「手書きが無い」ではなく「1ページも見ていない」。
+  cov.covered("分野数の手書きを調べたページ", checked, 10);
+  console.log(`分野数の手書き: ${checked}ページ / 「N分野」の出現 ${seen}件`);
+}
+
+
+// --- 解き方の一覧が、実在しない分野を宣伝していないか ---
+//
+// title と description は検索結果に出る。「10分野それぞれの解き方」と
+// 書いておいて実在が3本だと、来た人は期待したものを見つけられない。
+// 数の食い違いより重い。数を消しても「速度算の解き方も」と分野名で
+// 書けば同じことが起きるので、分野名そのものを突き合わせる。
+{
+  const dirs = fs.readdirSync(path.join(ROOT, "categories"), { withFileTypes: true })
+    .filter(e => e.isDirectory()).map(e => e.name).sort();
+
+  // app.js の CATEGORY_PAGES が「分野名 → ページ」の唯一の出所。
+  // 一覧の宣伝文はこの表に載っている分野しか名乗ってはいけない。
+  const appSrc = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+  const block = appSrc.match(/var CATEGORY_PAGES = \{([\s\S]*?)\};/);
+  const pairs = block ? [...block[1].matchAll(/"([^"]+)"\s*:\s*"([^"]+)"/g)].map(m => [m[1], m[2]]) : [];
+
+  if (!pairs.length) {
+    fail("app.js", "CATEGORY_PAGES を読めない", "解説ページの一覧を突き合わせられないので、この検査は意味を持たない");
+  } else {
+    // 表と実物がずれていたら、どちらが正しいか決められない
+    const slugs = pairs.map(([, v]) => v).sort();
+    if (slugs.join(",") !== dirs.join(",")) {
+      fail("categories/", "CATEGORY_PAGES と実在ページが食い違う", `表 ${slugs.join(" / ")} ≠ 実物 ${dirs.join(" / ")}`);
+    }
+
+    const listed = pairs.map(([k]) => k);
+    const vm2 = require("vm");
+    const ctx2 = vm2.createContext({ console, Math, Date, JSON, parseInt, parseFloat, isNaN, isFinite });
+    vm2.runInContext(fs.readFileSync(path.join(ROOT, "questions.js"), "utf8"), ctx2, { filename: "questions.js" });
+    const allCats = [...new Set(vm2.runInContext("QUESTION_TEMPLATES", ctx2).map(t => t.category))];
+    const notListed = allCats.filter(c => listed.indexOf(c) === -1);
+
+    const idx = fs.readFileSync(path.join(ROOT, "categories/index.html"), "utf8");
+    const head = (idx.match(/<title>([\s\S]*?)<\/title>/) || ["", ""])[1]
+      + " " + (idx.match(/<meta name="description" content="([^"]*)"/) || ["", ""])[1];
+
+    let checked = 0;
+    for (const c of notListed) {
+      checked++;
+      if (head.includes(c)) {
+        fail("categories/index.html", "実在しない解き方を宣伝している",
+          `「${c}」の解き方は無いのに title/description に書かれている`);
+      }
+    }
+    // 0件だと「宣伝が無い」ではなく「1分野も照合していない」。
+    cov.covered("解き方が無い分野との照合", checked, 5);
+    console.log(`解き方の一覧: 実在 ${dirs.length}本 / 解き方が無い分野 ${notListed.length}件を照合`);
   }
 }
 
