@@ -571,15 +571,15 @@
     "name": "既卒の枠を作らない",
     "why": "既卒の素材があるのに、その層には広告が出ないまま誰も気づかない",
     "file": "affiliate.js",
-    "find": "    { audience: \"career\",  heading: \"既卒・第二新卒・転職をお考えの方\" }",
-    "replace": "    { audience: \"career_removed\", heading: \"既卒・第二新卒・転職をお考えの方\" }",
+    "find": "    { audience: \"career\",  heading: AUD_HEADINGS.career }",
+    "replace": "    { audience: \"career_removed\", heading: AUD_HEADINGS.career }",
     "expect": "affiliate"
   },
   {
     "name": "枠の見出しを空にする",
     "why": "どちらの層向けの枠か読み手に分からなくなる。属性を選ばせる設計が働かない",
     "file": "affiliate.js",
-    "find": "    { audience: \"student\", heading: \"学生の方（2027年卒・2028年卒）\" },",
+    "find": "    { audience: \"student\", heading: AUD_HEADINGS.student },",
     "replace": "    { audience: \"student\", heading: \"\" },",
     "expect": "affiliate"
   },
@@ -1003,8 +1003,8 @@
     "name": "枠の見出しを呼び出し側に任せてしまう",
     "why": "heading 引数があるときに自前の見出しを出さない形。renderAll 経由で見出しが消える",
     "file": "affiliate.js",
-    "find": "    var aud = PROGRAMS[ids[0]].audience;\n    var head = el(\"p\", \"af-head\", opt.heading || (aud === \"student\" ? \"学生の方へ\" : \"ご案内\"));\n    host.appendChild(head);",
-    "replace": "    var aud = PROGRAMS[ids[0]].audience;\n    if (!opt.heading) host.appendChild(el(\"p\", \"af-head\", aud === \"student\" ? \"学生の方へ\" : \"ご案内\"));",
+    "find": "    var aud = PROGRAMS[ids[0]].audience;\n    var head = el(\"p\", \"af-head\", opt.heading || AUD_HEADINGS[aud] || \"ご案内\");\n    host.appendChild(head);",
+    "replace": "    var aud = PROGRAMS[ids[0]].audience;\n    if (!opt.heading) host.appendChild(el(\"p\", \"af-head\", AUD_HEADINGS[aud] || \"ご案内\"));",
     "expect": "affiliate"
   },
   {
@@ -1565,6 +1565,38 @@
     "file": "test/helpers/runner-lock.js",
     "find": "  console.error(`❌ 変異ランナーが動いている間は ${what} を書き換えられません。`);",
     "replace": "  console.error(`❌ 書き換えを止めました: ${what}`);",
+    "expect": "wiring"
+  },
+  {
+    "name": "属性枠の見出しを学生⇄既卒で入れ替える",
+    "why": "弱い壊し方の実測 (2026-08-29) で素通りだった穴。枠の数も注記も正しいまま誘導だけが逆になり、既卒が学生限定案件に申し込んで全件否認される",
+    "file": "affiliate.js",
+    "find": "  var AUD_HEADINGS = {\n    student: \"学生の方（2027年卒・2028年卒）\",\n    career: \"既卒・第二新卒・転職をお考えの方\"\n  };",
+    "replace": "  var AUD_HEADINGS = {\n    student: \"既卒・第二新卒・転職をお考えの方\",\n    career: \"学生の方（2027年卒・2028年卒）\"\n  };",
+    "expect": "affiliate"
+  },
+  {
+    "name": "学生限定素材の audience を career に付け替える",
+    "why": "弱い壊し方の実測 (2026-08-29) で「その属性の素材が最後の1件」のときしか捕まらなかった穴。値は正当な集合の中なので型検査は通る。成果条件（注記の文言）との対応で見る",
+    "file": "affiliate.js",
+    "find": "program: \"kimisuka\",\n      audience: \"student\",          // 成果条件が「学生からのお申し込み」限定",
+    "replace": "program: \"kimisuka\",\n      audience: \"career\",          // 成果条件が「学生からのお申し込み」限定",
+    "expect": "affiliate"
+  },
+  {
+    "name": "CIの生成検証の回数を1/10に弱める",
+    "why": "弱い壊し方の実測 (2026-08-29) で素通りだった穴。何も消えていないように見えて、乱数依存の不変条件の検出力だけが1/10になる",
+    "file": ".github/workflows/test.yml",
+    "find": "run: ITERATIONS=1000 node test/generator.spec.js",
+    "replace": "run: ITERATIONS=100 node test/generator.spec.js",
+    "expect": "wiring"
+  },
+  {
+    "name": "CIの生成検証から ITERATIONS の明示を外す",
+    "why": "環境変数を消すだけの「掃除」で検出力が1000→既定300に落ちる。出力の×N回表示はCIでは誰も読まない",
+    "file": ".github/workflows/test.yml",
+    "find": "run: ITERATIONS=1000 node test/generator.spec.js\n\n      - name: HTMLの健全性",
+    "replace": "run: node test/generator.spec.js\n\n      - name: HTMLの健全性",
     "expect": "wiring"
   }
 ]

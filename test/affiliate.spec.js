@@ -41,6 +41,15 @@ const AD_RE = /広告/;
     if (p.audience && !["student", "career"].includes(p.audience)) {
       fail("audience が不正", `${id}: ${p.audience}（student / career のみ）`);
     }
+    // audience（こちらで付ける属性）と note（広告主の成果条件の文言）の対応。
+    // 出所が独立しているから突き合わせられる。学生限定の案件を career に
+    // 付け替えると、既卒が申し込んで全件否認される。
+    // 弱い壊し方の実測 (2026-08-29): audience の入れ替えは「その属性の素材が
+    // 最後の1件だった」ときしか捕まらず、素材が2件あれば素通りだった。
+    // 対応そのものを見る。判定は「student ⇔ 注記に『学生』がある」のXOR。
+    if (p.audience && p.note && (p.audience === "student") !== /学生/.test(p.note)) {
+      fail("audience と注記の対象が食い違う", `${id}: audience=${p.audience} / 注記「${p.note}」`);
+    }
     // 配布物の改変検出。1x1の計測imgとリンクは同じ案件を指していないと計測が壊れる。
     if (p.href && p.pixel) {
       const key = (s) => (String(s).match(/a8mat=([^&"]+)/) || String(s).match(/rk=([^&"]+)/) || [])[1];
@@ -230,6 +239,28 @@ function checkNoteAfterEveryLink(host, where, programs) {
     if (auds.size !== drawn) fail("枠ごとに audience が分かれていない", [...auds].join(", "));
     cov.covered("属性ごとの枠", drawn, 1);
   }
+}
+
+// ============================================================
+// 2c. 枠の見出しが audience と対応している
+//     見出しの入れ替え（学生⇄既卒）は、枠の数も注記も正しいまま誘導だけが
+//     逆になる。既卒が学生限定案件に申し込むと全件否認される。
+//     文言は affiliate.js の AUD_HEADINGS の1箇所にしかないが、その中での
+//     入れ替えはコードからは正誤を決められないので、語で突き合わせる。
+//     判定は素材の検査と同じ形:「student ⇔ 見出しに『学生』がある」のXOR。
+// ============================================================
+{
+  const h = loadAffiliate();
+  const sel = h.Affiliate.selectByAudience(80);
+  let checked = 0;
+  for (const b of sel.blocks) {
+    checked++;
+    if ((b.audience === "student") !== /学生/.test(String(b.heading))) {
+      fail("枠の見出しが audience と食い違う", `${b.audience} の枠に「${b.heading}」`);
+    }
+  }
+  // 0件だと「対応が正しい」ではなく「1枠も見ていない」。
+  cov.covered("見出しと audience の対応", checked, 2);
 }
 
 // ============================================================

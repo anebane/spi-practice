@@ -116,7 +116,7 @@ var Affiliate = (function () {
     // 1) 枠の見出し。属性は推定せず、利用者に選ばせる。
     //    キミスカの成果条件は学生限定で、既卒・転職者に出すと全件否認される。
     var aud = PROGRAMS[ids[0]].audience;
-    var head = el("p", "af-head", opt.heading || (aud === "student" ? "学生の方へ" : "ご案内"));
+    var head = el("p", "af-head", opt.heading || AUD_HEADINGS[aud] || "ご案内");
     host.appendChild(head);
 
     ids.forEach(function (id) {
@@ -210,9 +210,18 @@ var Affiliate = (function () {
   //
   // 注記はここに持たない。案件ごとに成果条件が違うので、枠共通にすると
   // まとめた分だけ嘘になる（PROGRAMS[].note が唯一の出所）。
+  // 見出しの文言は audience から引く。ここ以外に見出しを書かない。
+  // 以前は AUDIENCES と render() のフォールバックの2箇所に手書きがあり、
+  // 入れ替え事故（学生⇄既卒）の面が2つあった。1箇所の中での入れ替えは
+  // コードからは正誤を決められないので、test/affiliate.spec.js が
+  // audience と語（学生）で突き合わせる。
+  var AUD_HEADINGS = {
+    student: "学生の方（2027年卒・2028年卒）",
+    career: "既卒・第二新卒・転職をお考えの方"
+  };
   var AUDIENCES = [
-    { audience: "student", heading: "学生の方（2027年卒・2028年卒）" },
-    { audience: "career",  heading: "既卒・第二新卒・転職をお考えの方" }
+    { audience: "student", heading: AUD_HEADINGS.student },
+    { audience: "career",  heading: AUD_HEADINGS.career }
   ];
 
   /**

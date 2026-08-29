@@ -60,6 +60,17 @@ if (!fs.existsSync(ciPath)) {
   if (!/node\s+test\/mutation-runner\.js\s*$/m.test(yml)) {
     fail("CIが破壊テストを回していない", "SPECS に登録しても実行されない。--check-ledger だけでは変異を1件も回さない");
   }
+  // ⚠️ 検査の厳しさを外から下げる口には、下限が要る。
+  //    ITERATIONS は生成系検査の試行回数で、下げても何も落ちない
+  //    「無音の弱体化」だった。実測 (2026-08-29): 1000→100 に変えても
+  //    9本すべて緑のまま。出力には「×N回」が印字されるが、CIでは誰も
+  //    出力を読まない。乱数依存の不変条件の検出力は試行回数に比例する。
+  const it = yml.match(/ITERATIONS=(\d+)\s+node\s+test\/generator\.spec\.js/);
+  if (!it) {
+    fail("CIの生成検証に ITERATIONS の明示が無い", "既定の300で走ってしまう。CIでは ITERATIONS=1000 以上を明示すること");
+  } else if (parseInt(it[1], 10) < 1000) {
+    fail("CIの生成検証が弱められている", `ITERATIONS=${it[1]}（下限は1000。生成系の検出力は試行回数に比例する）`);
+  }
 }
 cov.covered("CIが実行する検査", ci.length, 5);
 
