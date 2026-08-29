@@ -121,11 +121,16 @@ for (const s of specsMap) {
 {
   const tmpLock = path.join(require("os").tmpdir(), `wiring-lock-${process.pid}`);
   fs.writeFileSync(tmpLock, String(process.pid));   // 自分のPID＝生きているロック
+  const tmpBaseline = path.join(require("os").tmpdir(), `wiring-baseline-${process.pid}.json`);
+  fs.copyFileSync(path.join(__dirname, "diversity-baseline.json"), tmpBaseline);
   const env = Object.assign({}, process.env, { RUNNER_LOCK_PATH: tmpLock });
 
   const guarded = [
     ["questions.js の再生成", ["tools/build-questions.js"]],
-    ["ベースラインの更新",     ["test/generator.spec.js"], { UPDATE_BASELINE: "sign", BASELINE_REASON: "検査" }]
+    // ⚠️ 本物のベースラインを書き先にしない。門番を外す変異を当てたとき、
+    //    この検査自身が本物を書き換えてしまう（実際に reason を汚した）。
+    ["ベースラインの更新",     ["test/generator.spec.js"],
+      { UPDATE_BASELINE: "sign", BASELINE_REASON: "検査", DIVERSITY_BASELINE_PATH: tmpBaseline }]
   ];
   let checked = 0;
   for (const [label, argv, extraEnv] of guarded) {
@@ -148,6 +153,7 @@ for (const s of specsMap) {
   }
 
   try { fs.unlinkSync(tmpLock); } catch (e) {}
+  try { fs.unlinkSync(tmpBaseline); } catch (e) {}
   cov.covered("ロックを見るか調べたコマンド", checked, 3);
 }
 

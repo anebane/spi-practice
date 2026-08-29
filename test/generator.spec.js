@@ -307,7 +307,11 @@ if (failures.length) process.exitCode = 1;
   const DIVERSITY_TARGET = 50;
   const TOLERANCE = 0.8;   // 実測の振れ幅は最大1.3%。20%見ておけば誤検知しない
   const SAMPLES = 400;
-  const BASELINE_PATH = path.join(__dirname, "diversity-baseline.json");
+  // 書き先を差し替えられるようにしておく。検査が UPDATE_BASELINE の経路を
+  // 試すとき、本物のベースラインを書き換えてしまうのを防ぐため。
+  // 実際、門番の検査が本物の reason を「検査」に書き換えた（2026-08-29）。
+  const BASELINE_PATH = process.env.DIVERSITY_BASELINE_PATH
+    || path.join(__dirname, "diversity-baseline.json");
 
   const variantKey = (q) => [
     q.text,

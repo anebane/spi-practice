@@ -220,6 +220,12 @@ function acquireLock() {
   return { ok: false, why: "ロックの取得を繰り返し試みましたが、競合が解消しませんでした" };
 }
 
+/** ロックを取ったら、子プロセスに「自分が持ち主だ」と伝える。
+ *  これが無いと、ランナーが呼ぶ build-questions.js を自分の門番が止める。 */
+function announceLockOwner() {
+  process.env.RUNNER_LOCK_OWNER = String(process.pid);
+}
+
 let lockHeld = false;
 function releaseLock() {
   if (!lockHeld) return;
@@ -389,6 +395,7 @@ if (!lock.ok) {
   process.exit(1);
 }
 lockHeld = true;
+announceLockOwner();   // 自分が呼ぶ build-questions.js を門番が止めないように
 
 // 計装コピー(.cov-run-*)は preflight より前に消す。SIGKILL で死んだ実行は
 // 「コピー残留」と「ツリー汚染」を同時に残し、汚染が preflight を止める限り

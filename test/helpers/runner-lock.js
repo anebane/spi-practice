@@ -42,6 +42,14 @@ function assertNotLocked(what) {
   }
   let pid = 0;
   try { pid = parseInt(fs.readFileSync(p, "utf8").trim(), 10) || 0; } catch (e) {}
+
+  // ⚠️ ロックを持っている本人（とその子プロセス）は通す。
+  //    変異ランナーは自分のロックを持ったまま build-questions.js を呼ぶので、
+  //    ここで止めるとランナー自身が復元できなくなる。
+  //    実際に190変異の実行で88件が「ビルドに失敗」「復元時の異常」になった。
+  //    門番が守るべき相手は「ロックを持っていない他人」だけ。
+  if (pid && process.env.RUNNER_LOCK_OWNER && parseInt(process.env.RUNNER_LOCK_OWNER, 10) === pid) return;
+
   const alive = pid && processAlive(pid);
   console.error(`❌ 変異ランナーが動いている間は ${what} を書き換えられません。`);
   console.error(alive
