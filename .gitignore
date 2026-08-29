@@ -16,3 +16,6 @@ test/.mutation-runner.lock
 # 破壊テストのカバレッジ計測の一時ファイル（計装した spec のコピーと発火記録）
 test/.cov-run-*
 test/.mutation-coverage.log
+
+# エージェントの検証ハーネス・候補・実行ログ（再現用に置くが配布物ではない）
+.tools/
