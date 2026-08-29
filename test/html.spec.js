@@ -243,6 +243,35 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   }
 }
 
+// --- 記事面に広告枠が入っているか ---
+//
+// 結果画面だけに枠があり、記事10ページはゼロだった。検索から来た人が
+// 最初に触れる面に何も無いと、表示が増えず、CTRの判定に必要な標本が集まらない。
+//
+// ⚠️ 枠の div だけ入れて script を入れ忘れると、枠は永久に空のまま。
+//    画面上は何も起きないので、誰も気づかない。両方そろっていることを見る。
+{
+  // 枠を置く面。トップ(index.html)は app.js が結果画面に描くので別扱い。
+  // 法務系（privacy/about/contact）と offline は対象外。
+  const EXCLUDE = new Set(["index.html", "privacy.html", "about.html", "contact.html", "offline.html"]);
+  const targets = pages.filter((p) => !EXCLUDE.has(p));
+  // 0件だと「不足が無い」ではなく「1ページも見ていない」。
+  cov.covered("広告枠を置く面", targets.length, 10);
+
+  for (const p of targets) {
+    const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+    const hasSlot = html.includes('id="affiliate-article"');
+    const hasScript = html.includes("/affiliate-article.js") && html.includes("/affiliate.js");
+    if (!hasSlot) {
+      fail(p, "広告枠が無い", 'id="affiliate-article" の div が無い。この面は表示0のまま');
+    } else if (!hasScript) {
+      fail(p, "広告枠を描くスクリプトが無い",
+        "枠の div はあるが affiliate.js / affiliate-article.js を読み込んでいない。枠は永久に空のまま");
+    }
+  }
+  console.log(`広告枠: ${targets.length}面を検査`);
+}
+
 // --- AdSense の審査用スニペットが全ページの <head> に入っているか ---
 // 審査はサイト単位なので、1ページでも欠けると「コードが見つかりません」で
 // 弾かれる。手で貼ると必ず漏れるので機械的に守る。新しいページを足したとき

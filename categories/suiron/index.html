@@ -133,6 +133,11 @@
           <li><a href="/categories/">分野別の解き方 一覧</a><span>推論・損益算・確率</span></li>
         </ul>
       </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
     </main>
     <footer class="legal-footer">
       <nav class="legal-nav">
@@ -148,5 +153,7 @@
   </div>
   <script src="../../analytics.js"></script>
   <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
 </body>
 </html>

@@ -1678,5 +1678,53 @@
     "find": "    id: \"suiron_direction_01\",",
     "replace": "    idMissing: \"suiron_direction_01\",",
     "expect": "generator"
+  },
+  {
+    "name": "記事面の広告枠を1ページから外す",
+    "why": "1面だけ枠が消えても画面上は何も起きない。その面の表示が永久に0になる",
+    "file": "articles/spi3-toha.html",
+    "find": "      <div id=\"affiliate-article\"></div>",
+    "replace": "      <!-- 枠を外す変異 -->",
+    "expect": "html"
+  },
+  {
+    "name": "広告枠のスクリプトを1ページから外す",
+    "why": "枠のdivはあるのに描くスクリプトが無い。枠は永久に空のまま",
+    "file": "categories/suiron/index.html",
+    "find": "  <script src=\"/affiliate-article.js\"></script>\n",
+    "replace": "",
+    "expect": "html"
+  },
+  {
+    "name": "面の名前をURLから導かず固定にする",
+    "why": "すべての面が同じ名前になり、記事枠と結果画面のどちらが効いたか分解できなくなる",
+    "file": "affiliate-article.js",
+    "find": "    return seg.join(\"-\");",
+    "replace": "    return \"article\";",
+    "expect": "affiliate"
+  },
+  {
+    "name": "複数形の単数化をやめて面の名前をずらす",
+    "why": "面の名前が変わると、過去の計測と接続できなくなる",
+    "file": "affiliate-article.js",
+    "find": "    seg[0] = head[seg[0]] || seg[0];",
+    "replace": "    seg[0] = seg[0];",
+    "expect": "affiliate"
+  },
+  {
+    "name": "点数が無い面を「不明」として扱う",
+    "why": "記事側の枠が永久に空になる。点数の無い面と取り損ねを区別しないと起きる",
+    "file": "affiliate.js",
+    "find": "    if (percent === undefined) return { band: \"none\", programs: all };",
+    "replace": "    if (false) return { band: \"none\", programs: all };",
+    "expect": "affiliate"
+  },
+  {
+    "name": "点数の取り損ねでも広告を出す",
+    "why": "結果画面のバグが広告表示として記録され、表示回数が汚れる",
+    "file": "affiliate.js",
+    "find": "      unknown: []",
+    "replace": "      unknown: all",
+    "expect": "affiliate"
   }
 ]

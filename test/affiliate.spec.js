@@ -432,6 +432,67 @@ function checkNoteAfterEveryLink(host, where, programs) {
   cov.covered("スコア帯の境界", checked, 8);
 }
 
+// --- 記事面の枠が、実際に描かれて計測できるか ---
+//
+// 結果画面だけに枠があり、記事10ページにはゼロだった。検索から来た人が
+// 最初に触れる面に何も無い状態。表示が増えないと、CTRの判定に必要な
+// 500〜1000表示が集まらない（228表示0クリックは失敗の証拠にならない）。
+//
+// ⚠️ 面ごとに区別できないと「記事枠が効いたのか結果画面が効いたのか」を
+//    後から言えない。placement が面ごとに違うことまで見る。
+{
+  const { placementOf } = require("../affiliate-article.js");
+
+  // URL から面の名前を導けること。手で書かないための仕組みなので、
+  // ここが壊れると全部の面が同じ名前になり、分解できなくなる。
+  const want = [
+    ["/articles/spi3-toha.html", "article-spi3-toha"],
+    ["/categories/suiron/",      "category-suiron"],
+    ["/language/",               "language"],
+    ["/tamatebako-shisoku/",     "tamatebako-shisoku"],
+    ["/",                        "top"]
+  ];
+  let checked = 0;
+  const seen = new Set();
+  for (const [path, expect] of want) {
+    const got = placementOf(path);
+    checked++;
+    seen.add(got);
+    if (got !== expect) {
+      fail("面の名前が URL から導けない", `${path} → ${got}（期待 ${expect}）`);
+    }
+  }
+  if (seen.size !== want.length) {
+    fail("面の名前が重複している",
+      `${want.length}種類の面に対し ${seen.size}種類しか出ていない。面ごとに分解できない`);
+  }
+  cov.covered("面の名前", checked, 5);
+}
+
+// --- 記事面でも、点数が無いだけで枠が消えないか ---
+//
+// ⚠️ 記事には試験の点数が無い。「点数が無い＝不明だから出さない」に倒すと
+//    記事側の枠が永久に空になる。一方 NaN や null は結果画面での取り損ね
+//    （バグ）なので出さない。区別できていることを確かめる。
+{
+  const h = loadAffiliate();
+  const article = h.Affiliate.selectByAudience(undefined);
+  if (!article.blocks.length) {
+    fail("記事面に枠が出ない", "点数が無い面（記事）で1枠も出ない。記事側の枠が永久に空になる");
+  }
+  if (article.band !== "none") {
+    fail("記事面の帯の名前が違う", `band=${article.band}（記事は "none"。結果画面の帯と混ざる）`);
+  }
+  for (const bad of [NaN, null]) {
+    const s = h.Affiliate.selectByAudience(bad);
+    if (s.blocks.length) {
+      fail("点数の取り損ねでも枠を出している",
+        `${String(bad)} で ${s.blocks.length}枠。結果画面のバグが広告表示として記録される`);
+    }
+  }
+  cov.covered("点数の有無による出し分け", 3, 3);
+}
+
 // --- 出力 ---
 console.log("広告枠の不変条件を検査");
 cov.print();

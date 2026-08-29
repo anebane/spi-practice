@@ -95,6 +95,13 @@
           <li><a href="/">SPI非言語の模擬試験</a><span>推論・損益算・確率など、こちらも登録不要</span></li>
         </ul>
       </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる）。
+           ⚠️ 結果画面(#screen-result)ではなく、常に見えるイントロ側に置く。
+           隠れた要素に描くと、誰も見ていないのに affiliate_view が飛び、
+           これから測ろうとしている表示回数そのものが汚れる。 -->
+      <div id="affiliate-article"></div>
     </main>
     <footer class="legal-footer">
       <nav class="legal-nav">
@@ -183,5 +190,7 @@
 <script src="app.js"></script>
 <script src="../analytics.js"></script>
   <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
 </body>
 </html>

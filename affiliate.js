@@ -185,12 +185,21 @@ var Affiliate = (function () {
    * 承認され次第ここに creative id を足すだけで反映される。
    */
   function selectByScore(percent) {
-    var band = scoreBand(percent);
     // 高スコア → 登録完了型 / 低スコア → 面談型 の想定だが、
     // 承認済みの3件はいずれも登録型なので現状は帯で差を付けていない。
-    // 面談型（新卒就職エージェントneo / UZUZ 28新卒）は保留。
+    // 面談型（新卒就職エージェントneo / UZUZ 28新卒）はリンクコード待ち。
     // 既卒枠はウズウズITを先に置く（登録型で単価が最も高い）。
     var all = ["kimisuka_spi", "uzuz_it", "uzuz_second"];
+
+    // ⚠️ 「点数が無い面」と「点数を取ろうとして失敗した」を区別する。
+    //    記事ページには試験の点数が存在しない（undefined）。これを
+    //    「不明だから出さない」に倒すと、記事側の枠が永久に空になる。
+    //    一方 NaN や null は、結果画面で点数を取り損ねた＝バグなので出さない。
+    //    区別せずに扱うと、バグのときだけ静かに広告が消えるか、
+    //    記事に永久に出ないかの、どちらかが起きる。
+    if (percent === undefined) return { band: "none", programs: all };
+
+    var band = scoreBand(percent);
     var map = {
       high: all,
       mid:  all,
@@ -229,8 +238,8 @@ var Affiliate = (function () {
    * 素材が1件も無い属性の枠は返さない（空の見出しだけが残るのを防ぐ）。
    */
   function selectByAudience(percent) {
-    var band = scoreBand(percent);
     var sel = selectByScore(percent);
+    var band = sel.band;
     var blocks = [];
     AUDIENCES.forEach(function (a) {
       var ids = sel.programs.filter(function (id) {

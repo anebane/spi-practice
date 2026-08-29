@@ -128,6 +128,11 @@
         <li>対策は「答えを覚える」ではなく「解法パターンを身につける」「時間を計る」</li>
         <li>同じ問題を繰り返すと実力が測れなくなるため、毎回違う問題で練習するのが理想</li>
       </ul>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
     </main>
 
     <footer class="legal-footer">
@@ -143,5 +148,7 @@
   </div>
   <script src="../analytics.js"></script>
   <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
 </body>
 </html>
