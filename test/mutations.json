@@ -758,5 +758,197 @@
     "find": "cov.covered(\"検査ファイル\", specs.length, 5);",
     "replace": "cov.covered(\"検査ファイル\", specs.length, 99);",
     "expect": "wiring"
+  },
+  {
+    "name": "manifest の必須項目 short_name を空にする",
+    "why": "PWAのインストール名が消える。JSONとしては正常なので画面では気づけない",
+    "file": "manifest.json",
+    "find": "\"short_name\": \"テキドリ\",",
+    "replace": "\"short_name\": \"\",",
+    "expect": "pwa"
+  },
+  {
+    "name": "manifest の theme_color をHTMLとずらす",
+    "why": "HTML側の meta theme-color と食い違うと、起動画面とツールバーの色が別物になる",
+    "file": "manifest.json",
+    "find": "\"theme_color\": \"#1a237e\",",
+    "replace": "\"theme_color\": \"#3f51b5\",",
+    "expect": "pwa"
+  },
+  {
+    "name": "manifest の display を browser に戻す",
+    "why": "standalone でなくなるとインストール可能条件を満たさず、PWAとして開けない",
+    "file": "manifest.json",
+    "find": "\"display\": \"standalone\",",
+    "replace": "\"display\": \"browser\",",
+    "expect": "pwa"
+  },
+  {
+    "name": "manifest を壊れたJSONにする",
+    "why": "カンマ1つの編集ミスで起きる。ブラウザは黙って無視するのでインストール不可に誰も気づかない",
+    "file": "manifest.json",
+    "find": "\"categories\": [\"education\"],",
+    "replace": "\"categories\": [\"education\"],,",
+    "expect": "pwa"
+  },
+  {
+    "name": "manifest のアイコンのパスをずらす",
+    "why": "アイコンをリネームしたのに manifest を直し忘れる形。404でインストール要件を満たさなくなる",
+    "file": "manifest.json",
+    "find": "{ \"src\": \"/icons/icon-192.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+    "replace": "{ \"src\": \"/icons/icon-192@2x.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+    "expect": "pwa"
+  },
+  {
+    "name": "プリキャッシュに存在しないURLを残す",
+    "why": "ファイルを消した・リネームしたのに PRECACHE_URLS を直し忘れる形。addAll ごと失敗して何も入らない",
+    "file": "sw.js",
+    "find": "\"/style.css\",",
+    "replace": "\"/style-v2.css\",",
+    "expect": "pwa"
+  },
+  {
+    "name": "オフラインページの noindex を外す",
+    "why": "中身の薄いページが検索に出てサイト評価に響く。画面上は何も変わらない",
+    "file": "offline.html",
+    "find": "<meta name=\"robots\" content=\"noindex, follow\">",
+    "replace": "<meta name=\"robots\" content=\"index, follow\">",
+    "expect": "pwa"
+  },
+  {
+    "name": "index.html の manifest link を相対パスにする",
+    "why": "パスの書き方を変えた「だけ」に見える編集で、検査の期待形から外れてPWA登録が壊れる",
+    "file": "index.html",
+    "find": "<link rel=\"manifest\" href=\"/manifest.json\">",
+    "replace": "<link rel=\"manifest\" href=\"manifest.json\">",
+    "expect": "pwa"
+  },
+  {
+    "name": "旧ドメインのリンクを書き戻す",
+    "why": "移行前の記事からコピペすると混入する。301が二重になり評価が分散する",
+    "file": "about.html",
+    "find": "<a href=\"/articles/\">解説記事</a>",
+    "replace": "<a href=\"https://anebane.github.io/spi-practice/articles/\">解説記事</a>",
+    "expect": "html"
+  },
+  {
+    "name": "canonical を別ページに向ける",
+    "why": "ページをコピペして作るときの典型事故。検索評価が別ページに流れる",
+    "file": "about.html",
+    "find": "<link rel=\"canonical\" href=\"https://tekisei-drill.com/about.html\">",
+    "replace": "<link rel=\"canonical\" href=\"https://tekisei-drill.com/contact.html\">",
+    "expect": "html"
+  },
+  {
+    "name": "存在しないページへの内部リンクを張る",
+    "why": "ページを消した・リネームしたのにリンク元を直し忘れる形",
+    "file": "about.html",
+    "find": "<a href=\"/\">ホーム</a>",
+    "replace": "<a href=\"/home.html\">ホーム</a>",
+    "expect": "html"
+  },
+  {
+    "name": "sitemap に消えたページを残す",
+    "why": "ページを消したのに sitemap から消し忘れる形。Search Console でカバレッジエラーになる",
+    "file": "sitemap.xml",
+    "find": "<loc>https://tekisei-drill.com/tamatebako-shisoku/</loc>",
+    "replace": "<loc>https://tekisei-drill.com/tamatebako/</loc>",
+    "expect": "html"
+  },
+  {
+    "name": "AdSense のクライアントIDを1桁書き換える",
+    "why": "審査はサイト単位。1ページでも欠けると「コードが見つかりません」で弾かれる",
+    "file": "about.html",
+    "find": "client=ca-pub-5409685648363967",
+    "replace": "client=ca-pub-5409685648363968",
+    "expect": "html"
+  },
+  {
+    "name": "素材の lead を空にする",
+    "why": "素材の必須項目が欠けたまま公開される形。空文字はJSでは「無い」と同じに扱われがちで画面では気づきにくい",
+    "file": "affiliate.js",
+    "find": "lead: \"適性検査の対策コンテンツが使えるスカウト型の就活サービスです。\",",
+    "replace": "lead: \"\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "素材の audience を未知の値にする",
+    "why": "student/career 以外の値は出し分けから漏れ、成果条件を外した層に出て否認される",
+    "file": "affiliate.js",
+    "find": "program: \"uzuz\",\n      audience: \"career\",",
+    "replace": "program: \"uzuz\",\n      audience: \"alumni\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "リンクと計測imgを別案件の組にする",
+    "why": "素材を差し替えるとき片方だけ更新する形。ASP側の計測が壊れて成果が消える",
+    "file": "affiliate.js",
+    "find": "pixel: \"https://www12.a8.net/0.gif?a8mat=4BAEXK+6FLN3M+24ZO+HV7V6\",",
+    "replace": "pixel: \"https://www12.a8.net/0.gif?a8mat=4BAEXK+6FLN3M+24ZO+HZ2R6\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "exam_start から exam_id を落とす",
+    "why": "パラメータ1個の削り忘れ。start と finish を突き合わせられなくなり完走率が出せない",
+    "file": "app.js",
+    "find": "    trackEvent(\"exam_start\", {\n      exam_id: state.examId,\n      question_count: state.questions.length,",
+    "replace": "    trackEvent(\"exam_start\", {\n      question_count: state.questions.length,",
+    "expect": "app"
+  },
+  {
+    "name": "離脱の trigger を固定文字列にする",
+    "why": "経路の区別が消えると「タブ切替の一時離脱」と「本当の離脱」を分けて数えられない",
+    "file": "app.js",
+    "find": "      trigger: trigger,",
+    "replace": "      trigger: \"beforeunload\",",
+    "expect": "app"
+  },
+  {
+    "name": "exam_abandon から exam_id を落とす",
+    "why": "離脱と完走を同じ試験で突き合わせられなくなり、離脱率が二重計上される",
+    "file": "app.js",
+    "find": "    trackEvent(\"exam_abandon\", {\n      exam_id: state.examId,\n",
+    "replace": "    trackEvent(\"exam_abandon\", {\n",
+    "expect": "app"
+  },
+  {
+    "name": "visibilitychange のハンドラを張らない",
+    "why": "iOS Safari は pagehide が飛ばないことがあり、この1枚を失うとiOSの離脱が丸ごと消える",
+    "file": "app.js",
+    "find": "    document.addEventListener(\"visibilitychange\", function() {\n      if (document.visibilityState === \"hidden\") reportAbandon(\"hidden\");\n    });",
+    "replace": "",
+    "expect": "app"
+  },
+  {
+    "name": "テンプレの難易度を範囲外にする",
+    "why": "難易度は出題の絞り込み条件。範囲外の値は絞り込みから漏れて出題されなくなる",
+    "file": "src/questions/07-noudo.js",
+    "find": "    categoryId: 7,\n    difficulty: 1,\n    templateText: \"{{water}}g",
+    "replace": "    categoryId: 7,\n    difficulty: 4,\n    templateText: \"{{water}}g",
+    "expect": "generator"
+  },
+  {
+    "name": "formats に未知の形式を書く",
+    "why": "タイポした形式名はどの出題形式にもマッチせず、そのテンプレが静かに出題から消える",
+    "file": "src/questions/07-noudo.js",
+    "find": "    id: \"noudo_basic_01\",\n    formats: [\"webtesting\"],",
+    "replace": "    id: \"noudo_basic_01\",\n    formats: [\"webtest\"],",
+    "expect": "generator"
+  },
+  {
+    "name": "テンプレ変数名をタイポする",
+    "why": "変数名の書き間違いは {{名前}} がそのまま画面に出る。生成は例外を出さないので機械でしか止まらない",
+    "file": "src/questions/07-noudo.js",
+    "find": "    templateText: \"{{water}}gの水に{{salt}}gの食塩を溶かした。",
+    "replace": "    templateText: \"{{watter}}gの水に{{salt}}gの食塩を溶かした。",
+    "expect": "generator"
+  },
+  {
+    "name": "テンプレの制限時間を0にする",
+    "why": "0秒の問題は開いた瞬間に時間切れになる。定義の書き間違い1つで起きる",
+    "file": "src/questions/07-noudo.js",
+    "find": "    timeLimitSec: 60\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
+    "replace": "    timeLimitSec: 0\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
+    "expect": "generator"
   }
 ]

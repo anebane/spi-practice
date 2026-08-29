@@ -2,920 +2,608 @@
   "_readme": [
     "どの変異でも落ちない失敗経路の台帳。ここに載っている検査は『壊れても気づけない』状態にある。",
     "新しい検査をこの台帳に足してはいけない。検査を足したら、それを落とす変異を test/mutations.json に足すこと。",
-    "どうしても変異を書けない失敗経路（防御的な例外捕捉など）だけを、理由(why)を添えて登録する。",
-    "台帳は縮む方向にのみ動かす。変異で落ちるようになった項目はランナーが通知するので、そのとき削除する。",
+    "登録には個別の理由(why)が必須。『初期移行分』のような一括の文言は禁止。分類の接頭辞を付ける:",
+    "  A(借金/変異は書ける) … 書けるのにまだ書いていない項目。減らす方向にのみ動かす。新規にAを足すのは上のルール違反",
+    "  B(原理的に書けない) … 防御的な例外捕捉、環境や git 履歴が発火条件のもの。正当な免除としてだけ残る",
+    "  C(判断保留) … 書けるかどうか未確認。放置せず、確認して A か B に振り分ける",
+    "台帳は縮む方向にのみ動かす。掃除は全件実行のあと node test/prune-uncovered.js（dry-run）→ --write。削除は必ず git の差分として残す。",
     "照合の鍵は file + text(行の中身) + nth(同一内容の出現順)。行番号(line)は参考情報で、照合には使わない。"
   ],
   "sites": [
     {
       "file": "affiliate.spec.js",
-      "line": 37,
-      "nth": 0,
-      "text": "if (!p[k]) fail(\"素材の欠落\", `${id}: ${k} がない`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "affiliate.spec.js",
-      "line": 42,
-      "nth": 0,
-      "text": "fail(\"audience が不正\", `${id}: ${p.audience}（student / career のみ）`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "affiliate.spec.js",
-      "line": 48,
-      "nth": 0,
-      "text": "if (a && b && a !== b) fail(\"リンクと計測imgが別の案件\", `${id}: ${a} / ${b}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "affiliate.spec.js",
       "line": 66,
       "nth": 0,
       "text": "if (!links.length) { fail(\"リンクが無い\", where); return 0; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render がリンク(<a>)を生成しない壊れ方（render は true のまま）で発火する。既存変異に無いだけで書ける"
     },
     {
       "file": "affiliate.spec.js",
       "line": 106,
       "nth": 0,
       "text": "if (!note.text.trim()) { fail(\"対象の注記が空\", `${where}: ${n.text}`); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render が注記要素を作るが文言を入れない壊れ方で発火する。素材側の note を空にすると描画拒否の経路に行くため、render 側を壊す変異にする"
     },
     {
       "file": "affiliate.spec.js",
       "line": 108,
       "nth": 0,
       "text": "if (want === undefined) { fail(\"アンカーが素材に無い\", `${where}: ${n.text}`); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render がアンカー文言を素材から加工して出す壊れ方（p.anchor に文字を足す等）で照合が外れて発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 128,
       "nth": 0,
       "text": "if (!ok) { fail(\"描画されない\", `${id}: render が false を返した`); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render が正当な素材でも false を返す壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 136,
       "nth": 0,
       "text": "fail(\"注記が案件のものと違う\", `${id}: 画面「${shownNote.join(\" / \")}」 ≠ 素材「${want}」`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render が注記を素材からでなく固定文言で出す壊れ方で発火する。既存変異「注記を別の案件のものにする」では発火しないことを実測済み（別の行が先に捕まる）"
     },
     {
       "file": "affiliate.spec.js",
       "line": 164,
       "nth": 0,
       "text": "if (!ok) fail(\"2本の枠が描けない\", pair.join(\", \"));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render が2件指定のとき false を返す壊れ方（件数上限のバグの形）で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 167,
       "nth": 0,
       "text": "if (n !== 2) fail(\"2本置いたのにリンクが2本でない\", `${n}本`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render が2件指定でも1件しか描かない壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 198,
       "nth": 0,
       "text": "if (heads !== drawn) fail(\"枠の数だけ見出しが出ていない\", `見出し ${heads} / 枠 ${drawn}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 見出しを枠ごとでなく先頭に1回だけ出す壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 202,
       "nth": 0,
       "text": "if (views.length !== drawn) fail(\"affiliate_view が枠の数と合わない\", `${views.length} / ${drawn}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): renderAll が affiliate_view を枠ごとでなく全体で1回だけ送る壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 252,
       "nth": 0,
       "text": "if (view.length !== 1) fail(\"affiliate_view の回数\", `${view.length}回（1回であるべき）`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render が affiliate_view を二重送信する壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 263,
       "nth": 0,
       "text": "if (!link) fail(\"リンクが無い\", ids[0]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render がアンカーを生成しない壊れ方で発火する（#3 と同じ変異で同時に落ちる）"
     },
     {
       "file": "affiliate.spec.js",
       "line": 267,
       "nth": 0,
       "text": "if (click.length !== 1) fail(\"affiliate_click の回数\", `${click.length}回`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): click ハンドラを二重登録する壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 281,
       "nth": 0,
       "text": "if (ok) fail(\"空でも描いてしまう\", \"programs: [] で render が true\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render の空ガード(!ids.length)を外して true を返す壊れ方で発火する。既存変異「素材が空でも枠を描いてしまう」では発火しないことを実測済み"
     },
     {
       "file": "affiliate.spec.js",
       "line": 284,
       "nth": 0,
       "text": "fail(\"出していないのに affiliate_view\", \"表示回数が水増しされる\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): affiliate_view の送信を ids チェックより前に動かす壊れ方で発火する"
     },
     {
       "file": "affiliate.spec.js",
       "line": 302,
       "nth": 0,
       "text": "if (!a) { fail(\"リンクが無い\", id); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): render がアンカーを生成しない壊れ方で発火する（#3/#13 と同系）"
     },
     {
       "file": "affiliate.spec.js",
       "line": 308,
       "nth": 0,
       "text": "if (anchor && anchor.rel !== \"nofollow\") fail(\"rel が配布物と違う\", `${id}: ${anchor.rel}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 37,
-      "nth": 0,
-      "text": "try { fn(); } catch (e) { fail(name, \"例外: \" + e.message); }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): a.rel を落とす・別の値にする壊れ方で発火する（referrerpolicy 版の既存変異はあるが rel 版が無い）"
     },
     {
       "file": "app.spec.js",
       "line": 46,
       "nth": 0,
       "text": "if (h.count(\"exam_start\") !== 1) fail(\"通常の試験\", `exam_start が ${h.count(\"exam_start\")}回`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 47,
-      "nth": 0,
-      "text": "if (h.count(\"exam_finish\") !== 1) fail(\"通常の試験\", `exam_finish が ${h.count(\"exam_finish\")}回`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 48,
-      "nth": 0,
-      "text": "if (h.count(\"question_answer\") !== 10) fail(\"通常の試験\", `question_answer が ${h.count(\"question_answer\")}回（10問なので10のはず）`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 62,
-      "nth": 0,
-      "text": "if (f !== 1) fail(\"最終問題での連打\", `exam_finish が ${f}回（1回であるべき）`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 108,
-      "nth": 0,
-      "text": "if (!s.params.exam_id) { fail(\"exam_id\", \"exam_start に exam_id が無い\"); return; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): exam_start を二重送信する壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 110,
       "nth": 0,
       "text": "fail(\"exam_id\", `start と finish で不一致: ${s.params.exam_id} ≠ ${f.params.exam_id}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): finishExam 側で exam_id を作り直す壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 112,
       "nth": 0,
       "text": "if (h.count(\"exam_finish\") !== 1) fail(\"exam_id\", `${t + 1}回目の exam_finish が ${h.count(\"exam_finish\")}回`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 126,
-      "nth": 0,
-      "text": "if (h.count(\"exam_start\") !== 1) fail(\"再挑戦\", `2試験目の exam_start が ${h.count(\"exam_start\")}回`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 128,
-      "nth": 0,
-      "text": "if (h.count(\"retry_exam\") !== 1) fail(\"再挑戦\", `retry_exam が ${h.count(\"retry_exam\")}回`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 139,
-      "nth": 0,
-      "text": "if (h.count(\"question_answer\") !== 20) fail(\"再挑戦の2種類\", `1試験目が20問になっていない: ${h.count(\"question_answer\")}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 146,
-      "nth": 0,
-      "text": "if (!r) fail(\"再挑戦の2種類\", \"retry_exam が出ていない（same）\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): exam_finish を二重送信する壊れ方で発火する（再挑戦経由のテスト5でも数えている）"
     },
     {
       "file": "app.spec.js",
       "line": 148,
       "nth": 0,
       "text": "if (r.params.variant !== \"same\") fail(\"再挑戦の2種類\", `variant が same でない: ${r.params.variant}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 再挑戦の variant を常に short にする壊れ方で発火する。既存変異は same に寄せる方向で、この行（same 経路の検査）には来ない"
     },
     {
       "file": "app.spec.js",
       "line": 149,
       "nth": 0,
       "text": "if (r.params.question_count !== 20) fail(\"再挑戦の2種類\", `question_count が 20 でない: ${r.params.question_count}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 158,
-      "nth": 0,
-      "text": "if (!r) fail(\"再挑戦の2種類\", \"retry_exam が出ていない（short）\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): retry_exam の question_count を固定値で送る壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 161,
       "nth": 0,
       "text": "if (r.params.question_count !== 10) fail(\"再挑戦の2種類\", `question_count が 10 でない: ${r.params.question_count}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): short 側の question_count を上書き前の値で送る壊れ方で発火する。既存変異「短縮版で問題数の上書きをやめる」では発火しないことを実測済み"
     },
     {
       "file": "app.spec.js",
       "line": 178,
       "nth": 0,
       "text": "fail(\"短縮版の出し分け\", \"20問の直後なのに短縮版が隠れている\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 206,
-      "nth": 0,
-      "text": "fail(\"選択欄に無い分野を ?cat= で指定\", `出題された分野が「語句の関係」だけになっていない: ${cats.join(\", \") || \"(出題なし)\"}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 出し分け条件を反転して常に隠す壊れ方で発火する。既存変異は「常に表示」で逆側の行だけ落とす"
     },
     {
       "file": "app.spec.js",
       "line": 210,
       "nth": 0,
       "text": "fail(\"選択欄に無い分野を ?cat= で指定\", `案内文に分野名が出ていない: ${note.textContent}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 案内文から分野名を落とす壊れ方（expect:app 版）で発火する。同じ壊し方が deeplink 側でのみ登録されている"
     },
     {
       "file": "app.spec.js",
       "line": 214,
       "nth": 0,
       "text": "fail(\"選択欄に無い分野を ?cat= で指定\", `category_practice_start が出ていない/IDが違う: ${ev && ev.params.category_id}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 225,
-      "nth": 0,
-      "text": "fail(\"選択欄にある分野の ?cat=\", `「場合の数・確率」だけになっていない: ${cats.join(\", \") || \"(出題なし)\"}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 236,
-      "nth": 0,
-      "text": "fail(\"実在しない ?cat=\", `全分野に戻っていない（出題分野 ${cats.length}種）: ${cats.join(\", \")}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): category_practice_start を送らない壊れ方（expect:app 版）で発火する。同上"
     },
     {
       "file": "app.spec.js",
       "line": 240,
       "nth": 0,
       "text": "fail(\"実在しない ?cat=\", \"実在しないIDなのに案内文を出している\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 実在しない ?cat= でも案内文を表示する壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 255,
       "nth": 0,
       "text": "fail(\"?cat= の解除\", \"選択を触ったのに語句の関係に固定されたまま\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 257,
-      "nth": 0,
-      "text": "if (!cats.length) fail(\"?cat= の解除\", \"出題されていない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 284,
-      "nth": 0,
-      "text": "if (!fin || !sh) { fail(\"シェアの点数\", `イベントが出ていない（step=${step}）`); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 294,
-      "nth": 0,
-      "text": "if (!compared) fail(\"シェアの点数\", \"1件も比較できていない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 分野の選択を触っても ?cat= 指定を解除しない壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 295,
       "nth": 0,
       "text": "else if (maxCorrect === 0) fail(\"シェアの点数\", \"どの組み合わせでも正解0問で、検査が空回りしている\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 正誤判定を常に不正解にする壊れ方（correct_count が常に0）で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 312,
       "nth": 0,
       "text": "if (h.count(\"exam_abandon\") !== 0) fail(\"離脱\", \"離れる前から飛んでいる\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 318,
-      "nth": 0,
-      "text": "fail(\"離脱\", `questions_answered=${e.params.questions_answered}（2であるべき）`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 320,
-      "nth": 0,
-      "text": "if (e.params.trigger !== \"pagehide\") fail(\"離脱\", `trigger=${e.params.trigger}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 325,
-      "nth": 0,
-      "text": "if (!e.params.exam_id) fail(\"離脱\", \"exam_id が無い。完走と突き合わせられない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 338,
-      "nth": 0,
-      "text": "if (e && e.params.trigger !== \"hidden\") fail(\"離脱\", `最初の経路は hidden のはず: ${e.params.trigger}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 346,
-      "nth": 0,
-      "text": "if (!h.onResult()) { fail(\"離脱\", \"結果画面に到達しない\"); return; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 C(判断保留): 変異は書けるが、現実的なバグの形を設計できていない。この行は「試験中・離脱イベント前」の exam_abandon を数えるが、pagehide/visibilitychange はその時点で発生していないため、発火には回答経路などから reportAbandon を呼ぶ不自然な壊し方が要る。保留"
     },
     {
       "file": "app.spec.js",
       "line": 361,
       "nth": 0,
       "text": "if (afterBack !== 1) { fail(\"離脱\", `戻るボタンで ${afterBack}回`); return; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 362,
-      "nth": 0,
-      "text": "if (h.find(\"exam_abandon\").params.trigger !== \"button\") fail(\"離脱\", \"trigger が button でない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): btn-back で reportAbandon を呼ばない壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 364,
       "nth": 0,
       "text": "if (h.count(\"exam_abandon\") !== 1) fail(\"離脱\", \"戻ったあとの離脱で二重に飛んだ\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): abandonSent をボタン経路だけ立てない壊れ方で発火する"
     },
     {
       "file": "app.spec.js",
       "line": 371,
       "nth": 0,
       "text": "if (h.count(\"exam_abandon\") !== 0) fail(\"離脱\", \"試験を始めていないのに飛んだ\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "app.spec.js",
-      "line": 375,
-      "nth": 0,
-      "text": "if (!ls.doc.includes(\"visibilitychange\")) fail(\"離脱\", \"visibilitychange のハンドラが登録されていない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): reportAbandon の examId/questions ガードを外す壊れ方で発火する"
     },
     {
       "file": "deeplink.spec.js",
       "line": 91,
       "nth": 0,
       "text": "fail(\"リンク先の分野が存在しない\", `?cat=${id} （${where}）… その categoryId の問題が1問も無い`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): ページ内の ?cat= リンクを実在しないIDに書き換える変異（HTML 対象・expect:deeplink）で発火する"
     },
     {
       "file": "deeplink.spec.js",
       "line": 101,
       "nth": 0,
       "text": "fail(\"起動できない\", `?cat=${id}（${name} / ${where}）… 例外: ${e.message}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): cat パラメータ処理の中で例外を投げる壊れ方（未定義プロパティ参照）で発火する"
     },
     {
       "file": "deeplink.spec.js",
       "line": 115,
       "nth": 0,
       "text": "fail(\"問題数が合わない\", `?cat=${id}（${name}）… 10問のはずが ${answered}問`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): カテゴリ絞り込み時に生成数を1問減らす壊れ方（generateExamSet 側）で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 98,
       "nth": 0,
       "text": "fail(t.id, \"formats未宣言\", \"対応形式を配列で宣言してください\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "generator.spec.js",
-      "line": 101,
-      "nth": 0,
-      "text": "if (VALID_FORMATS.indexOf(f) === -1) fail(t.id, \"formatsに未知の値\", f);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): テンプレの formats を空配列にする変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 106,
       "nth": 0,
       "text": "fail(t.id, \"testcenter非対応の回答形式\", `answerType=${t.answerType} / type=${t.type}（テストセンターは選択式）`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 数値入力テンプレの formats に testcenter を足す変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 109,
       "nth": 0,
       "text": "if (!t.category || !t.categoryId) fail(t.id, \"カテゴリ未設定\", `${t.category}/${t.categoryId}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "generator.spec.js",
-      "line": 110,
-      "nth": 0,
-      "text": "if (![1, 2, 3].includes(t.difficulty)) fail(t.id, \"難易度が1〜3でない\", String(t.difficulty));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): テンプレの category を空にする変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 118,
       "nth": 0,
       "text": "fail(t.id, \"例外\", `${e.message}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): answerFormula の中で未定義関数を呼ぶ変異（生成時に例外）で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 121,
       "nth": 0,
       "text": "if (!q) { fail(t.id, \"生成失敗\", \"generateQuestion が null を返した\"); break; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "generator.spec.js",
-      "line": 125,
-      "nth": 0,
-      "text": "if (/\\{\\{[^}]+\\}\\}/.test(q.text)) fail(t.id, \"未展開の変数(問題文)\", q.text.match(/\\{\\{[^}]+\\}\\}/)[0]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): validate を常に false にする変異で発火する。generateTemplateQuestion は 1000回のリトライが尽きると null を返す（generator.js の maxAttempts 実装を確認済み）"
     },
     {
       "file": "generator.spec.js",
       "line": 127,
       "nth": 0,
       "text": "fail(t.id, \"未展開の変数(解説)\", q.explanation.match(/\\{\\{[^}]+\\}\\}/)[0]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): explanationTemplate の変数名をタイポする変異で発火する（問題文版は今日変異を書いた。その解説版）"
     },
     {
       "file": "generator.spec.js",
       "line": 130,
       "nth": 0,
       "text": "if (!q.text || !q.text.trim()) fail(t.id, \"問題文が空\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): templateText を空文字にする変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 131,
       "nth": 0,
       "text": "if (q.explanation !== undefined && !String(q.explanation).trim()) fail(t.id, \"解説が空\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): explanationTemplate を空白にする変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 135,
       "nth": 0,
       "text": "fail(t.id, \"答えなし\", String(q.correctAnswer));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): answerFormula の return を消す変異（undefined が返る）で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 140,
       "nth": 0,
       "text": "if (!Array.isArray(q.choices)) fail(t.id, \"選択式なのにchoicesが無い\", String(q.choices));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): answerType:choice のテンプレ（例: 13-kisokusei）の distractors をリネームする変異で発火する。distractors が無いと choices は null のまま返る（generator.js で確認済み）"
     },
     {
       "file": "generator.spec.js",
       "line": 142,
       "nth": 0,
       "text": "if (n < 2) fail(t.id, \"選択肢が不足\", `${n}個`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): distractor の生成数を1個に絞る変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 144,
       "nth": 0,
       "text": "fail(t.id, \"正解indexが範囲外\", `index=${q.correctAnswer} / 選択肢${n}個`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): correctAnswer の index に +1 するオフバイワン変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 146,
       "nth": 0,
       "text": "fail(t.id, \"選択肢が重複\", JSON.stringify(q.choices));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 選択肢の重複排除を外す変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 151,
       "nth": 0,
       "text": "fail(t.id, \"分母が0\", JSON.stringify(q.correctAnswer));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 分数の答えで分母0を許す変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 153,
       "nth": 0,
       "text": "fail(t.id, \"答えが数値でない\", JSON.stringify(q.correctAnswer));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 答えを文字列連結で返す変異（\"12km\" のような形）で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 158,
       "nth": 0,
       "text": "fail(t.id, \"ありえない負の値\", `${q.correctAnswer}${q.unit}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 引き算の順序を逆にする変異（人数・個数・距離系のテンプレ）で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 161,
       "nth": 0,
       "text": "fail(t.id, \"確率が0〜1の外\", `${answerKey(q.correctAnswer)} = ${v}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 確率の分子と分母を入れ替える変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 164,
       "nth": 0,
       "text": "fail(t.id, \"濃度が0〜100%の外\", `${q.correctAnswer}%`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 濃度計算の ×100 を二重にする変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 169,
       "nth": 0,
       "text": "if (d > 1) fail(t.id, \"分数が約分されていない\", answerKey(q.correctAnswer));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): answerType=fraction のテンプレで約分せずに返す変異で発火する。既存変異「四則逆算で未約分の分数を出す」では発火しないことを実測済み（選択肢経路で捕まる）"
     },
     {
       "file": "generator.spec.js",
       "line": 175,
       "nth": 0,
       "text": "if (/NaN|undefined|Infinity/.test(q.text)) fail(t.id, \"問題文に不正値\", q.text.match(/NaN|undefined|Infinity/)[0]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 問題文の派生変数の計算を壊して NaN を埋め込む変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 177,
       "nth": 0,
       "text": "fail(t.id, \"解説に不正値\", String(q.explanation).match(/NaN|undefined|Infinity/)[0]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "generator.spec.js",
-      "line": 180,
-      "nth": 0,
-      "text": "if (!(q.timeLimitSec > 0)) fail(t.id, \"制限時間が不正\", String(q.timeLimitSec));",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "generator.spec.js",
-      "line": 220,
-      "nth": 0,
-      "text": "if (failures.length) process.exitCode = 1;",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): computeDerivedVars の計算を壊して NaN を解説に埋める変異で発火する（renderTemplate は NaN をそのまま文字列化して埋め込むことを確認済み）"
     },
     {
       "file": "generator.spec.js",
       "line": 233,
       "nth": 0,
       "text": "if (shortfall) process.exitCode = 1;",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): generateExamSet が指定数未満を返す変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 387,
       "nth": 1,
       "text": "process.exitCode = 1;",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 C(判断保留): 発火が乱数で揺れる。全件実行2回のうち1回だけ発火した（覆われたと断定して消すと、次の実行で未カバー扱いに戻りうる）。決定的に落とす変異を書いてから消すこと"
     },
     {
       "file": "generator.spec.js",
       "line": 548,
       "nth": 3,
       "text": "process.exitCode = 1;",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 語彙テンプレの文言に壊れた活用（「〜ているていない」形）を仕込む変異で発火する"
     },
     {
       "file": "generator.spec.js",
       "line": 1260,
       "nth": 0,
       "text": "fail(line.trim(), \"解説の検算（自己検査）\", \"正しい式を誤検知した\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "html.spec.js",
-      "line": 38,
-      "nth": 0,
-      "text": "if (/anebane\\.github\\.io/.test(html)) fail(p, \"旧ドメインが残っている\", \"anebane.github.io\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): spec 内 checkLine の許容幅を0にする変異（1行→1行で書ける）で発火する。既存変異は「緩める」方向だけで「誤検知」側の自己検査が落ちない"
     },
     {
       "file": "html.spec.js",
       "line": 41,
       "nth": 0,
       "text": "if (!/<title>[^<]{5,}<\\/title>/.test(html)) fail(p, \"titleが無い/短い\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): 既存ページの <title> を5文字未満にする変異で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 42,
       "nth": 0,
       "text": "if (!/name=\"description\" content=\"[^\"]{20,}\"/.test(html)) fail(p, \"descriptionが無い/短い\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): meta description を20文字未満にする変異で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 43,
       "nth": 0,
       "text": "if (!/rel=\"canonical\" href=\"https:\\/\\//.test(html)) fail(p, \"canonicalが無い\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "html.spec.js",
-      "line": 50,
-      "nth": 0,
-      "text": "if (c[1] !== expect) fail(p, \"canonicalが自分を指していない\", `${c[1]} ≠ ${expect}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "html.spec.js",
-      "line": 65,
-      "nth": 0,
-      "text": "if (!ok) fail(p, \"リンク先が存在しない\", m[1]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): canonical の rel 属性を別の値にする変異で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 81,
       "nth": 0,
       "text": "if (/\\{\\{[^}]+\\}\\}/.test(html)) fail(p, \"未展開の変数\", html.match(/\\{\\{[^}]+\\}\\}/)[0]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "html.spec.js",
-      "line": 89,
-      "nth": 0,
-      "text": "if (!fs.existsSync(path.join(ROOT, rel))) fail(\"sitemap.xml\", \"存在しないURLを登録\", m[1]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): HTML に {{変数}} を書き込む変異で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 114,
       "nth": 0,
       "text": "fail(\"index.html\", \"出題分野の選択欄が見つからない\", \"category-select\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): index.html の category-select の id を変える変異で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 117,
       "nth": 0,
       "text": "if (!boxes.length) fail(\"index.html\", \"出題分野のチェックボックスが0件\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): グリッド内の input と span の書式対応を崩す変異（ブロックごと置換）で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 120,
       "nth": 0,
       "text": "fail(\"index.html\", \"存在しない分野が選択欄にある\", `value=${id} (${label}) … その categoryId の問題が1問も無い`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): チェックボックスの value を実在しない分野IDにする変異で発火する（名前不一致版の既存変異とは別の行）"
     },
     {
       "file": "html.spec.js",
       "line": 132,
       "nth": 0,
       "text": "fail(\"index.html\", \"対応分野の一覧が見つからない\", \"categories-list\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): categories-list の id を変える変異で発火する"
     },
     {
       "file": "html.spec.js",
       "line": 173,
       "nth": 0,
       "text": "if (!head) { fail(p, \"head が見つからない\", \"\"); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "html.spec.js",
-      "line": 175,
-      "nth": 0,
-      "text": "fail(p, \"AdSenseスニペットが head に無い\", `${PUB} を含む <script> が必要`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 39,
-      "nth": 0,
-      "text": "fail(\"manifest.json\", \"JSONとして読めない\", e.message);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 45,
-      "nth": 0,
-      "text": "if (!manifest[k]) fail(\"manifest.json\", \"必須項目が無い\", k);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 48,
-      "nth": 0,
-      "text": "fail(\"manifest.json\", \"theme_colorがHTMLと不一致\", `${manifest.theme_color} ≠ ${THEME}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 51,
-      "nth": 0,
-      "text": "fail(\"manifest.json\", \"displayがstandaloneでない\", manifest.display);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 58,
-      "nth": 0,
-      "text": "if (!fs.existsSync(abs)) { fail(\"manifest.json\", \"アイコンが存在しない\", ic.src); continue; }",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): <head> タグの綴りを壊す変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 61,
       "nth": 0,
       "text": "if (!actual) fail(\"manifest.json\", \"PNGとして読めない\", ic.src);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): manifest の icon src を実在する非PNG（favicon.svg）へ向ける変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 63,
       "nth": 0,
       "text": "fail(\"manifest.json\", \"宣言サイズと実寸が違う\", `${ic.src} 宣言${ic.sizes} 実際${actual.w}x${actual.h}`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 69,
-      "nth": 0,
-      "text": "if (!sizes.has(need)) fail(\"manifest.json\", \"purpose:any のアイコンが足りない\", need);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): icon の sizes 宣言を実寸と違う値にする変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 72,
       "nth": 0,
       "text": "fail(\"manifest.json\", \"maskableアイコンが無い\", \"Androidで白い余白付きになる\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): maskable アイコンの purpose を any に変える変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 76,
       "nth": 0,
       "text": "if (!fs.existsSync(resolveUrl(sc.url))) fail(\"manifest.json\", \"shortcutのURLが存在しない\", sc.url);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): shortcut の url を実在しないパスにする変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 78,
       "nth": 0,
       "text": "if (!fs.existsSync(resolveUrl(ic.src))) fail(\"manifest.json\", \"shortcutのアイコンが存在しない\", ic.src);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): shortcut の icon src を実在しないパスにする変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 87,
       "nth": 0,
       "text": "fail(\"sw.js\", \"PRECACHE_URLS が見つからない\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): sw.js の PRECACHE_URLS の定数名を変える変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 90,
       "nth": 0,
       "text": "if (urls.length < 5) fail(\"sw.js\", \"PRECACHE_URLSが少なすぎる\", `${urls.length}件`);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 92,
-      "nth": 0,
-      "text": "if (!fs.existsSync(resolveUrl(u))) fail(\"sw.js\", \"プリキャッシュ対象が存在しない\", u);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): PRECACHE_URLS を5件未満に減らす変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 96,
       "nth": 0,
       "text": "if (!off) fail(\"sw.js\", \"OFFLINE_URLが無い\", \"\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): OFFLINE_URL の定数名・書式を変える変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 97,
       "nth": 0,
       "text": "else if (!fs.existsSync(resolveUrl(off[1]))) fail(\"sw.js\", \"オフラインページが存在しない\", off[1]);",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 115,
-      "nth": 0,
-      "text": "if (!/<link rel=\"manifest\" href=\"\\/manifest\\.json\">/.test(html)) fail(p, \"manifestへのlinkが無い\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): OFFLINE_URL を実在しないパスへ変える変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 116,
       "nth": 0,
       "text": "if (!new RegExp(`<meta name=\"theme-color\" content=\"${THEME}\">`).test(html)) fail(p, \"theme-colorが無い/色が違う\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): index.html の theme-color meta の色を変える変異で発火する（manifest 側の変異は今日書いた。そのHTML版）"
     },
     {
       "file": "pwa.spec.js",
       "line": 117,
       "nth": 0,
       "text": "if (!/<link rel=\"apple-touch-icon\"/.test(html)) fail(p, \"apple-touch-iconが無い\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): apple-touch-icon の link を別の rel に変える変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 118,
       "nth": 0,
       "text": "if (!/<script src=\"\\/pwa\\.js\"/.test(html)) fail(p, \"pwa.jsを読み込んでいない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
-    },
-    {
-      "file": "pwa.spec.js",
-      "line": 124,
-      "nth": 0,
-      "text": "fail(\"offline.html\", \"noindexが無い\", \"中身の薄いページを検索に出すとサイト評価に響く\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): pwa.js の script src をタイポする変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 127,
       "nth": 0,
       "text": "fail(\"sitemap.xml\", \"offline.htmlを登録している\", \"noindexページをサイトマップに入れない\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 A(借金/変異は書ける): sitemap.xml に offline.html を登録する変異で発火する"
     },
     {
       "file": "pwa.spec.js",
       "line": 166,
       "nth": 0,
       "text": "fail(\"sw.js\", \"VERSION検査ができない\", \"浅いクローンです。CIでは actions/checkout に fetch-depth: 0 を指定してください\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 B(原理的に書けない): 発火条件は「リポジトリが浅いクローンであること」。変異はファイル内容の置換しかできず、クローンの履歴深度は作れない。CI 設定（fetch-depth: 0 の欠落）を検出するための経路で、ローカル・CI とも full clone なら発火しないのが正常"
     },
     {
       "file": "pwa.spec.js",
       "line": 189,
       "nth": 0,
       "text": "fail(\"sw.js\", \"VERSIONを変更したコミットが履歴に無い\", \"検査が成立しません\");",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 B(原理的に書けない): 発火条件は「VERSION 行を変更したコミットが git 履歴に1つも無いこと」。履歴は作業ツリーの変異では消せず、このリポジトリには該当コミットが既に存在するため到達不能"
     },
     {
       "file": "pwa.spec.js",
       "line": 195,
       "nth": 0,
       "text": "fail(\"sw.js\", \"VERSIONを上げずに配信アセットを変更したコミットがある\",",
-      "why": "2026-08-29 カバレッジ検査の導入時点で、対応する変異が未整備（初期移行分）"
+      "why": "2026-08-29 B(原理的に書けない): 発火条件は「コミット済みの履歴でアセット変更コミットが VERSION 変更コミットより新しいこと」。ランナーはコミットを作らないため到達不能。未コミット側の同型経路（1つ上の分岐）は既存変異「配信アセットを変えて VERSION を据え置く」がカバー済み"
     }
   ]
 }
