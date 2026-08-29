@@ -17,6 +17,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # test/tools.spec.js は取得系(tools/gsc・tools/ga4)にモックを注入して動かす。
+      # 本物のAPIは叩かないが、モジュールの import は本物なのでライブラリが要る。
+      #
+      # ⚠️ 無ければスキップ、にしてはいけない。CIでは取得系を一度も検査しないのに
+      #    緑になる。実際 2026-08-29〜30 に4回連続でCIが落ちたのはこれが無かったため。
+      #    検査は「実験台が動かない＝1本も見ていない」と正しく落ちていた。
+      - name: Python の依存（取得系の検査に要る）
+        run: pip install --quiet google-api-python-client google-analytics-data
 
       # src/questions/ を編集して questions.js の再生成を忘れると、
       # ソースと配信物がズレたまま公開されてしまう。それを防ぐ。
@@ -77,16 +89,71 @@ jobs:
       - name: 導線のE2E（?cat= のリンクが実際にその分野を出すか）
         run: node test/deeplink.spec.js
 
-      # 検査そのものが効いているかを確かめる（テストのテスト）。
-      # 「壊して落ちることを確認してから報告する」を口約束ではなく仕組みにする。
-      # 3回とも、これで検査側の欠陥（5択でNaN / ガードの隠し合い /
-      # ハーネスの作り直し）が出ている。
-      # 通常のテストより遅い（3分程度）ので別ステップにしてある。
-      # ⚠️ 他のジョブと並行して同じ作業ツリーを書き換えないこと。
-      - name: 破壊テスト（検査が本当に落ちるか）
-        run: node test/mutation-runner.js
+      # ⚠️ find の一意性は全体で1回しか判定できない。分割実行では各シャードが
+      #    自分の担当ぶんしか見ないので、ここで全件まとめて確かめる。
+      #    変異を1件も当てないので速い。
+      - name: 変異定義（名前・対象・findの一意性・行数）
+        run: node test/mutation-runner.js --check-mutations
 
       # 計測の壊れ方は画面上が無症状なので、気づけるのは数か月後の集計になる。
       # exam_start と exam_finish が1対1であることを機械で守る。
       - name: 画面ロジックの計測（exam_start と exam_finish の対応）
         run: node test/app.spec.js
+
+  # 破壊テスト（検査が本当に落ちるか）。
+  # 「壊して落ちることを確認してから報告する」を口約束ではなく仕組みにする。
+  # 検査側の欠陥（5択でNaN / ガードの隠し合い / ハーネスの作り直し / TDZ /
+  # 検査を足したことで既存変異が無効化）は、すべてこれで出ている。
+  #
+  # 220件超を直列で回すと13〜34分かかるので分割する。
+  # ⚠️ 未カバーの判定はここではしない。各シャードは自分が回した変異の発火しか
+  #    知らないので、シャード単位で判定すると全シャードが「未カバーだらけ」と
+  #    誤報する。判定は下の集約ジョブが、全シャードの発火の和集合で行う。
+  # ⚠️ 同じ作業ツリーを書き換えるので、1つのシャードの中では直列に走らせること。
+  mutation:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # 1つ落ちても他を最後まで回す（全体像が要る）
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python の依存（取得系の検査に要る）
+        run: pip install --quiet google-api-python-client google-analytics-data
+
+      - name: 破壊テスト（${{ matrix.shard }}/4）
+        run: node test/mutation-runner.js --shard ${{ matrix.shard }}/4 --coverage-out cov-${{ matrix.shard }}.log
+
+      # 発火記録を集約ジョブへ渡す。ここが欠けると未カバーの判定が成立しない。
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.shard }}
+          path: cov-${{ matrix.shard }}.log
+          if-no-files-found: error
+
+  # 全シャードの発火記録を合わせて、未カバーの失敗経路を判定する。
+  # ⚠️ needs で失敗は伝播するが、それだけに頼らない。記録の本数を突き合わせる。
+  #    シャードが静かに落ちて記録が欠けたまま集約すると、
+  #    「未カバー0件」ではなく「そのシャードのぶんを見ていない」になる。
+  coverage:
+    runs-on: ubuntu-latest
+    needs: mutation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: cov
+      - name: 未カバーの失敗経路（全シャードの発火を合わせて判定）
+        run: node test/mutation-runner.js --coverage-check cov --expect-shards 4

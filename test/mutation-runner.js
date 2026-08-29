@@ -132,15 +132,87 @@ if (process.argv.includes("--check-ledger")) {
   process.exit(1);
 }
 
-const only = process.argv[2] || null;   // 変異名の一部で絞り込める（開発用）
+// --- 引数 ---
+// 変異名での絞り込み（開発用）に加えて、CIで分割実行するための口を持つ。
+//   --shard i/N          自分の担当ぶんだけ実行する
+//   --coverage-out P     発火記録を P に写す（シャードの成果物）
+//   --coverage-check D   D の中の発火記録を全部合わせて未カバーを判定する
+//   --expect-shards N    D の中の記録が N 本そろっていることを確かめる
+//   --check-mutations    変異定義そのものを全件まとめて検査する
+//
+// ⚠️ 分割すると、各シャードは自分が回した変異の発火しか知らない。
+//    未カバーの判定は「全変異の発火の和集合」でしか成立しないので、
+//    シャードでは判定せず、集約ジョブで判定する。
+const RAW = process.argv.slice(2);
+const WITH_VALUE = ["--shard", "--coverage-out", "--coverage-check", "--expect-shards"];
+const opt = {};
+const positional = [];
+for (let ai = 0; ai < RAW.length; ai++) {
+  const a = RAW[ai];
+  if (WITH_VALUE.indexOf(a) !== -1) { opt[a] = RAW[++ai]; continue; }
+  if (a.indexOf("--") === 0) { opt[a] = true; continue; }
+  positional.push(a);
+}
+const only = positional[0] || null;   // 変異名の一部で絞り込める（開発用）
+
+let shard = null;
+if (opt["--shard"]) {
+  const sm = /^(\d+)\/(\d+)$/.exec(String(opt["--shard"]));
+  if (!sm) { console.error("❌ --shard は i/N の形で指定してください（例: --shard 2/4）"); process.exit(2); }
+  shard = { i: parseInt(sm[1], 10), n: parseInt(sm[2], 10) };
+  if (shard.n < 1 || shard.i < 1 || shard.i > shard.n) {
+    console.error(`❌ --shard ${opt["--shard"]} は範囲外です`); process.exit(2);
+  }
+}
+const AGG = !!opt["--coverage-check"];   // 集約モード。変異は1件も当てない
 
 // 未カバーの失敗経路の検出は、全変異を実行したときだけ意味を持つ
 // （絞り込み実行では「発火しなかった」が「変異を走らせていない」と区別できない）。
-const coverageOn = !only;
+const coverageOn = !only;                       // 計装して発火を記録するか
+// 未カバーの判定は、全変異の発火がそろって初めて意味を持つ。
+// シャードは自分のぶんしか知らないので判定しない（集約ジョブがやる）。
+const checkUncovered = coverageOn && !shard && !AGG;
 
 const mutations = JSON.parse(fs.readFileSync(MUTATIONS, "utf8"));
 const failures = [];
 const fail = (name, detail) => failures.push({ name, detail });
+
+// 変異定義そのものを全件まとめて検査する。変異は1件も当てないので速い。
+//
+// ⚠️ find の一意性は「全体で1回」しか判定できない。分割実行では各シャードが
+//    自分の担当ぶんしか見ないので、シャードに任せると
+//    「検査を足したことで既存変異の find が2箇所に一致し、その変異が黙って
+//    効かなくなる」（2026-08-29に実際に起きた）を取り逃す。
+if (opt["--check-mutations"]) {
+  const problems = [];
+  const names = new Set();
+  for (const m of mutations) {
+    const where = `「${m.name}」`;
+    if (names.has(m.name)) problems.push(`名前が重複している: ${where}`);
+    names.add(m.name);
+    if (!SPECS[m.expect]) {
+      problems.push(`${where}: expect が不正（${m.expect}）。${Object.keys(SPECS).join(" / ")} のいずれか`);
+    }
+    const abs = path.join(ROOT, m.file);
+    if (!fs.existsSync(abs)) { problems.push(`${where}: 対象ファイルが無い（${m.file}）`); continue; }
+    const src = fs.readFileSync(abs, "utf8");
+    const hits = src.split(m.find).length - 1;
+    if (hits !== 1) {
+      problems.push(`${where}: find の一致が ${hits}箇所（${m.file}）。`
+        + "1箇所でなければ変異が適用されず、緑が意味を持たない");
+    }
+    // spec への変異が行数を変えると、発火の記録（ファイル:行）が総崩れになる
+    if (Object.values(SPECS).indexOf(m.file) !== -1
+        && m.find.split("\n").length !== m.replace.split("\n").length) {
+      problems.push(`${where}: spec への変異が行数を変えている（${m.file}）`);
+    }
+  }
+  console.log(`変異定義の検査: ${mutations.length}件`);
+  if (!problems.length) { console.log("   ✅ 名前・対象・find の一意性・行数のいずれも問題なし"); process.exit(0); }
+  console.log(`   ❌ ${problems.length}件`);
+  for (const p of problems) console.log(`   - ${p}`);
+  process.exit(1);
+}
 
 /** src/questions/ を触ったら questions.js を作り直す。 */
 // 再ビルドを意図的に失敗させる自己検査の口。
@@ -195,6 +267,8 @@ function lockStillMine() {
 //    2プロセスがほぼ同時に引き取ると unlink と作成が交錯しうるが、2 で片方が退き、
 //    それでもすり抜けた場合は 3 が1変異以内に捕まえる。
 function acquireLock() {
+  // 集約は発火記録を読むだけで、作業ツリーに触らない。ロックは要らない。
+  if (AGG) return { ok: true };
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       fs.writeFileSync(LOCK, String(process.pid), { flag: "wx" });
@@ -353,6 +427,7 @@ const watchedFiles = [...new Set(mutations.map(m => path.join(ROOT, m.file)))].c
 const watchedRel = watchedFiles.map(f => path.relative(ROOT, f));
 
 function preflight() {
+  if (AGG) return { ok: true };
   // ⚠️ ここで git status --porcelain を使ってはいけない。
   //    git は (mtime, サイズ, inode) の stat キャッシュが揃うと中身を読まずに
   //    「クリーン」を返す。書いて即戻すこのランナーは、まさにその条件を作る。
@@ -403,8 +478,8 @@ if (!lock.ok) {
   console.log(`   ❌ ${lock.why}`);
   process.exit(1);
 }
-lockHeld = true;
-announceLockOwner();   // 自分が呼ぶ build-questions.js を門番が止めないように
+lockHeld = !AGG;
+if (!AGG) announceLockOwner();   // 自分が呼ぶ build-questions.js を門番が止めないように
 
 // 計装コピー(.cov-run-*)は preflight より前に消す。SIGKILL で死んだ実行は
 // 「コピー残留」と「ツリー汚染」を同時に残し、汚染が preflight を止める限り
@@ -422,7 +497,7 @@ if (!pre.ok) {
 // 前回のカバレッジ記録を消す（残っていると前回の発火が混ざる）。
 // こちらは preflight の後に残す。起動を拒否された場合でも、直前に完走した
 // 全件実行の発火記録は prune-uncovered.js の入力として意味を持ち続けるため。
-if (coverageOn) { try { fs.unlinkSync(COVLOG); } catch (e) {} }
+if (coverageOn && !AGG) { try { fs.unlinkSync(COVLOG); } catch (e) {} }
 
 // 開始時点の中身を控える。git ではなく中身で照合する。
 // git の差分で確かめると、開始時に既に変更されていたファイルは
@@ -455,8 +530,11 @@ let ran = 0, skipped = 0;
 const results = [];
 let lockLost = false;   // 実行中にロックを失ったら立てる。以降の変異と最終確認を中止する
 
-for (const m of mutations) {
+for (const [mIndex, m] of mutations.entries()) {
+  if (AGG) break;                       // 集約モードは変異を当てない
   if (only && m.name.indexOf(only) === -1) { skipped++; continue; }
+  // 何番目かで割り当てる。定義の並び順が変わらない限り、同じシャードが同じ変異を担当する。
+  if (shard && (mIndex % shard.n) !== (shard.i - 1)) { skipped++; continue; }
 
   // ロックの所有を1件ごとに確かめる。外部でロックが消される・奪われると
   // 二重起動が起き、互いの復元を上書きする（2026-08-28に実際に起きた）。
@@ -617,7 +695,7 @@ if (!lockLost) {
 // 各 spec の失敗経路を列挙し、上の全変異の実行で一度も発火しなかったものを
 // 失敗として報告する。0件・計装切れ・台帳の腐りも、すべて沈黙させずに落とす。
 // 呼び出しは下の「出力」節（結果一覧の直後）。failures に載るので終了コードにも乗る。
-function checkCoverage() {
+function checkCoverage(firedOverride) {
   // 1. 復元済みの spec から失敗経路を列挙する（列挙と計装は同じ関数を使う。
   //    別実装にすると、片方だけがずれたとき嘘のカバレッジが生まれる）
   const all = [];
@@ -638,10 +716,12 @@ function checkCoverage() {
   if (!all.length) { fail("カバレッジ", "失敗経路が全 spec で0件。列挙が空回りしている"); return; }
 
   // 2. 発火の記録を読む
-  const fired = new Set();
-  try {
-    for (const ln of fs.readFileSync(COVLOG, "utf8").split("\n")) if (ln) fired.add(ln);
-  } catch (e) {}
+  const fired = firedOverride || new Set();
+  if (!firedOverride) {
+    try {
+      for (const ln of fs.readFileSync(COVLOG, "utf8").split("\n")) if (ln) fired.add(ln);
+    } catch (e) {}
+  }
   if (!fired.size) {
     fail("カバレッジ", "どの失敗経路の発火も記録されていない。"
       + "変異が検出されているのに発火ゼロはありえないので、計装が空回りしている");
@@ -701,8 +781,58 @@ for (const r of results) {
   console.log(`   ${r.ok ? "✅" : "❌"} [${r.spec}] ${r.name}`);
 }
 if (skipped) console.log(`   （${skipped}件は絞り込みで除外）`);
-if (coverageOn && !lockLost) checkCoverage();
-if (!coverageOn) console.log("   ℹ️ 絞り込み実行のため、未カバーの失敗経路の検出は行っていません（全件実行のときだけ行います）");
+// シャードの成果物。集約ジョブがこれを全部集めて和集合を取る。
+if (opt["--coverage-out"] && !AGG) {
+  try {
+    const body = fs.existsSync(COVLOG) ? fs.readFileSync(COVLOG, "utf8") : "";
+    fs.writeFileSync(opt["--coverage-out"], body, "utf8");
+    console.log(`   発火記録を書き出しました: ${opt["--coverage-out"]}（${body.split("\n").filter(Boolean).length}行）`);
+  } catch (e) {
+    fail("カバレッジ", `発火記録を書き出せない（${opt["--coverage-out"]}）: ${e.message}`);
+  }
+}
+
+if (AGG) {
+  // 集約: 全シャードの発火記録を合わせてから未カバーを判定する。
+  const dir = opt["--coverage-check"];
+  const logs = [];
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      if (name.indexOf(".") === 0) continue;
+      const p = path.join(dir, name);
+      if (fs.statSync(p).isDirectory()) {
+        // 成果物は <名前>/<ファイル> の形で降りてくることがある
+        for (const inner of fs.readdirSync(p)) {
+          const q = path.join(p, inner);
+          if (fs.statSync(q).isFile()) logs.push(q);
+        }
+      } else logs.push(p);
+    }
+  } catch (e) {
+    fail("カバレッジ", `発火記録のディレクトリを読めない（${dir}）: ${e.message}`);
+  }
+  // ⚠️ シャードが静かに落ちて記録が欠けたまま集約すると、
+  //    「未カバー0件」ではなく「そのシャードのぶんを見ていない」になる。
+  //    本数を必ず突き合わせる。
+  const want = opt["--expect-shards"] ? parseInt(opt["--expect-shards"], 10) : 0;
+  if (want && logs.length !== want) {
+    fail("カバレッジ", `発火記録が ${logs.length}本しかありません（${want}本のはず）。`
+      + "シャードが落ちたか、成果物の受け渡しが壊れています。未カバーの判定は成立しません");
+  }
+  const firedAll = new Set();
+  for (const f of logs) {
+    try { for (const ln of fs.readFileSync(f, "utf8").split("\n")) if (ln) firedAll.add(ln); }
+    catch (e) { fail("カバレッジ", `発火記録を読めない（${f}）: ${e.message}`); }
+  }
+  console.log(`カバレッジの集約: 発火記録 ${logs.length}本 / 発火した行 ${firedAll.size}件`);
+  checkCoverage(firedAll);
+} else if (checkUncovered && !lockLost) {
+  checkCoverage();
+} else if (!AGG && !checkUncovered) {
+  console.log(shard
+    ? `   ℹ️ 分割実行（${shard.i}/${shard.n}）のため、未カバーの検出は集約ジョブで行います`
+    : "   ℹ️ 絞り込み実行のため、未カバーの失敗経路の検出は行っていません（全件実行のときだけ行います）");
+}
 
 if (!failures.length) {
   console.log(`   ✅ ${ran}件すべて、壊すと検査が落ちた（検査が本当に効いている）`);

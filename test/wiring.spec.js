@@ -53,12 +53,47 @@ if (!fs.existsSync(ciPath)) {
   ci = [...new Set([...yml.matchAll(/node\s+(test\/[a-z0-9-]+\.spec\.js)/g)].map(m => m[1]))].sort();
   // CIが変異ランナーを回しているかも見る。回していなければ SPECS 側の
   // 登録が正しくても、破壊テストは一度も動かない。
-  // ⚠️ 引数なしの実行（＝全件の破壊テスト）だけを数える。
-  //    --check-ledger は台帳の構造を見るだけで、変異は1件も回さない。
-  //    文字列 mutation-runner.js の有無で見ると、--check-ledger の行があるだけで
+  // ⚠️ 変異を実際に回している行だけを数える。
+  //    --check-ledger（台帳の構造）と --check-mutations（変異定義）と
+  //    --coverage-check（集約）は、変異を1件も当てない。
+  //    文字列 mutation-runner.js の有無で見ると、それらの行があるだけで
   //    「破壊テストを回している」ことになってしまう（実際に変異が検出できなかった）。
-  if (!/node\s+test\/mutation-runner\.js\s*$/m.test(yml)) {
-    fail("CIが破壊テストを回していない", "SPECS に登録しても実行されない。--check-ledger だけでは変異を1件も回さない");
+  //
+  //    数えるのは「引数なし（全件）」か「--shard i/N（分割）」の行。
+  const runsMutations = [...yml.matchAll(/node\s+test\/mutation-runner\.js([^\n]*)/g)]
+    .map((m) => m[1].trim())
+    .filter((rest) => rest === "" || /^--shard\s/.test(rest));
+  if (!runsMutations.length) {
+    fail("CIが破壊テストを回していない",
+      "SPECS に登録しても実行されない。--check-ledger / --check-mutations / --coverage-check は変異を1件も回さない");
+  }
+
+  // 分割しているなら、集約（未カバーの判定）も回っていなければならない。
+  // ⚠️ 各シャードは自分が回した変異の発火しか知らない。集約が無いと
+  //    未カバーの判定が誰にも行われないまま、全部緑になる。
+  // ⚠️ matrix で回すと --shard の行は1つでも、実際に走るのは matrix の要素数。
+  //    行数で数えると常に1になり、--expect-shards と食い違って誤検知する。
+  //    走る本数は matrix の定義から取る。
+  const shards = runsMutations.filter((r) => /^--shard\s/.test(r));
+  let shardCount = shards.length;
+  const matrix = yml.match(/matrix:\s*\n\s*shard:\s*\[([^\]]*)\]/);
+  if (shards.length && matrix) {
+    shardCount = matrix[1].split(",").map((x) => x.trim()).filter(Boolean).length;
+  }
+  if (shards.length) {
+    if (!/--coverage-check/.test(yml)) {
+      fail("分割しているのに集約が無い",
+        `--shard が ${shards.length}件あるのに --coverage-check が無い。未カバーの判定が誰も行わないまま緑になる`);
+    }
+    // 集約が「何本そろうべきか」を知らないと、シャードが静かに落ちても気づけない。
+    const expect = yml.match(/--expect-shards\s+(\d+)/);
+    if (!expect) {
+      fail("集約がシャードの本数を確かめていない",
+        "--expect-shards が無い。シャードが落ちて発火記録が欠けても「未カバー0件」に見える");
+    } else if (+expect[1] !== shardCount) {
+      fail("集約が期待するシャード数と実際が違う",
+        `--expect-shards ${expect[1]} に対し、実際に走るシャードは ${shardCount}本`);
+    }
   }
   // ⚠️ 検査の厳しさを外から下げる口には、下限が要る。
   //    ITERATIONS は生成系検査の試行回数で、下げても何も落ちない

@@ -1758,5 +1758,13 @@
     "find": "    var all = [\"kimisuka_spi\", \"neo\", \"uzuz_it\", \"uzuz_second\"];",
     "replace": "    var all = [\"kimisuka_spi\", \"neo\", \"uzuz_it\", \"uzuz_second\", \"kimisuka_general\"];",
     "expect": "affiliate"
+  },
+  {
+    "name": "成果条件の型に未知の値を入れる",
+    "why": "型が未知だと、面談型と登録型の食い違いを検査できなくなる。宣言そのものが壊れていることに気づけない",
+    "file": "affiliate.js",
+    "find": "      conversion: \"signup\",         // 登録で成果。面談は不要",
+    "replace": "      conversion: \"とりあえず\",",
+    "expect": "affiliate"
   }
 ]
