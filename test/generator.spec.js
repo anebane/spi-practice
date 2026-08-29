@@ -29,6 +29,7 @@ const TEMPLATES = vm.runInContext("QUESTION_TEMPLATES", ctx);
 // テンプレートが取れていなければ、以降の検査はすべて空回りする。
 // 「壊れているものが無い」と「何も見ていない」を取り違えないための最初の一線。
 cov.covered("問題テンプレート", TEMPLATES.length, 50);
+
 const GEN = vm.runInContext("QuestionGenerator", ctx);
 
 const VALID_FORMATS = ["webtesting", "testcenter"];
@@ -58,6 +59,33 @@ function reportLateFailures() {
   for (const f of late.slice(0, 20)) {
     console.log(`   - [${f.rule}] ${f.tid}: ${String(f.detail).slice(0, 120)}`);
   }
+}
+
+// --- テンプレートIDが一意か ---
+//
+// ⚠️ IDの重複を見る検査が無かった。テンプレートを1件まるごと複製しても
+//    すべての検査が緑のまま通る。同じIDが出題プールに2重登録されると
+//    ・その分野だけ出題率が倍になる（利用者から見える偏り）
+//    ・GA4の template_id 別集計で2つの実体が1つに混ざる
+//    ・誤り報告が来ても、どちらのテンプレートか特定できない
+//    ビルドは連結するだけなので、コピペで簡単に起こる。
+{
+  const seen = new Map();
+  const dups = [];
+  for (const t of TEMPLATES) {
+    if (!t.id) { fail("(id なし)", "テンプレートIDが無い", `category=${t.category}`); continue; }
+    if (seen.has(t.id)) dups.push(t.id);
+    else seen.set(t.id, t);
+  }
+  if (dups.length) {
+    for (const id of [...new Set(dups)]) {
+      fail(id, "テンプレートIDが重複している",
+        `${TEMPLATES.filter(t => t.id === id).length}件ある。`
+        + "出題率が倍になり、template_id 別の集計も混ざる");
+    }
+  }
+  // 0件だと「重複が無い」ではなく「1件も見ていない」。
+  cov.covered("IDを調べたテンプレート", seen.size, 50);
 }
 
 /** 答えを数値に正規化する。answerType="fraction" は {numerator,denominator} 形式。 */

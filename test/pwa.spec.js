@@ -88,6 +88,55 @@ if (!block) {
 } else {
   const urls = [...block[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
   if (urls.length < 5) fail("sw.js", "PRECACHE_URLSが少なすぎる", `${urls.length}件`);
+
+  // ⚠️ 件数だけを見ていたので、/app.js を1本だけ消しても緑のままだった。
+  //    オフラインでアプリ本体が欠けるのに気づけない。
+  //    「ごっそり消す」ではなく「1本抜く」壊れ方を捕まえる。
+  //
+  //    中核＝これが無いと試験そのものが動かないもの。
+  //    トップページ・見た目・問題データ・生成器・本体・インストール情報。
+  const CORE = ["/", "/style.css", "/questions.js", "/generator.js", "/app.js", "/manifest.json"];
+  for (const u of CORE) {
+    if (urls.indexOf(u) === -1) {
+      fail("sw.js", "中核アセットがプリキャッシュに載っていない",
+        `${u} … オフラインで欠けると、この1本だけで試験が動かなくなる`);
+    }
+  }
+  cov.covered("中核アセット", CORE.length, 5);
+
+  // 名指しの一覧だけだと、新しく読み込む資源が増えたときに追随できない。
+  // トップページが実際に読み込むローカル資源と突き合わせる。
+  //
+  // ⚠️ 欠けてよいものは、理由付きで individually 挙げる。
+  //    一括の「その他」を作ると、A7（例外リストが腐る）になる。
+  const OPTIONAL_OFFLINE = new Map([
+    ["/affiliate.js", "広告枠。app.js が typeof Affiliate で守っており、無くても試験は動く"],
+    ["/pwa.js", "Service Worker の登録。オフラインの時点で既に登録済みなので要らない"]
+  ]);
+  const idx = read("index.html");
+  const refs = new Set();
+  for (const m of idx.matchAll(/<script[^>]+src="([^"]+)"/g)) refs.add(m[1]);
+  for (const m of idx.matchAll(/<link[^>]+rel="stylesheet"[^>]*href="([^"]+)"/g)) refs.add(m[1]);
+  const local = [...refs]
+    .filter((u) => !/^https?:\/\//.test(u))
+    .map((u) => (u.startsWith("/") ? u : "/" + u));
+
+  // 0件だと「不足が無い」ではなく「1つも見ていない」。
+  cov.covered("トップページが読み込むローカル資源", local.length, 3);
+
+  for (const u of local) {
+    if (urls.indexOf(u) !== -1) continue;
+    if (OPTIONAL_OFFLINE.has(u)) continue;
+    fail("sw.js", "トップページが読み込む資源がプリキャッシュに無い",
+      `${u} … オフラインで欠ける。要らないなら理由を添えて OPTIONAL_OFFLINE に挙げること`);
+  }
+  // 挙げた例外が実物から消えていたら、例外のほうを消す。
+  for (const [u, why] of OPTIONAL_OFFLINE) {
+    if (local.indexOf(u) === -1) {
+      fail("sw.js", "オフライン例外の指定が実物と合わない",
+        `${u} はトップページが読み込んでいない（理由: ${why}）。例外から消すこと`);
+    }
+  }
   for (const u of urls) {
     if (!fs.existsSync(resolveUrl(u))) fail("sw.js", "プリキャッシュ対象が存在しない", u);
   }

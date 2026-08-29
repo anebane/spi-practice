@@ -374,6 +374,62 @@ function checkNoteAfterEveryLink(host, where, programs) {
   cov.covered("配布物の検査", n, 1);
 }
 
+// --- W3: 配布されたURLが http に落ちていないか ---
+//
+// ⚠️ 計測imgを http:// にすると mixed content でブロックされ、
+//    画面は何も変わらないまま計測だけ死ぬ。成果が計上されなくなる。
+//    「1文字だけ変える」壊れ方なので、素材の存在確認では捕まらない。
+//
+// ⚠️ 「https に直す」検査にはしない。ASPから配布されたURLは改変してはいけない。
+//    ここで見るのは「http で始まっていないこと」だけ。
+{
+  const h = loadAffiliate();
+  const P = h.Affiliate._programs;
+  const ids = Object.keys(P);
+  let checked = 0;
+  for (const id of ids) {
+    for (const key of ["href", "pixel"]) {
+      const url = P[id][key];
+      if (!url) continue;
+      checked++;
+      if (/^http:\/\//i.test(url)) {
+        fail("配布URLが http になっている",
+          `${id}.${key}: ${url} … mixed content でブロックされ、画面は変わらないまま計測だけ死ぬ`);
+      } else if (!/^https:\/\//i.test(url)) {
+        fail("配布URLの形が想定外", `${id}.${key}: ${url} … https で始まっていない`);
+      }
+    }
+  }
+  // 0件だと「http が無い」ではなく「1本も見ていない」。
+  cov.covered("URLを調べた素材", checked, 4);
+}
+
+// --- W4: スコア帯の境界 ---
+//
+// ⚠️ >= を > に変えるだけで、70点ちょうど・40点ちょうどの層の帯が静かにずれる。
+//    どの層に何が効いたかの集計が、境界の人数ぶんだけ狂う。
+//    境界そのものを名指しで確かめる。
+{
+  const h = loadAffiliate();
+  const band = h.Affiliate.scoreBand;
+  const cases = [
+    [100, "high"], [70.1, "high"], [70, "high"],   // 70ちょうどは high
+    [69.9, "mid"], [40.1, "mid"], [40, "mid"],     // 40ちょうどは mid
+    [39.9, "low"], [0, "low"],
+    [NaN, "unknown"], [null, "unknown"], ["70", "unknown"]
+  ];
+  let checked = 0;
+  for (const [input, want] of cases) {
+    const got = band(input);
+    checked++;
+    if (got !== want) {
+      fail("スコア帯の境界がずれている",
+        `scoreBand(${JSON.stringify(input)}) = ${got}（期待 ${want}）`);
+    }
+  }
+  cov.covered("スコア帯の境界", checked, 8);
+}
+
 // --- 出力 ---
 console.log("広告枠の不変条件を検査");
 cov.print();

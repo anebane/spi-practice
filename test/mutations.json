@@ -1606,5 +1606,61 @@
     "find": "      var marks = [25, 50, 75, 100], fired = {};",
     "replace": "      var marks = [25, 50, 75], fired = {};",
     "expect": "analytics"
+  },
+  {
+    "name": "プリキャッシュからapp.jsを1本だけ消す",
+    "why": "オフラインでアプリ本体が欠ける。件数だけ見ていると1本抜いても気づけない",
+    "file": "sw.js",
+    "find": "  \"/app.js\",\n",
+    "replace": "",
+    "expect": "pwa"
+  },
+  {
+    "name": "プリキャッシュからstyle.cssを1本だけ消す",
+    "why": "オフラインで見た目が崩れる。中核アセットの名指しが無いと素通りする",
+    "file": "sw.js",
+    "find": "  \"/style.css\",\n",
+    "replace": "",
+    "expect": "pwa"
+  },
+  {
+    "name": "トップページが読み込む資源をプリキャッシュから外す",
+    "why": "新しく読み込む資源が増えたとき、名指しの一覧だけでは追随できない",
+    "file": "sw.js",
+    "find": "  \"/questions.js\",\n",
+    "replace": "",
+    "expect": "pwa"
+  },
+  {
+    "name": "テンプレートを1件複製する",
+    "why": "同じIDが出題プールに2重登録される。出題率が倍になり、template_id 別の集計も混ざる",
+    "file": "src/questions/13-kisokusei.js",
+    "find": "    id: \"suiron_code_01\",",
+    "replace": "    id: \"suiron_code_01\",\n    _dup: (function(){ QUESTION_TEMPLATES.push({ id: \"suiron_code_01\", formats: [\"webtesting\"], category: \"規則性・方角\", categoryId: 13, difficulty: 1, templateText: \"複製\", variables: {}, answerType: \"number\", answerFormula: function(){ return 1; }, unit: \"\", explanationTemplate: \"複製 1\", timeLimitSec: 60 }); return 1; })(),",
+    "expect": "generator"
+  },
+  {
+    "name": "計測imgをhttpに落とす",
+    "why": "mixed content でブロックされ、画面は変わらないまま計測だけ死ぬ。成果が計上されなくなる",
+    "file": "affiliate.js",
+    "find": "      pixel: \"https://h.accesstrade.net/sp/rr?rk=0100omb800oxvd\",",
+    "replace": "      pixel: \"http://h.accesstrade.net/sp/rr?rk=0100omb800oxvd\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "スコア帯の上の境界をずらす",
+    "why": "70点ちょうどの層が high から外れる。どの層に何が効いたかの集計が狂う",
+    "file": "affiliate.js",
+    "find": "    if (percent >= 70) return \"high\";",
+    "replace": "    if (percent > 70) return \"high\";",
+    "expect": "affiliate"
+  },
+  {
+    "name": "スコア帯の下の境界をずらす",
+    "why": "40点ちょうどの層が mid から外れる",
+    "file": "affiliate.js",
+    "find": "    if (percent >= 40) return \"mid\";",
+    "replace": "    if (percent > 40) return \"mid\";",
+    "expect": "affiliate"
   }
 ]
