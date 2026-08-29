@@ -670,5 +670,93 @@
     "find": "          if (pct >= m && !fired[m]) {",
     "replace": "          if (!fired[m]) {",
     "expect": "analytics"
+  },
+  {
+    "name": "短い記事の読了を毎回送る",
+    "why": "スクロールのたびに読了が飛び、読了数が水増しされる",
+    "file": "analytics.js",
+    "find": "            fired[100] = true;",
+    "replace": "            fired[100] = false;",
+    "expect": "analytics"
+  },
+  {
+    "name": "短い記事の読了を100%以外で送る",
+    "why": "全文が見えているのに途中までしか読まれていないことになる",
+    "file": "analytics.js",
+    "find": "            track(\"article_scroll\", { page: slug, percent: 100, scrolled: false });",
+    "replace": "            track(\"article_scroll\", { page: slug, percent: 50, scrolled: false });",
+    "expect": "analytics"
+  },
+  {
+    "name": "本文が無いページでも読了を送る",
+    "why": "記事ではないページで読了率が水増しされる",
+    "file": "analytics.js",
+    "find": "    var body = document.querySelector(\".article-body\");",
+    "replace": "    var body = document.querySelector(\".article-body\") || { offsetHeight: 0, getBoundingClientRect: function () { return { top: 0, bottom: 1 }; } };",
+    "expect": "analytics"
+  },
+  {
+    "name": "計測が存在しない要素を参照する",
+    "why": "依存する要素がどのページにも無い指標は永久に発火しない",
+    "file": "analytics.js",
+    "find": "    document.querySelectorAll(\".cta-btn\").forEach(function (el) {",
+    "replace": "    document.querySelectorAll(\".cta-btn-none\").forEach(function (el) {",
+    "expect": "analytics"
+  },
+  {
+    "name": "CATEGORY_PAGES の名前を変えて読めなくする",
+    "why": "解説ページの一覧を突き合わせられなくなる。読めないまま緑になると検査が空回りする",
+    "file": "app.js",
+    "find": "  var CATEGORY_PAGES = {",
+    "replace": "  var CATEGORY_PAGES_RENAMED = {",
+    "expect": "html"
+  },
+  {
+    "name": "CI設定の場所を見失わせる",
+    "why": "CI設定を読めないまま緑になると、登録漏れの検査が丸ごと空回りする",
+    "file": "test/wiring.spec.js",
+    "find": "const ciPath = path.join(ROOT, \".github/workflows/test.yml\");",
+    "replace": "const ciPath = path.join(ROOT, \".github/workflows/none.yml\");",
+    "expect": "wiring"
+  },
+  {
+    "name": "CIから破壊テストを外す",
+    "why": "SPECS に登録しても破壊テストが動かない。登録だけして走らない状態になる",
+    "file": ".github/workflows/test.yml",
+    "find": "        run: node test/mutation-runner.js",
+    "replace": "        run: echo skipped",
+    "expect": "wiring"
+  },
+  {
+    "name": "SPECS の名前を変えて読めなくする",
+    "why": "破壊テストの対象一覧を読めないまま緑になる",
+    "file": "test/mutation-runner.js",
+    "find": "const SPECS = {",
+    "replace": "const SPECS_RENAMED = {",
+    "expect": "wiring"
+  },
+  {
+    "name": "CIが実在しない検査を指す",
+    "why": "消した検査が一覧に残っていると、CIはそこで落ちる",
+    "file": ".github/workflows/test.yml",
+    "find": "        run: node test/wiring.spec.js",
+    "replace": "        run: node test/nosuch.spec.js",
+    "expect": "wiring"
+  },
+  {
+    "name": "SPECS が実在しない検査を指す",
+    "why": "消した検査が SPECS に残っていると、破壊テストがそこで落ちる",
+    "file": "test/mutation-runner.js",
+    "find": "  wiring: \"test/wiring.spec.js\"",
+    "replace": "  wiring: \"test/nosuch.spec.js\"",
+    "expect": "wiring"
+  },
+  {
+    "name": "登録漏れの検査で0件ガードを効かなくする",
+    "why": "検査ファイルを1本も見ていなくても緑になる",
+    "file": "test/wiring.spec.js",
+    "find": "cov.covered(\"検査ファイル\", specs.length, 5);",
+    "replace": "cov.covered(\"検査ファイル\", specs.length, 99);",
+    "expect": "wiring"
   }
 ]

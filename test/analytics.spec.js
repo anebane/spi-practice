@@ -59,17 +59,24 @@ function run(opts) {
   // dataLayer に積まれた引数から取り出す。
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(path.join(ROOT, "analytics.js"), "utf8"), sandbox, { filename: "analytics.js" });
+  // スクロールを起こしたあとにも取り直せるよう、その都度集める。
+  // 一度きりだと「2回目以降に増えていないか」を確かめられない。
+  const collect = () => sandbox.dataLayer
+    .filter(a => a[0] === "event")
+    .map(a => ({ name: a[1], params: a[2] || {} }));
   (listeners.DOMContentLoaded || []).forEach(f => f());
-  for (const args of sandbox.dataLayer) {
-    if (args[0] === "event") events.push({ name: args[1], params: args[2] || {} });
-  }
-  return { events, scroll: () => (listeners.scroll || []).forEach(f => f()) };
+  return {
+    get events() { return collect(); },
+    scroll: () => (listeners.scroll || []).forEach(f => f())
+  };
 }
 
 // --- 1. 画面に収まる短い記事でも読了が送られる ---
 {
   // 本文600px、画面800px → スクロールしない
   const r = run({ hasBody: true, bodyHeight: 600, innerHeight: 800, rect: { top: 100, bottom: 700 } });
+  // スクロールが起きても増えないこと。短い記事でも指を動かせばイベントは飛ぶ。
+  r.scroll(); r.scroll();
   const ev = r.events.filter(e => e.name === "article_scroll");
   if (!ev.length) {
     fail("短い記事で読了が送られない",
