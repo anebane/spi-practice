@@ -1,4 +1,10 @@
 {
+  "_meta": {
+    "signature": "6b76fc66031ec0df",
+    "updated": "2026-08-29",
+    "reason": "既存の値に由来を付ける（手編集の検出を有効化）",
+    "changed": []
+  },
   "chart_bar_01": 400,
   "chart_bar_compare_01": 400,
   "chart_line_01": 400,
@@ -11,8 +17,8 @@
   "junretsu_cond_01": 83,
   "junretsu_exclude_01": 70,
   "kakuritsu_arrange_01": 56,
-  "kakuritsu_ball_01": 131,
   "kakuritsu_ball3_01": 226,
+  "kakuritsu_ball_01": 131,
   "kakuritsu_card_01": 70,
   "kakuritsu_coin_01": 78,
   "kakuritsu_cond_01": 106,
@@ -86,6 +92,6 @@
   "wariai_consecutive_01": 325,
   "wariai_increase_01": 92,
   "wariai_population_01": 265,
-  "wariai_ratio_01": 272,
-  "wariai_ratio3_01": 324
+  "wariai_ratio3_01": 324,
+  "wariai_ratio_01": 272
 }

@@ -22,6 +22,7 @@ for (const f of ["questions.js", "generator.js"]) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });
 }
 const { Coverage } = require("./helpers/coverage");
+const BaselineMeta = require("./helpers/baseline-meta");
 const cov = new Coverage();
 
 const TEMPLATES = vm.runInContext("QUESTION_TEMPLATES", ctx);
@@ -347,8 +348,15 @@ if (failures.length) process.exitCode = 1;
       console.error('     UPDATE_BASELINE=all BASELINE_REASON="理由" node test/generator.spec.js');
       process.exit(2);
     }
-    const targets = req === "all" ? rows.map(r => r.id)
+    // sign: 値は変えず、由来（_meta）だけを付け直す。
+    // 既存ファイルに由来が無い状態から始めるための口。
+    const targets = req === "sign" ? []
+                  : req === "all" ? rows.map(r => r.id)
                   : [...new Set(req.split(",").map(s => s.trim()).filter(Boolean))];
+    if (req === "sign" && !reason) {
+      console.error('❌ sign にも理由が要ります。BASELINE_REASON="..." を付けてください。');
+      process.exit(2);
+    }
     const unknown = targets.filter(id => !byId.has(id));
     if (unknown.length) {
       console.error(`❌ 実在しないテンプレートID: ${unknown.join(", ")}（タイポの可能性。何も更新していません）`);
@@ -371,12 +379,14 @@ if (failures.length) process.exitCode = 1;
     // 名指しした分だけ書き換え、他は旧値のまま残す。
     // 実在しなくなったテンプレートの記録だけは落とす（名指しでは永遠に消せないため）。
     const merged = {};
-    for (const id of Object.keys(old)) if (byId.has(id)) merged[id] = old[id];
-    const dropped = Object.keys(old).filter(id => !byId.has(id));
+    const oldEntries = BaselineMeta.entriesOf(old);
+    for (const id of Object.keys(oldEntries)) if (byId.has(id)) merged[id] = oldEntries[id];
+    const dropped = Object.keys(oldEntries).filter(id => !byId.has(id));
     for (const c of changes) merged[c.id] = c.n;
-    const sorted = {};
-    for (const k of Object.keys(merged).sort()) sorted[k] = merged[k];
-    fs.writeFileSync(BASELINE_PATH, JSON.stringify(sorted, null, 2) + "\n", "utf8");
+    // 由来（更新日・理由・変更したID・署名）を一緒に書く。
+    // 署名は、ゲートを通さない手編集を次の実行で見えるようにするためのもの。
+    const doc = BaselineMeta.withMeta(merged, reason, changes.map(c => c.id));
+    fs.writeFileSync(BASELINE_PATH, JSON.stringify(doc, null, 2) + "\n", "utf8");
     console.log(`\nベースラインを更新: ${changes.length}件${reason ? `（理由: ${reason}）` : ""}`);
     for (const c of changes) {
       console.log(`   - ${c.id}: ${c.o === undefined ? `新規 ${c.n}` : `${c.o} → ${c.n}${c.big ? " ⚠️ 20%超" : ""}`}`);
@@ -384,9 +394,19 @@ if (failures.length) process.exitCode = 1;
     if (dropped.length) console.log(`   実在しないテンプレートの記録を削除: ${dropped.join(", ")}`);
   }
 
-  let baseline = {};
-  try { baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); }
+  let baselineDoc = {};
+  try { baselineDoc = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); }
   catch (e) { console.log("\n⚠️ ベースラインが読めません。UPDATE_BASELINE=all BASELINE_REASON=\"初回作成\" で作成してください。"); }
+
+  // ⚠️ UPDATE_BASELINE のゲート（名指し・理由・タイポ検出）は、
+  //    ファイルをエディタで直接書き換えれば全部素通りする。
+  //    実測: soneki_discount_01 を 305 → 10 に手で下げても9本すべて緑だった。
+  //    ベースラインを下げるのは退行を隠す方向なので、ここで見えるようにする。
+  if (!process.env.UPDATE_BASELINE) {
+    const v = BaselineMeta.verify(baselineDoc);
+    if (!v.ok) fail("diversity-baseline.json", "ベースラインの由来が確認できない", `${v.why} … ${v.how}`);
+  }
+  const baseline = BaselineMeta.entriesOf(baselineDoc);
 
   const byCat = {};
   for (const r of rows) (byCat[r.cat] ||= []).push(r);
