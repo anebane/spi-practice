@@ -75,6 +75,63 @@ const SPECS = {
   wiring: "test/wiring.spec.js"
 };
 
+// 台帳の構造だけを検査して終わる口。変異を1件も回さないので速い。
+// ⚠️ 台帳の _readme に書いてあるルールのうち、これまで機械で効いていたのは
+//    「理由(why)が要る」と「重複禁止」の2つだけだった。
+//    「接頭辞 A/B/C を付ける」「新規にAを足さない」「縮む方向にのみ動かす」は
+//    文章だけで、破っても何も落ちなかった（2026-08-29に実測）。
+//    口約束のままにせず、ここで機械の義務にする。
+if (process.argv.includes("--check-ledger")) {
+  const problems = [];
+  let reg = { sites: [] };
+  try { reg = JSON.parse(fs.readFileSync(REGISTER, "utf8")); }
+  catch (e) { problems.push(`台帳が読めない: ${e.message}`); }
+  const sites = reg.sites || [];
+
+  const seen = new Set();
+  // 実際の書式: "2026-08-29 A(借金/変異は書ける): ..." のように日付が先に来る。
+  // 分類の記号だけを探す（日付の有無は問わない）。
+  const prefix = /(^|\s)([ABC])\(/;
+  for (const r of sites) {
+    const key = `${r.file}##${r.text}##${r.nth || 0}`;
+    if (seen.has(key)) problems.push(`重複した項目: ${r.file} 「${r.text}」`);
+    seen.add(key);
+    if (!r.why) { problems.push(`理由(why)が無い: ${r.file} 「${r.text}」`); continue; }
+    const m = prefix.exec(r.why);
+    if (!m) {
+      problems.push(`分類の接頭辞が無い: ${r.file} 「${r.text}」… why は A( B( C( のいずれかで始める`);
+    }
+  }
+
+  // 縮む方向にのみ動かす。HEAD と比べて件数が増えていたら止める。
+  // 「新規にAを足すのは違反」も、Aの件数が増えないことで見る。
+  const cp2 = require("child_process");
+  const head = cp2.spawnSync("git", ["show", `HEAD:${path.relative(ROOT, REGISTER)}`],
+    { cwd: ROOT, encoding: "utf8" });
+  if (head.status === 0) {
+    let before = { sites: [] };
+    try { before = JSON.parse(head.stdout); } catch (e) {}
+    const countA = (x) => (x.sites || []).filter(r => /(^|\s)A\(/.test(r.why || "")).length;
+    const nowAll = sites.length, wasAll = (before.sites || []).length;
+    const nowA = countA(reg), wasA = countA(before);
+    if (nowAll > wasAll) {
+      problems.push(`台帳が増えている: ${wasAll} → ${nowAll}件。台帳は縮む方向にのみ動かす`);
+    }
+    if (nowA > wasA) {
+      problems.push(`A（借金）が増えている: ${wasA} → ${nowA}件。`
+        + "Aは「変異を書けるのにまだ書いていない」項目なので、新規に足してはいけない");
+    }
+  } else {
+    problems.push("HEAD の台帳を取り出せないので、増減を判定できない（浅いクローン？）");
+  }
+
+  console.log(`台帳の検査: ${sites.length}件`);
+  if (!problems.length) { console.log("   ✅ 理由・接頭辞・重複・増減のいずれも違反なし"); process.exit(0); }
+  console.log(`   ❌ ${problems.length}件`);
+  for (const p of problems) console.log(`   - ${p}`);
+  process.exit(1);
+}
+
 const only = process.argv[2] || null;   // 変異名の一部で絞り込める（開発用）
 
 // 未カバーの失敗経路の検出は、全変異を実行したときだけ意味を持つ

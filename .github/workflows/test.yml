@@ -58,6 +58,11 @@ jobs:
       # 「書いたのに走らない」を止める。affiliate.spec.js は作られてから
       # 一度もCIで実行されていなかった。spec を1つ作るたびに3か所へ
       # 手で登録する構造で、うち2か所は書き忘れても何も起きなかった。
+      # 台帳のルール（理由・分類の接頭辞・増減）が機械で効いているか。
+      # 変異を1件も回さないので速い。全件実行の前に落とせる。
+      - name: 台帳のルール
+        run: node test/mutation-runner.js --check-ledger
+
       - name: 検査の登録漏れ（CIと破壊テストの両方に載っているか）
         run: node test/wiring.spec.js
 

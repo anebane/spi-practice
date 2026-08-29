@@ -21,6 +21,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const cp = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
 const { Coverage } = require("./helpers/coverage");
@@ -84,6 +85,28 @@ for (const s of ci) {
 }
 for (const s of specsMap) {
   if (specs.indexOf(s) === -1) fail("SPECS が実在しない検査を指している", s);
+}
+
+// --- 台帳のルールが、文章ではなく機械で効いているか ---
+//
+// ⚠️ 台帳（mutations-uncovered.json）の _readme には7つのルールが書いてあるが、
+//    2026-08-29 に1件ずつ実際に破って測ったところ、機械で効いていたのは
+//    「理由(why)が要る」「重複禁止」「照合の鍵」「spec変異の行数」の4つだけ。
+//    「分類の接頭辞を付ける」「新規にAを足さない」「台帳は縮む方向にのみ」は
+//    文章だけで、破っても何も落ちなかった。
+//    ランナーの --check-ledger が、それらを機械の義務にしている。
+{
+  const r = cp.spawnSync("node", ["test/mutation-runner.js", "--check-ledger"],
+    { cwd: ROOT, encoding: "utf8" });
+  const out = (r.stdout || "") + (r.stderr || "");
+  if (r.status !== 0) {
+    fail("台帳のルール違反", out.split("\n").filter(l => l.trim().startsWith("- ")).join(" / ").slice(0, 300)
+      || out.trim().slice(0, 200));
+  }
+  // 0件だと「違反が無い」ではなく「台帳を1件も見ていない」。
+  const m = out.match(/台帳の検査: (\d+)件/);
+  const n = m ? +m[1] : 0;
+  cov.covered("台帳の項目", n, 1);
 }
 
 // --- 出力 ---

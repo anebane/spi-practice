@@ -1470,5 +1470,29 @@
     "find": "        run: node test/tools.spec.js",
     "replace": "        run: echo skipped",
     "expect": "wiring"
+  },
+  {
+    "name": "台帳の分類の接頭辞を消す",
+    "why": "接頭辞が無いと「書けないから免除」と「まだ書いていない借金」が区別できなくなる。台帳130件が一括の言い訳で埋まったのと同じ形",
+    "file": "test/mutations-uncovered.json",
+    "find": "2026-08-29 A(借金/変異は書ける): カテゴリ絞り込み",
+    "replace": "2026-08-29 とりあえず免除: カテゴリ絞り込み",
+    "expect": "wiring"
+  },
+  {
+    "name": "台帳の理由を空にする",
+    "why": "理由の無い登録を許すと、台帳が「まだ書いていないもの」の置き場になる",
+    "file": "test/mutations-uncovered.json",
+    "find": "      \"why\": \"2026-08-29 A(借金/変異は書ける): カテゴリ絞り込み",
+    "replace": "      \"whyx\": \"2026-08-29 A(借金/変異は書ける): カテゴリ絞り込み",
+    "expect": "wiring"
+  },
+  {
+    "name": "台帳の項目を増やす",
+    "why": "台帳は縮む方向にのみ動かす。増やせると、検査を足すたびに免除が積み上がる",
+    "file": "test/mutations-uncovered.json",
+    "find": "  \"sites\": [\n",
+    "replace": "  \"sites\": [\n    { \"file\": \"tools.spec.js\", \"text\": \"増やした項目\", \"nth\": 0, \"why\": \"2026-08-29 B(原理的に書けない): 検証用\" },\n",
+    "expect": "wiring"
   }
 ]
