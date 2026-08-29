@@ -1494,5 +1494,29 @@
     "find": "  \"sites\": [\n",
     "replace": "  \"sites\": [\n    { \"file\": \"tools.spec.js\", \"text\": \"増やした項目\", \"nth\": 0, \"why\": \"2026-08-29 B(原理的に書けない): 検証用\" },\n",
     "expect": "wiring"
+  },
+  {
+    "name": "questions.js の再生成がロックを見ない",
+    "why": "変異適用中に再生成すると、変異が当たったままの questions.js が焼き込まれる",
+    "file": "tools/build-questions.js",
+    "find": "assertNotLocked(\"questions.js\");",
+    "replace": "void assertNotLocked;",
+    "expect": "wiring"
+  },
+  {
+    "name": "ベースライン更新がロックを見ない",
+    "why": "ランナーの復元検査が誤検知するか、更新が復元で消える",
+    "file": "test/generator.spec.js",
+    "find": "    require(\"./helpers/runner-lock\").assertNotLocked(\"diversity-baseline.json\");",
+    "replace": "    void 0;",
+    "expect": "wiring"
+  },
+  {
+    "name": "ロックを越える明示の口を消す",
+    "why": "回避手段が無いと、ランナーが異常終了してロックが残ったときに詰まり、いずれ門番ごと外される",
+    "file": "test/helpers/runner-lock.js",
+    "find": "  if (process.env.IGNORE_RUNNER_LOCK) {",
+    "replace": "  if (false) {",
+    "expect": "wiring"
   }
 ]

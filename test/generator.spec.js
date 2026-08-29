@@ -327,6 +327,8 @@ if (failures.length) process.exitCode = 1;
   }
 
   if (process.env.UPDATE_BASELINE) {
+    // ランナーが動いている最中にベースラインを書き換えない。
+    require("./helpers/runner-lock").assertNotLocked("diversity-baseline.json");
     // ⚠️ かつては UPDATE_BASELINE=1 で全件が一括更新できた。意図した1件と
     //    無関係な揺らぎ、さらに（もし実在すれば）本物の退行まで、区別なく
     //    まとめて承認される。実際に踏んで巻き戻す事故が起きた（2026-08-29）。

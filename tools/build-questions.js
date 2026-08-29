@@ -28,4 +28,6 @@ const parts = [
 
 fs.writeFileSync(OUT, parts.join("\n") + "\n", "utf8");
 const n = parts.join("").split("QUESTION_TEMPLATES.push(").length - 1;
+const { assertNotLocked } = require("../test/helpers/runner-lock");
+assertNotLocked("questions.js");
 console.log(`生成: questions.js (${cats.length}カテゴリ / ${n}問 / ${fs.statSync(OUT).size.toLocaleString()} bytes)`);

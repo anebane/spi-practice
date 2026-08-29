@@ -109,6 +109,48 @@ for (const s of specsMap) {
   cov.covered("台帳の項目", n, 1);
 }
 
+// --- ツリーに書き込むコマンドが、ランナーのロックを見ているか ---
+//
+// ⚠️ 変異ランナーは「控える→当てる→検査→復元」を高速に繰り返す。
+//    その最中に別のコマンドが同じツリーへ書くと、復元検査が誤検知するか、
+//    最悪は変異が当たったままの questions.js が焼き込まれる。
+//    2026-08-29 の実測では、ツリーに書き込む7本のうちロックを見ていたのは0本だった。
+//
+// 本物のロックは触らない。RUNNER_LOCK_PATH で差し替えて試す。
+// 本物を作ると、実際に走っているランナーのロックを壊しかねない。
+{
+  const tmpLock = path.join(require("os").tmpdir(), `wiring-lock-${process.pid}`);
+  fs.writeFileSync(tmpLock, String(process.pid));   // 自分のPID＝生きているロック
+  const env = Object.assign({}, process.env, { RUNNER_LOCK_PATH: tmpLock });
+
+  const guarded = [
+    ["questions.js の再生成", ["tools/build-questions.js"]],
+    ["ベースラインの更新",     ["test/generator.spec.js"], { UPDATE_BASELINE: "sign", BASELINE_REASON: "検査" }]
+  ];
+  let checked = 0;
+  for (const [label, argv, extraEnv] of guarded) {
+    const r = cp.spawnSync("node", argv, { cwd: ROOT, encoding: "utf8", env: Object.assign({}, env, extraEnv || {}) });
+    checked++;
+    const msg = (r.stdout || "") + (r.stderr || "");
+    if (r.status === 0) {
+      fail("ロックを見ずに書き込む", `${label} … ランナーの実行中でも書けてしまう`);
+    } else if (!/変異ランナーが動いている間は/.test(msg)) {
+      fail("止めたのは別の理由", `${label} … 期待した門番のメッセージが出ていない: ${msg.trim().split("\n")[0].slice(0, 60)}`);
+    }
+  }
+
+  // 明示すれば越えられること。回避手段が無いと、いずれ門番ごと外される（性質A8）。
+  {
+    const r = cp.spawnSync("node", ["tools/build-questions.js"],
+      { cwd: ROOT, encoding: "utf8", env: Object.assign({}, env, { IGNORE_RUNNER_LOCK: "1" }) });
+    checked++;
+    if (r.status !== 0) fail("明示しても越えられない", `IGNORE_RUNNER_LOCK=1 でも EXIT=${r.status}`);
+  }
+
+  try { fs.unlinkSync(tmpLock); } catch (e) {}
+  cov.covered("ロックを見るか調べたコマンド", checked, 3);
+}
+
 // --- 出力 ---
 console.log(`検査の登録: 実体 ${specs.length}本 / CI ${ci.length}本 / 破壊テスト ${specsMap.length}本`);
 cov.print();

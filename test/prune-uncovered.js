@@ -84,5 +84,6 @@ if (process.argv.indexOf("--write") === -1) {
 }
 
 register.sites = keep;
+require("./helpers/runner-lock").assertNotLocked("台帳（mutations-uncovered.json）");
 fs.writeFileSync(REGISTER, JSON.stringify(register, null, 2) + "\n", "utf8");
 console.log(`\n台帳を更新しました: ${keep.length + drop.length} → ${keep.length}件`);
