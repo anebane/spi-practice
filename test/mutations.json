@@ -958,5 +958,461 @@
     "find": "id=\"btn-retry-short\"",
     "replace": "id=\"btn-retry-short-removed\"",
     "expect": "app"
+  },
+  {
+    "name": "枠にリンクを追加し忘れる",
+    "why": "アンカーを作るが枠に入れない。画面には説明と注記だけが残り、収益経路が消える",
+    "file": "affiliate.js",
+    "find": "      item.appendChild(a);\n",
+    "replace": "",
+    "expect": "affiliate"
+  },
+  {
+    "name": "注記の文言を空で描画する",
+    "why": "注記の器だけ置いて中身を入れない。否認条件の回避が画面から消える",
+    "file": "affiliate.js",
+    "find": "      if (p.note) item.appendChild(el(\"p\", \"af-note\", p.note));\n\n      host.appendChild(item);",
+    "replace": "      if (p.note) item.appendChild(el(\"p\", \"af-note\", \"\"));\n\n      host.appendChild(item);",
+    "expect": "affiliate"
+  },
+  {
+    "name": "アンカー文言を勝手に加工する",
+    "why": "配布物の文言に飾りを足す。画面から案件を特定する照合が全部外れる",
+    "file": "affiliate.js",
+    "find": "      a.textContent = p.anchor;",
+    "replace": "      a.textContent = p.anchor + \"はこちら\";",
+    "expect": "affiliate"
+  },
+  {
+    "name": "高スコア帯で枠を描かない",
+    "why": "条件式の書き間違いで特定の帯だけ枠が消える。無症状で収益が止まる",
+    "file": "affiliate.js",
+    "find": "    if (!host) return false;",
+    "replace": "    if (!host || opt.band === \"high\") return false;",
+    "expect": "affiliate"
+  },
+  {
+    "name": "2件指定でも1件しか描かない",
+    "why": "先頭しか処理しないループの壊れ方。2本目の案件が黙って消える",
+    "file": "affiliate.js",
+    "find": "    ids.forEach(function (id) {",
+    "replace": "    ids.slice(0, 1).forEach(function (id) {",
+    "expect": "affiliate"
+  },
+  {
+    "name": "枠の見出しを呼び出し側に任せてしまう",
+    "why": "heading 引数があるときに自前の見出しを出さない形。renderAll 経由で見出しが消える",
+    "file": "affiliate.js",
+    "find": "    var aud = PROGRAMS[ids[0]].audience;\n    var head = el(\"p\", \"af-head\", opt.heading || (aud === \"student\" ? \"学生の方へ\" : \"ご案内\"));\n    host.appendChild(head);",
+    "replace": "    var aud = PROGRAMS[ids[0]].audience;\n    if (!opt.heading) host.appendChild(el(\"p\", \"af-head\", aud === \"student\" ? \"学生の方へ\" : \"ご案内\"));",
+    "expect": "affiliate"
+  },
+  {
+    "name": "affiliate_view を二重送信する",
+    "why": "コピペで送信が2回入る。表示回数が水増しされ、クリック率が実態より低く見える",
+    "file": "affiliate.js",
+    "find": "    track(\"affiliate_view\", {\n      score_band: opt.band || \"unknown\",\n      placement: opt.placement || \"unknown\",\n      creative_count: ids.length,\n      audience: aud || \"unknown\"\n    });\n    return true;",
+    "replace": "    track(\"affiliate_view\", {\n      score_band: opt.band || \"unknown\",\n      placement: opt.placement || \"unknown\",\n      creative_count: ids.length,\n      audience: aud || \"unknown\"\n    });\n    track(\"affiliate_view\", {\n      score_band: opt.band || \"unknown\",\n      placement: opt.placement || \"unknown\",\n      creative_count: ids.length,\n      audience: aud || \"unknown\"\n    });\n    return true;",
+    "expect": "affiliate"
+  },
+  {
+    "name": "クリックの計測を二重登録する",
+    "why": "リスナーが2回張られてクリックが2件記録される。成果と計測がずれる",
+    "file": "affiliate.js",
+    "find": "      a.addEventListener(\"click\", function () {\n        track(\"affiliate_click\", {\n          program: p.program,\n          creative: id,\n          score_band: opt.band || \"unknown\",\n          placement: opt.placement || \"unknown\",\n          audience: p.audience\n        });\n      });",
+    "replace": "      a.addEventListener(\"click\", function () {\n        track(\"affiliate_click\", {\n          program: p.program,\n          creative: id,\n          score_band: opt.band || \"unknown\",\n          placement: opt.placement || \"unknown\",\n          audience: p.audience\n        });\n      });\n      a.addEventListener(\"click\", function () {\n        track(\"affiliate_click\", {\n          program: p.program,\n          creative: id,\n          score_band: opt.band || \"unknown\",\n          placement: opt.placement || \"unknown\",\n          audience: p.audience\n        });\n      });",
+    "expect": "affiliate"
+  },
+  {
+    "name": "素材が空でも枠を出して view を送る",
+    "why": "空ガードの早期 return を「描いたことにする」方向へ壊す。空枠の表示回数が水増しされる",
+    "file": "affiliate.js",
+    "find": "    var ids = (opt.programs || []).filter(function (id) { return PROGRAMS[id]; });\n    if (!ids.length) { host.style.display = \"none\"; return false; }",
+    "replace": "    var ids = (opt.programs || []).filter(function (id) { return PROGRAMS[id]; });\n    if (!ids.length) { host.style.display = \"\"; track(\"affiliate_view\", { score_band: opt.band || \"unknown\", placement: opt.placement || \"unknown\", creative_count: 0, audience: \"unknown\" }); return true; }",
+    "expect": "affiliate"
+  },
+  {
+    "name": "リンクの rel を落とす",
+    "why": "見た目に出ない属性なので消えても気づけない。配布物の改変になり提携条件に触れる",
+    "file": "affiliate.js",
+    "find": "      a.rel = \"nofollow\";                 // 配布されたまま。改変しない",
+    "replace": "      a.rel = \"\";                 // 配布されたまま。改変しない",
+    "expect": "affiliate"
+  },
+  {
+    "name": "exam_start を二重送信する",
+    "why": "コピペで送信が2回入る。開始数が水増しされ完走率が実態より低く出る",
+    "file": "app.js",
+    "find": "    trackEvent(\"exam_start\", {\n      exam_id: state.examId,\n      question_count: state.questions.length,\n      mode: state.mode,\n      difficulties: selectedDifficulties.join(\",\"),\n      categories: selectedCategories.join(\",\")\n    });",
+    "replace": "    trackEvent(\"exam_start\", {\n      exam_id: state.examId,\n      question_count: state.questions.length,\n      mode: state.mode,\n      difficulties: selectedDifficulties.join(\",\"),\n      categories: selectedCategories.join(\",\")\n    });\n    trackEvent(\"exam_start\", {\n      exam_id: state.examId,\n      question_count: state.questions.length,\n      mode: state.mode,\n      difficulties: selectedDifficulties.join(\",\"),\n      categories: selectedCategories.join(\",\")\n    });",
+    "expect": "app"
+  },
+  {
+    "name": "exam_finish の exam_id を作り直す",
+    "why": "終了時にIDを再生成する。start と finish を突き合わせられず完走率が出ない",
+    "file": "app.js",
+    "find": "    trackEvent(\"exam_finish\", {\n      exam_id: state.examId,",
+    "replace": "    trackEvent(\"exam_finish\", {\n      exam_id: newExamId(),",
+    "expect": "app"
+  },
+  {
+    "name": "exam_finish を二重送信する",
+    "why": "終了イベントが2件出る。GA4で exam_finish > exam_start だった本番事故の形",
+    "file": "app.js",
+    "find": "    trackEvent(\"exam_finish\", {\n      exam_id: state.examId,\n      question_count: totalQuestions,\n      correct_count: totalCorrect,\n      score_percent: percent,\n      mode: state.mode,\n      total_time_sec: totalTime,\n      attempt_no: attemptNo,\n      weakest_category: weakest || \"\",\n      weakest_rate: weakest ? weakestRate : -1\n    });",
+    "replace": "    trackEvent(\"exam_finish\", {\n      exam_id: state.examId,\n      question_count: totalQuestions,\n      correct_count: totalCorrect,\n      score_percent: percent,\n      mode: state.mode,\n      total_time_sec: totalTime,\n      attempt_no: attemptNo,\n      weakest_category: weakest || \"\",\n      weakest_rate: weakest ? weakestRate : -1\n    });\n    trackEvent(\"exam_finish\", {\n      exam_id: state.examId,\n      question_count: totalQuestions,\n      correct_count: totalCorrect,\n      score_percent: percent,\n      mode: state.mode,\n      total_time_sec: totalTime,\n      attempt_no: attemptNo,\n      weakest_category: weakest || \"\",\n      weakest_rate: weakest ? weakestRate : -1\n    });",
+    "expect": "app"
+  },
+  {
+    "name": "同条件の再挑戦を short と申告する",
+    "why": "variant の書き間違い。どちらの再挑戦導線が効いたかを後から言えなくなる",
+    "file": "app.js",
+    "find": "        variant: \"same\",",
+    "replace": "        variant: \"short\",",
+    "expect": "app"
+  },
+  {
+    "name": "再挑戦の question_count を固定値で送る",
+    "why": "実際の問題数でなく定数を送る。20問設定の再挑戦が10問と記録される",
+    "file": "app.js",
+    "find": "        variant: \"same\",\n        question_count: state.questions.length",
+    "replace": "        variant: \"same\",\n        question_count: 10",
+    "expect": "app"
+  },
+  {
+    "name": "短縮版の question_count を上書き前の値で送る",
+    "why": "イベントに載せる数と実際に始まる数がずれる。短縮版の効果測定が壊れる",
+    "file": "app.js",
+    "find": "        variant: \"short\",\n        question_count: SHORT_RETRY_COUNT",
+    "replace": "        variant: \"short\",\n        question_count: state.questions.length",
+    "expect": "app"
+  },
+  {
+    "name": "短縮版の出し分けを反転する",
+    "why": "三項演算子の反転。出すべき場面で隠れ、隠すべき場面で出る",
+    "file": "app.js",
+    "find": "totalQuestions > SHORT_RETRY_COUNT ? \"\" : \"none\";",
+    "replace": "totalQuestions > SHORT_RETRY_COUNT ? \"none\" : \"\";",
+    "expect": "app"
+  },
+  {
+    "name": "案内文から分野名を落とす",
+    "why": "汎用文言に置き換える。利用者はどの分野に絞られたのか画面から分からない",
+    "file": "app.js",
+    "find": "        note.textContent = \"「\" + name + \"」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。\";",
+    "replace": "        note.textContent = \"指定された分野だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。\";",
+    "expect": "app"
+  },
+  {
+    "name": "category_practice_start のIDを数値で送る",
+    "why": "型の書き換えで分析側の突き合わせ（文字列ID）が全部外れる",
+    "file": "app.js",
+    "find": "      trackEvent(\"category_practice_start\", { category_id: want });\n    })();",
+    "replace": "      trackEvent(\"category_practice_start\", { category_id: parseInt(want, 10) });\n    })();",
+    "expect": "app"
+  },
+  {
+    "name": "実在しない分野でも案内文を出す",
+    "why": "無視すべきIDに「絞りました」と案内する。実際は全分野が出るので案内が嘘になる",
+    "file": "app.js",
+    "find": "        if (!name) { paramCategoryId = null; return; }   // 実在しないIDは無視する",
+    "replace": "        if (!name) { paramCategoryId = null; name = \"分野\" + want; }   // 実在しないIDは無視する",
+    "expect": "app"
+  },
+  {
+    "name": "選択欄を触っても ?cat= を解除しない",
+    "why": "指定が居座り、選択欄を操作しても出題が変わらない。画面上は選択が変わって見える",
+    "file": "app.js",
+    "find": "      cb.addEventListener(\"change\", function() { paramCategoryId = null; });",
+    "replace": "      cb.addEventListener(\"change\", function() {});",
+    "expect": "app"
+  },
+  {
+    "name": "選択式の正誤判定を型違いの比較にする",
+    "why": "=== の片側だけ文字列化。全問不正解になるが例外は出ず、シェアも0%で一致してしまう",
+    "file": "app.js",
+    "find": "      return userAnswer === correctAnswer;",
+    "replace": "      return userAnswer === String(correctAnswer);",
+    "expect": "app"
+  },
+  {
+    "name": "戻るボタンで離脱を記録しない",
+    "why": "呼び出しの消し忘れ。ボタン経由の離脱が計測から消える",
+    "file": "app.js",
+    "find": "      reportAbandon(\"button\");\n      state.examId = null;",
+    "replace": "      state.examId = null;",
+    "expect": "app"
+  },
+  {
+    "name": "戻るボタンで離脱記録をリセットする",
+    "why": "戻る＝新しい試験の準備と誤解してフラグを戻す。閉じたときに二重に飛ぶ",
+    "file": "app.js",
+    "find": "      reportAbandon(\"button\");\n      state.examId = null;          // この試験からは離れた。以降の離脱は報告しない",
+    "replace": "      reportAbandon(\"button\");\n      state.abandonSent = false;    // 戻る＝新しい試験の準備、と誤解してフラグを戻してしまう壊れ方",
+    "expect": "app"
+  },
+  {
+    "name": "試験外の離脱ガードを外す",
+    "why": "ガードの整理で「試験に入っているか」の判定を落とす。試験前の離脱まで記録される",
+    "file": "app.js",
+    "find": "    if (!state.examId) return;              // 試験に入っていない、または既に離れた\n    if (state.finished) return;             // 完走済み。exam_finish が出ている\n    if (state.abandonSent) return;          // exam_id ごとに1回だけ\n    if (!state.questions.length) return;",
+    "replace": "    if (state.finished) return;             // 完走済み。exam_finish が出ている\n    if (state.abandonSent) return;          // exam_id ごとに1回だけ",
+    "expect": "app"
+  },
+  {
+    "name": "manifest のアイコンを非PNGに向ける",
+    "why": "SVGをそのまま icons に流用する形。PNG必須の環境でインストール不能になる",
+    "file": "manifest.json",
+    "find": "{ \"src\": \"/icons/icon-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+    "replace": "{ \"src\": \"/favicon.svg\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },",
+    "expect": "pwa"
+  },
+  {
+    "name": "アイコンの宣言サイズを実寸とずらす",
+    "why": "sizes の書き間違い。宣言と実寸の不一致はインストール要件を満たさなくなる",
+    "file": "manifest.json",
+    "find": "\"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" }",
+    "replace": "\"sizes\": \"180x180\", \"type\": \"image/png\", \"purpose\": \"any\" }",
+    "expect": "pwa"
+  },
+  {
+    "name": "maskable アイコンをやめる",
+    "why": "purpose の書き換えで maskable が消える。Androidで白い余白付きアイコンになる",
+    "file": "manifest.json",
+    "find": "\"purpose\": \"maskable\" }",
+    "replace": "\"purpose\": \"any\" }",
+    "expect": "pwa"
+  },
+  {
+    "name": "shortcut のURLを実在しないパスにする",
+    "why": "ページ移動に shortcuts が追随しない形。ホーム画面のショートカットが404になる",
+    "file": "manifest.json",
+    "find": "\"url\": \"/tamatebako-shisoku/\",",
+    "replace": "\"url\": \"/tamatebako/\",",
+    "expect": "pwa"
+  },
+  {
+    "name": "shortcut のアイコンを実在しないパスにする",
+    "why": "アイコンのリネームに shortcuts が追随しない形",
+    "file": "manifest.json",
+    "find": "      \"url\": \"/\",\n      \"icons\": [{ \"src\": \"/icons/icon-192.png\", \"sizes\": \"192x192\" }]",
+    "replace": "      \"url\": \"/\",\n      \"icons\": [{ \"src\": \"/icons/icon-192@1x.png\", \"sizes\": \"192x192\" }]",
+    "expect": "pwa"
+  },
+  {
+    "name": "PRECACHE_URLS をリネームして検査から見えなくする",
+    "why": "定数のリネームに検査の期待形が追随できず、プリキャッシュの検査が丸ごと沈黙する",
+    "file": "sw.js",
+    "find": "const PRECACHE_URLS = [",
+    "replace": "const PRECACHE_LIST = [",
+    "expect": "pwa"
+  },
+  {
+    "name": "プリキャッシュをごっそり減らす",
+    "why": "リスト整理のつもりで大半を消す。オフラインで開けないページだらけになる",
+    "file": "sw.js",
+    "find": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/generator.js\",\n  \"/app.js\",\n  \"/favicon.svg\",\n  \"/manifest.json\",\n  OFFLINE_URL,\n  \"/tamatebako-shisoku/\",\n  \"/tamatebako-shisoku/app.js\",\n  \"/icons/icon-192.png\",\n  \"/icons/icon-512.png\",\n  \"/icons/icon-maskable-512.png\",\n  \"/icons/apple-touch-icon-180.png\",",
+    "replace": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/app.js\",",
+    "expect": "pwa"
+  },
+  {
+    "name": "OFFLINE_URL をリネームして検査から見えなくする",
+    "why": "定数のリネームでオフラインページの検査が沈黙する",
+    "file": "sw.js",
+    "find": "const OFFLINE_URL = \"/offline.html\";",
+    "replace": "const OFFLINE_PAGE = \"/offline.html\";",
+    "expect": "pwa"
+  },
+  {
+    "name": "オフラインページを実在しないパスに向ける",
+    "why": "ページのリネームに sw.js が追随しない形。オフライン時に何も出なくなる",
+    "file": "sw.js",
+    "find": "OFFLINE_URL = \"/offline.html\"",
+    "replace": "OFFLINE_URL = \"/offline-page.html\"",
+    "expect": "pwa"
+  },
+  {
+    "name": "index の theme-color を manifest とずらす",
+    "why": "片方だけ色替えする形。起動画面とツールバーの色が別物になる",
+    "file": "index.html",
+    "find": "<meta name=\"theme-color\" content=\"#1a237e\">",
+    "replace": "<meta name=\"theme-color\" content=\"#283593\">",
+    "expect": "pwa"
+  },
+  {
+    "name": "apple-touch-icon の rel をタイポする",
+    "why": "rel の書き間違いで iOS のホーム画面アイコンが消える",
+    "file": "index.html",
+    "find": "<link rel=\"apple-touch-icon\"",
+    "replace": "<link rel=\"apple-touchicon\"",
+    "expect": "pwa"
+  },
+  {
+    "name": "pwa.js の読み込みパスを変える",
+    "why": "配置変更にHTMLが追随しない形。Service Worker の登録が丸ごと走らない",
+    "file": "index.html",
+    "find": "<script src=\"/pwa.js\"",
+    "replace": "<script src=\"/js/pwa.js\"",
+    "expect": "pwa"
+  },
+  {
+    "name": "sitemap に offline.html を登録する",
+    "why": "機械的に全ページを列挙して noindex ページまで載せる形。サイト評価を薄める",
+    "file": "sitemap.xml",
+    "find": "</urlset>",
+    "replace": "  <url>\n    <loc>https://tekisei-drill.com/offline.html</loc>\n  </url>\n</urlset>",
+    "expect": "pwa"
+  },
+  {
+    "name": "ページの title を短くする",
+    "why": "仮タイトルのまま公開する形。検索結果の見た目と評価に直結する",
+    "file": "about.html",
+    "find": "<title>運営者情報 | 適性検査無限ドリル</title>",
+    "replace": "<title>会社概要</title>",
+    "expect": "html"
+  },
+  {
+    "name": "description を短い仮文言にする",
+    "why": "「あとで書く」のまま公開される形",
+    "file": "about.html",
+    "find": "<meta name=\"description\" content=\"適性検査無限ドリル（tekisei-drill.com）の運営者情報、サイトの目的、コンテンツの作成方針について。\">",
+    "replace": "<meta name=\"description\" content=\"運営者情報。\">",
+    "expect": "html"
+  },
+  {
+    "name": "canonical の rel をタイポする",
+    "why": "rel の書き間違いで canonical が無いのと同じになる。重複コンテンツ扱いのリスク",
+    "file": "about.html",
+    "find": "rel=\"canonical\" href=\"https://tekisei-drill.com/about.html\"",
+    "replace": "rel=\"canonicaI\" href=\"https://tekisei-drill.com/about.html\"",
+    "expect": "html"
+  },
+  {
+    "name": "HTMLにテンプレート変数を残す",
+    "why": "生成テンプレートの変数が未展開のまま公開される形",
+    "file": "about.html",
+    "find": "<h1>運営者情報</h1>",
+    "replace": "<h1>{{site_name}} 運営者情報</h1>",
+    "expect": "html"
+  },
+  {
+    "name": "出題分野の選択欄のidを変える",
+    "why": "idのリネームに検査とJSが追随しない形。選択欄の検査が丸ごと沈黙する",
+    "file": "index.html",
+    "find": "id=\"category-select\"",
+    "replace": "id=\"category-selector\"",
+    "expect": "html"
+  },
+  {
+    "name": "選択欄に実在しない分野を置く",
+    "why": "分野の付け替えでvalueだけ書き換わる形。選んでも1問も出ない分野ができる",
+    "file": "index.html",
+    "find": "<input type=\"checkbox\" value=\"3\" checked><span>集合</span>",
+    "replace": "<input type=\"checkbox\" value=\"93\" checked><span>集合</span>",
+    "expect": "html"
+  },
+  {
+    "name": "対応分野の一覧のidを変える",
+    "why": "idのリネームで静的な控えの検査が沈黙する",
+    "file": "index.html",
+    "find": "id=\"categories-list\"",
+    "replace": "id=\"category-list\"",
+    "expect": "html"
+  },
+  {
+    "name": "head タグを壊す",
+    "why": "タグの破損で head の抽出が失敗する。AdSense の検査が沈黙する",
+    "file": "about.html",
+    "find": "<head>",
+    "replace": "<ahead>",
+    "expect": "html"
+  },
+  {
+    "name": "分野ページのリンクを実在しないIDに変える",
+    "why": "分野IDの付け替えにリンクが追随しない形。押した人が意図しない出題を受ける",
+    "file": "categories/kakuritsu/index.html",
+    "find": "<a class=\"cta-btn\" href=\"/?cat=2\">場合の数・確率の練習を始める</a>",
+    "replace": "<a class=\"cta-btn\" href=\"/?cat=299\">場合の数・確率の練習を始める</a>",
+    "expect": "deeplink"
+  },
+  {
+    "name": "分野指定の処理で存在しない要素を触る",
+    "why": "セレクタ変更ミスで ?cat= 付きの起動が例外で死ぬ。トップは無事なので気づきにくい",
+    "file": "app.js",
+    "find": "      var want = m[1];\n      var boxes = document.querySelectorAll(\"#category-select input\");",
+    "replace": "      var want = m[1];\n      var boxes = document.querySelector(\"#category-select-boxes\").children;",
+    "expect": "deeplink"
+  },
+  {
+    "name": "テンプレの formats を空にする",
+    "why": "宣言を空にすると、そのテンプレはどの形式でも出題されず黙って消える",
+    "file": "src/questions/07-noudo.js",
+    "find": "    id: \"noudo_evaporate_01\",\n    formats: [\"webtesting\"],",
+    "replace": "    id: \"noudo_evaporate_01\",\n    formats: [],",
+    "expect": "generator"
+  },
+  {
+    "name": "テンプレの category を空にする",
+    "why": "分野の付け替え中に空のまま残る形。分野別の出題と成績から消える",
+    "file": "src/questions/07-noudo.js",
+    "find": "    formats: [\"webtesting\"],\n    category: \"濃度算\",\n    categoryId: 7,\n    difficulty: 2,\n    templateText: \"濃度{{conc}}%の食塩水が",
+    "replace": "    formats: [\"webtesting\"],\n    category: \"\",\n    categoryId: 7,\n    difficulty: 2,\n    templateText: \"濃度{{conc}}%の食塩水が",
+    "expect": "generator"
+  },
+  {
+    "name": "answerFormula で存在しない関数を呼ぶ",
+    "why": "タイポ1つで生成が例外で死ぬ。そのテンプレの問題が全部出なくなる",
+    "file": "src/questions/07-noudo.js",
+    "find": "      return Math.round(v.salt / (v.water + v.salt) * 1000) / 10;",
+    "replace": "      return Math.rounde(v.salt / (v.water + v.salt) * 1000) / 10;",
+    "expect": "generator"
+  },
+  {
+    "name": "validate を常に不成立にする",
+    "why": "条件の書き間違いで合格する組み合わせが無くなり、リトライが尽きて null が返る",
+    "file": "src/questions/07-noudo.js",
+    "find": "    validate: function(v) {\n      return v.concA < v.concB;\n    }",
+    "replace": "    validate: function(v) {\n      return v.concA < v.concB && v.concA > v.concB;\n    }",
+    "expect": "generator"
+  },
+  {
+    "name": "解説テンプレの変数名をタイポする",
+    "why": "解説に {{watter}} がそのまま出る。生成は例外を出さないので機械でしか止まらない",
+    "file": "src/questions/07-noudo.js",
+    "find": "  水 + 食塩 = {{water}} + {{salt}} = {{total}}g",
+    "replace": "  水 + 食塩 = {{watter}} + {{salt}} = {{total}}g",
+    "expect": "generator"
+  },
+  {
+    "name": "テンプレの問題文を空にする",
+    "why": "本文の消し忘れ。空の問題が出題される",
+    "file": "src/questions/07-noudo.js",
+    "find": "    templateText: \"濃度{{concA}}%の食塩水{{weightA}}gと、濃度{{concB}}%の食塩水{{weightB}}gを混ぜると、濃度は何%になるか。（小数第2位を四捨五入）\",",
+    "replace": "    templateText: \"\",",
+    "expect": "generator"
+  },
+  {
+    "name": "正解indexをずらす",
+    "why": "オフバイワンで正解の位置がずれる。範囲外になった問題は回答不能",
+    "file": "generator.js",
+    "find": "        result.correctAnswer = pool.indexOf(answer);",
+    "replace": "        result.correctAnswer = pool.indexOf(answer) + 1;",
+    "expect": "generator"
+  },
+  {
+    "name": "選択肢の重複排除を外す",
+    "why": "同じ値の選択肢が並ぶ。どちらを選んでも同じ答えの問題になる",
+    "file": "generator.js",
+    "find": "          if (pool.indexOf(w) === -1) pool.push(w);",
+    "replace": "          pool.push(w);",
+    "expect": "generator"
+  },
+  {
+    "name": "テンプレの解説を空白にする",
+    "why": "解説の書きかけ。画面には空の解説欄が出る",
+    "file": "src/questions/07-noudo.js",
+    "find": "    explanationTemplate: \"【考え方】\\n濃度の基本公式: 濃度(%) = 食塩の量 / 食塩水の量 × 100\\n食塩水の量 = 水 + 食塩（食塩も含むことに注意！）\\n\\n【解法】\\n① 食塩水の総量:\\n  水 + 食塩 = {{water}} + {{salt}} = {{total}}g\\n\\n② 濃度を計算:\\n  濃度 = 食塩 / 食塩水 × 100\\n       = {{salt}} / {{total}} × 100\\n       = {{answer}}%\\n\\n【ポイント】\\n・食塩水の量 = 水 + 食塩（分母に食塩も含む！）\\n・「水の量」と「食塩水の量」は違う → よくあるひっかけ\\n・濃度は常に0〜100%の範囲\",",
+    "replace": "    explanationTemplate: \" \",",
+    "expect": "generator"
   }
 ]
