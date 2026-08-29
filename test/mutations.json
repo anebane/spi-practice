@@ -1662,5 +1662,21 @@
     "find": "    if (percent >= 40) return \"mid\";",
     "replace": "    if (percent > 40) return \"mid\";",
     "expect": "affiliate"
+  },
+  {
+    "name": "配布URLをプロトコル相対にする",
+    "why": "http でも https でもない形になる。配布物の改変で、想定外の形を見逃すと計測の生死が分からなくなる",
+    "file": "affiliate.js",
+    "find": "      pixel: \"https://h.accesstrade.net/sp/rr?rk=0100pw7e00oxvd\",",
+    "replace": "      pixel: \"//h.accesstrade.net/sp/rr?rk=0100pw7e00oxvd\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "テンプレートからIDを落とす",
+    "why": "IDの無いテンプレートは、出題されても template_id 別の集計に現れず、誤り報告も特定できない",
+    "file": "src/questions/13-kisokusei.js",
+    "find": "    id: \"suiron_direction_01\",",
+    "replace": "    idMissing: \"suiron_direction_01\",",
+    "expect": "generator"
   }
 ]

@@ -385,9 +385,11 @@ function checkNoteAfterEveryLink(host, where, programs) {
 {
   const h = loadAffiliate();
   const P = h.Affiliate._programs;
-  const ids = Object.keys(P);
+  // ⚠️ 変数名は既存の検査と重ねない。同じ行が2箇所になると、
+  //    その行を狙った変異の find が一意でなくなり、変異が適用されなくなる。
+  const urlIds = Object.keys(P);
   let checked = 0;
-  for (const id of ids) {
+  for (const id of urlIds) {
     for (const key of ["href", "pixel"]) {
       const url = P[id][key];
       if (!url) continue;
