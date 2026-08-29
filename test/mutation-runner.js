@@ -71,6 +71,7 @@ const SPECS = {
   generator: "test/generator.spec.js",
   html: "test/html.spec.js",
   pwa: "test/pwa.spec.js",
+  tools: "test/tools.spec.js",
   wiring: "test/wiring.spec.js"
 };
 

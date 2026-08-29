@@ -1414,5 +1414,61 @@
     "find": "    explanationTemplate: \"【考え方】\\n濃度の基本公式: 濃度(%) = 食塩の量 / 食塩水の量 × 100\\n食塩水の量 = 水 + 食塩（食塩も含むことに注意！）\\n\\n【解法】\\n① 食塩水の総量:\\n  水 + 食塩 = {{water}} + {{salt}} = {{total}}g\\n\\n② 濃度を計算:\\n  濃度 = 食塩 / 食塩水 × 100\\n       = {{salt}} / {{total}} × 100\\n       = {{answer}}%\\n\\n【ポイント】\\n・食塩水の量 = 水 + 食塩（分母に食塩も含む！）\\n・「水の量」と「食塩水の量」は違う → よくあるひっかけ\\n・濃度は常に0〜100%の範囲\",",
     "replace": "    explanationTemplate: \" \",",
     "expect": "generator"
+  },
+  {
+    "name": "GSCが空でも書き出す",
+    "why": "空を書くと、その上の分析と週次レポートが「アクセスが消えた」という嘘を事実の顔で運ぶ",
+    "file": "tools/gsc/fetch.py",
+    "find": "    if not totals and not qrows and not drows and not prows:",
+    "replace": "    if False:",
+    "expect": "tools"
+  },
+  {
+    "name": "GSCがスキーマ変更を見逃す",
+    "why": "rows が別のキーに変わっても0件として扱い、データが消えたように見える",
+    "file": "tools/gsc/fetch.py",
+    "find": "        if \"rows\" not in resp and resp:",
+    "replace": "        if False:",
+    "expect": "tools"
+  },
+  {
+    "name": "GA4が空でも書き出す",
+    "why": "権限の失効もプロパティIDの誤りも、同じ「0件」に見える",
+    "file": "tools/ga4/fetch.py",
+    "find": "    if not detail and not by_category and not by_event:",
+    "replace": "    if False:",
+    "expect": "tools"
+  },
+  {
+    "name": "GA4がスキーマ変更を見逃す",
+    "why": "応答に rows が無くても0件として扱う",
+    "file": "tools/ga4/fetch.py",
+    "find": "        if not hasattr(resp, \"rows\"):",
+    "replace": "        if False:",
+    "expect": "tools"
+  },
+  {
+    "name": "分析が空の入力からレポートを作る",
+    "why": "「クリック0 / 該当なし」は正常な分析結果に見える。取得失敗と本当の0件を区別できない",
+    "file": "tools/gsc/analyze.py",
+    "find": "    if not rows and not (totals or {}).get(\"clicks\") and not (totals or {}).get(\"impressions\"):",
+    "replace": "    if False:",
+    "expect": "tools"
+  },
+  {
+    "name": "空を許す明示の口を消す",
+    "why": "回避手段が無いと、本当に0件のときに検査ごと外される",
+    "file": "tools/gsc/fetch.py",
+    "find": "    p.add_argument(\"--allow-empty\", action=\"store_true\",",
+    "replace": "    p.add_argument(\"--allow-empty-x\", action=\"store_true\",",
+    "expect": "tools"
+  },
+  {
+    "name": "CIから取得系の検査を外す",
+    "why": "tools/ が破壊テストの分母から抜け、Python側だけ守られない状態に戻る",
+    "file": ".github/workflows/test.yml",
+    "find": "        run: node test/tools.spec.js",
+    "replace": "        run: echo skipped",
+    "expect": "wiring"
   }
 ]

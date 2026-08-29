@@ -30,6 +30,16 @@ def query(svc, site, start, end, dims, limit=25000):
         body = {"startDate": start, "endDate": end, "dimensions": dims,
                 "rowLimit": limit, "startRow": start_row}
         resp = svc.searchanalytics().query(siteUrl=site, body=body).execute()
+        # ⚠️ 応答の形が変わったときに黙って0件として扱わない。
+        #    rows が無いだけなら「データ無し」だが、他のキーが入っているのに
+        #    rows が無いのは形が変わった可能性が高い。区別せずに .get すると
+        #    「アクセスが消えた」という嘘を事実の顔で下流に流すことになる。
+        if not isinstance(resp, dict):
+            sys.exit(f"エラー: 応答が辞書ではありません（{type(resp).__name__}）。APIの形が変わった可能性があります。")
+        if "rows" not in resp and resp:
+            sys.exit("エラー: 応答に rows がありません。返ってきたキー: "
+                     + ", ".join(sorted(map(str, resp)))
+                     + "\n  APIの形が変わった可能性があります。空データとして扱いません。")
         got = resp.get("rows", [])
         rows.extend(got)
         if len(got) < limit: break
@@ -43,6 +53,8 @@ def main():
     p.add_argument("--days", type=int, default=28, help="遡る日数")
     p.add_argument("--lag", type=int, default=3, help="末尾の未確定日を除外する日数")
     p.add_argument("-o", "--out", help="出力先JSON。省略時は data/gsc/<end>.json")
+    p.add_argument("--allow-empty", action="store_true",
+                   help="取得結果が空でも書き出す。新規プロパティで本当に0件だと分かっているときだけ使う")
     a = p.parse_args()
 
     end = date.today() - timedelta(days=a.lag)     # 直近数日はデータ未確定なので除く
@@ -69,6 +81,19 @@ def main():
     prows = [{"page": r["keys"][0], "clicks": int(r["clicks"]),
               "impressions": int(r["impressions"]), "position": r["position"]}
              for r in query(svc, a.site, s, e, ["page"])]
+
+    # ⚠️ 空を書かない。空を書くと、その上の分析と週次レポートが
+    #    「アクセスが消えた」という嘘を事実として運ぶ。
+    #    実際 2026-08-29 に新しいプロパティで クエリ0件/合計クリック0 を受け取り、
+    #    別経路で確かめるまで「ドメイン移行の失敗」と読み違えるところだった。
+    #    本当に0件だと分かっているときは --allow-empty を明示する。
+    if not totals and not qrows and not drows and not prows:
+        if not a.allow_empty:
+            sys.exit("エラー: 取得結果が空です（合計・クエリ・日別・ページ別のすべてが0件）。\n"
+                     f"  サイト {a.site} / 期間 {s} 〜 {e}\n"
+                     "  プロパティの指定違い・権限不足・APIの形の変更でも同じ見た目になります。\n"
+                     "  本当に0件だと確認済みなら --allow-empty を付けてください。")
+        print("⚠️ 取得結果は空ですが --allow-empty が指定されたので書き出します。")
 
     out = a.out or os.path.join("data", "gsc", f"{e}.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)

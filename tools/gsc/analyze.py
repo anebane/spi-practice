@@ -166,6 +166,8 @@ def main():
     p.add_argument("source", help="GSCのCSV(クエリ.csv) または fetch.py が出力したJSON")
     p.add_argument("-o", "--out", help="出力先(.md)。省略時は標準出力")
     p.add_argument("--total-clicks", type=int, help="実際の総クリック数(CSV利用時。匿名化分を補正する)")
+    p.add_argument("--allow-empty", action="store_true",
+                   help="入力が空でもレポートを書く。本当に0件だと分かっているときだけ使う")
     a = p.parse_args()
     totals = None
     if a.source.endswith(".json"):
@@ -174,6 +176,16 @@ def main():
     else:
         rows = load_csv(a.source)
         if a.total_clicks: totals = {"clicks": a.total_clicks}
+    # ⚠️ 空の入力から「クリック0 / 該当なし」のレポートを作らない。
+    #    見た目は正常な分析結果なので、受け取った側は事実として扱う。
+    #    取得が失敗していたのか本当に0件なのかを、レポートからは区別できない。
+    if not rows and not (totals or {}).get("clicks") and not (totals or {}).get("impressions"):
+        if not a.allow_empty:
+            sys.exit(f"エラー: 入力が空です（{a.source}）。\n"
+                     "  取得の失敗と本当の0件を、出来上がったレポートからは区別できません。\n"
+                     "  本当に0件だと確認済みなら --allow-empty を付けてください。")
+        print("⚠️ 入力は空ですが --allow-empty が指定されたのでレポートを書きます。")
+
     md = analyze(rows, os.path.basename(a.source), totals)
     if a.out:
         with open(a.out, "w", encoding="utf-8") as f: f.write(md)

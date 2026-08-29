@@ -57,6 +57,10 @@ def run(client, prop, start, end, dims, mets):
             metrics=[Metric(name=m) for m in mets],
             limit=100000, offset=offset,
         ))
+        # ⚠️ 応答の形が変わったときに黙って0件として扱わない。
+        if not hasattr(resp, "rows"):
+            sys.exit(f"エラー: 応答に rows がありません（{type(resp).__name__}）。"
+                     "APIの形が変わった可能性があります。空データとして扱いません。")
         rows.extend(resp.rows)
         offset += len(resp.rows)
         if len(resp.rows) < 100000 or offset >= resp.row_count:
@@ -83,6 +87,8 @@ def main():
     p.add_argument("--lag", type=int, default=1,
                    help="末尾の未確定日を除外する日数。GA4はGSCほど遅れないので既定1")
     p.add_argument("-o", "--out", help="出力先JSON")
+    p.add_argument("--allow-empty", action="store_true",
+                   help="取得結果が空でも書き出す。本当に0件だと分かっているときだけ使う")
     a = p.parse_args()
 
     from google.analytics.data_v1beta import BetaAnalyticsDataClient
@@ -109,6 +115,20 @@ def main():
     D3 = ["eventName"]
     by_event = to_dicts(run(client, a.property, s, e, D3, M), D3, M)
 
+    # ⚠️ 空を書かない。GSC 側と同じ理由（tools/gsc/fetch.py のコメント参照）。
+    #    権限が外れても、プロパティIDを間違えても、同じ「0件」に見える。
+    total_events = sum(r.get("eventCount", 0) for r in by_event)
+    if not detail and not by_category and not by_event:
+        if not a.allow_empty:
+            sys.exit("エラー: 取得結果が空です（明細・分野別・イベント別のすべてが0件）。\n"
+                     f"  プロパティ {a.property} / 期間 {s} 〜 {e}\n"
+                     "  プロパティIDの誤り・権限の失効・APIの形の変更でも同じ見た目になります。\n"
+                     "  本当に0件だと確認済みなら --allow-empty を付けてください。")
+        print("⚠️ 取得結果は空ですが --allow-empty が指定されたので書き出します。")
+    elif total_events == 0 and not a.allow_empty:
+        sys.exit("エラー: 行はありますがイベント総数が0です。指標の取り違えの可能性があります。\n"
+                 "  意図した結果なら --allow-empty を付けてください。")
+
     out = a.out or os.path.join("data", "ga4", f"{e}.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
@@ -117,8 +137,7 @@ def main():
                    "by_event": by_event}, f, ensure_ascii=False, indent=1)
     print(f"取得完了: {out}")
     print(f"  期間 {s} 〜 {e} / 明細 {len(detail):,}行 / 分野別 {len(by_category):,}行")
-    total = sum(r["eventCount"] for r in by_event)
-    print(f"  イベント総数 {total:,}")
+    print(f"  イベント総数 {total_events:,}")
 
 
 if __name__ == "__main__":

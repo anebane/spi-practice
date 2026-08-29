@@ -19,3 +19,10 @@ test/.mutation-coverage.log
 
 # エージェントの検証ハーネス・候補・実行ログ（再現用に置くが配布物ではない）
 .tools/
+
+# Python の実行時キャッシュ。tools/ を検査から呼ぶと生まれる
+__pycache__/
+*.pyc
+
+# 掃き出し作業の実験台（配布物ではない）
+.sweep/
