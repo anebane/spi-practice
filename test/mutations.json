@@ -1598,5 +1598,13 @@
     "find": "run: ITERATIONS=1000 node test/generator.spec.js\n\n      - name: HTMLの健全性",
     "replace": "run: node test/generator.spec.js\n\n      - name: HTMLの健全性",
     "expect": "wiring"
+  },
+  {
+    "name": "読了の節目から100を削る",
+    "why": "読了100%が永久に出なくなる。節目が1つ欠けても、複数発火と順序しか見ていなければ緑のまま",
+    "file": "analytics.js",
+    "find": "      var marks = [25, 50, 75, 100], fired = {};",
+    "replace": "      var marks = [25, 50, 75], fired = {};",
+    "expect": "analytics"
   }
 ]

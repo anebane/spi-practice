@@ -67,7 +67,19 @@ function run(opts) {
   (listeners.DOMContentLoaded || []).forEach(f => f());
   return {
     get events() { return collect(); },
-    scroll: () => (listeners.scroll || []).forEach(f => f())
+    scroll: () => (listeners.scroll || []).forEach(f => f()),
+    /**
+     * 本文の何%まで読み進めた状態にしてから scroll を起こす。
+     * ⚠️ これが無いと「最後まで読んだ」を再現できず、節目の一覧から
+     *    100 を1つ削っても検査が緑のままだった（弱い壊し方で素通り）。
+     *    rect を固定で返していたのが原因。
+     */
+    scrollToPercent(p) {
+      const total = opts.bodyHeight - opts.innerHeight;
+      opts.rect.top = -(p / 100) * total;
+      opts.rect.bottom = opts.rect.top + opts.bodyHeight;
+      (listeners.scroll || []).forEach(f => f());
+    }
   };
 }
 
@@ -103,6 +115,30 @@ function run(opts) {
     fail("長い記事なのに scrolled:false", "短い記事用の経路が誤って通っている");
   }
   cov.covered("長い記事の読了", 1, 1);
+}
+
+// --- 2b. 最後まで読むと、節目がすべて出る ---
+//
+// ⚠️ 「複数出ないこと」と「順序」だけを見ていたので、節目の一覧から
+//    100 を1つ削っても検査が緑のままだった。読了100%が永久に出なくなる。
+//    実際に最後までスクロールさせて、出る節目の集合を確かめる。
+{
+  const r = run({ hasBody: true, bodyHeight: 3000, innerHeight: 800, rect: { top: 0, bottom: 3000 } });
+  for (const p of [25, 50, 75, 100]) r.scrollToPercent(p);
+
+  const got = r.events.filter(e => e.name === "article_scroll")
+    .map(e => e.params.percent).sort((a, b) => a - b);
+  const want = [25, 50, 75, 100];
+
+  if (got.join(",") !== want.join(",")) {
+    fail("最後まで読んでも節目がそろわない",
+      `出た節目 [${got.join(", ")}] / 期待 [${want.join(", ")}]。`
+      + "節目が欠けると、その深さの読了は永久に出ない");
+  }
+  if (r.events.some(e => e.name === "article_scroll" && e.params.scrolled !== true)) {
+    fail("スクロールで到達したのに scrolled が true でない", "短い記事の読了と混ざる");
+  }
+  cov.covered("最後まで読んだときの節目", got.length, 4);
 }
 
 // --- 3. 本文が無いページでは送らない ---
