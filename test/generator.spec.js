@@ -562,6 +562,85 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 濃度算: 問題文から独立に解き直す ---
+//
+// 【なぜ必要か】
+// 2026-08-29、noudo_target_01 の answerFormula に +1 を入れても全検査が
+// 緑のままだった（実測）。解説は答えをそのまま {{answer}} で埋めるので、
+// 解説の検算（式チェーンの内部整合）は答えの正しさを1ミリも保証しない。
+// 「答えが題意と合っているか」は、誰も見ていなかった。
+//
+// 【独立性の作り方】
+// ⚠️ answerFormula を読んで書いてはいけない（A1: 同じ式を2箇所に書けば、
+//    式が間違ったとき両方が同じように間違う。noudo_target_01 の validate()
+//    が answerFormula と同じ式を手で二重に持っていたのが実例）。
+// この検査の入力は「利用者が読む問題文」だけ。数値・操作・丸め指示を
+// 文面から取り出し、濃度の定義（濃度% = 食塩 / 食塩水 × 100）だけで解き直す。
+// 生成器と共有するのは日本語の読みと算数の定石のみ。
+// 残るリスクも明記する: 定石そのものの誤解は両側で一致しうる。それは
+// 推論系の独立再計算と同じ限界で、この検査が守るのは「実装の壊れ」まで。
+{
+  const N = 300;
+  const NUM = "(\\d+(?:\\.\\d+)?)";
+  // 「何を聞かれているか」1形につき1パターン。文面が変わればマッチしなく
+  // なるが、それは沈黙ではなく「解き直せない」という失敗として表に出す。
+  const FORMS = [
+    { re: new RegExp(`^${NUM}gの水に${NUM}gの食塩を溶かした。この食塩水の濃度は何%か`),
+      solve: (m) => { const w = +m[1], s = +m[2]; return s / (w + s) * 100; } },
+    { re: new RegExp(`^濃度${NUM}%の食塩水${NUM}gと、濃度${NUM}%の食塩水${NUM}gを混ぜると、濃度は何%になるか`),
+      solve: (m) => { const cA = +m[1], wA = +m[2], cB = +m[3], wB = +m[4];
+        return (wA * cA / 100 + wB * cB / 100) / (wA + wB) * 100; } },
+    { re: new RegExp(`^濃度${NUM}%の食塩水が${NUM}gある。水を${NUM}g蒸発させると、濃度は何%になるか`),
+      solve: (m) => { const c = +m[1], w = +m[2], e = +m[3]; return (w * c / 100) / (w - e) * 100; } },
+    { re: new RegExp(`^濃度${NUM}%の食塩水${NUM}gに水を${NUM}g加えると、濃度は何%になるか`),
+      solve: (m) => { const c = +m[1], w = +m[2], a = +m[3]; return (w * c / 100) / (w + a) * 100; } },
+    { re: new RegExp(`^濃度${NUM}%の食塩水${NUM}gに食塩を${NUM}g加えると、濃度は何%になるか`),
+      solve: (m) => { const c = +m[1], w = +m[2], s = +m[3]; return (w * c / 100 + s) / (w + s) * 100; } },
+    { // 「何g混ぜるか」: 食塩の量の等式 cA·wA + cB·x = cT·(wA+x) を x について解く
+      re: new RegExp(`^濃度${NUM}%の食塩水${NUM}gに、濃度${NUM}%の食塩水を何g混ぜると濃度${NUM}%になるか`),
+      solve: (m) => { const cA = +m[1], wA = +m[2], cB = +m[3], cT = +m[4];
+        return wA * (cT - cA) / (cB - cT); } },
+    { re: new RegExp(`^濃度${NUM}%の食塩水${NUM}gから${NUM}gを取り出し、代わりに同量の水を加えた。新しい濃度は何%か`),
+      solve: (m) => { const c = +m[1], w = +m[2], r = +m[3]; return ((w - r) * c / 100) / w * 100; } }
+  ];
+
+  const noudo = TEMPLATES.filter(t => t.category === "濃度算");
+  let checked = 0, mismatch = 0, unparsed = 0;
+  const bad = [];
+  for (const t of noudo) {
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      const form = FORMS.find(f => f.re.test(q.text));
+      if (!form) {
+        unparsed++;
+        if (bad.length < 3) bad.push(`${t.id}: どの型にも一致しない「${String(q.text).slice(0, 50)}」`);
+        continue;
+      }
+      let x = form.solve(q.text.match(form.re));
+      // 丸めは文面の指示に従う。指示が無い問題（gを問う）は表示粒度＝整数。
+      const rounded = /小数第2位を四捨五入/.test(q.text);
+      x = rounded ? Math.round(x * 10) / 10 : Math.round(x);
+      const tol = rounded ? 0.05 : 0.5;
+      checked++;
+      if (!(Math.abs(x - q.correctAnswer) <= tol + 1e-9)) {
+        mismatch++;
+        if (bad.length < 5) bad.push(`${t.id}: 文面から=${x} / システム=${q.correctAnswer} 「${String(q.text).slice(0, 50)}」`);
+      }
+    }
+  }
+
+  cov.covered("問題文からの独立再計算（濃度算）", checked, 500);
+  console.log(`\n濃度算の独立再計算: ${checked.toLocaleString()}問を文面から解き直して照合`);
+  if (checked && mismatch === 0 && unparsed === 0) {
+    console.log("   ✅ 文面から解いた答えと、システムの答えがすべて一致");
+  } else {
+    console.log(`   ❌ 不一致 ${mismatch} / 解き直せない ${unparsed}`);
+    if (mismatch) fail("濃度算", "独立再計算と答えが不一致", bad.join(" / "));
+    if (unparsed) fail("濃度算", "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
+  }
+}
+
 // --- 生成された日本語が壊れていないか ---
 //
 // 既存の不変条件（未展開変数・答えの存在・選択肢の重複）は、文法や論理が

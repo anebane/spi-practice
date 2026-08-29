@@ -1798,5 +1798,21 @@
     "find": "        run: node test/mutation-runner.js --check-mutations",
     "replace": "        run: echo skipped",
     "expect": "wiring"
+  },
+  {
+    "name": "濃度算の答えをオフバイワンにする",
+    "why": "2026-08-29 に実測した穴の再現形。answerFormula に +1 を入れても全検査が緑のままだった。解説は答えをそのまま埋めるので検算では捕まらない。問題文からの独立再計算だけがこれを落とせる",
+    "file": "src/questions/07-noudo.js",
+    "find": "      return Math.round(v.weightA * (v.concTarget - v.concA) / (v.concB - v.concTarget));",
+    "replace": "      return Math.round(v.weightA * (v.concTarget - v.concA) / (v.concB - v.concTarget)) + 1;",
+    "expect": "generator"
+  },
+  {
+    "name": "濃度算の文言を変えて独立再計算から見えなくする",
+    "why": "問題文の言い回しを変えると、文面から解き直す検査の型が外れる。黙って0件になると検査が消えたのと同じなので、「解き直せない」を失敗として表に出す番人",
+    "file": "src/questions/07-noudo.js",
+    "find": "{{water}}gの水に",
+    "replace": "{{water}}グラムの水に",
+    "expect": "generator"
   }
 ]
