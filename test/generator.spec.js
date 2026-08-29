@@ -302,7 +302,7 @@ if (failures.length) process.exitCode = 1;
   // こうすれば「どこが未達か」は常に見えたまま、悪化と新規だけを検出できる。
   //
   // ベースラインは test/diversity-baseline.json。改善したら値を更新する
-  // （UPDATE_BASELINE=1 で再生成できる）。
+  // （更新は UPDATE_BASELINE=<テンプレートID> の名指しで行う。下記参照）。
   const DIVERSITY_TARGET = 50;
   const TOLERANCE = 0.8;   // 実測の振れ幅は最大1.3%。20%見ておけば誤検知しない
   const SAMPLES = 400;
@@ -326,15 +326,67 @@ if (failures.length) process.exitCode = 1;
   }
 
   if (process.env.UPDATE_BASELINE) {
-    const out = {};
-    for (const r of rows.slice().sort((a, b) => a.id.localeCompare(b.id))) out[r.id] = r.n;
-    fs.writeFileSync(BASELINE_PATH, JSON.stringify(out, null, 2) + "\n", "utf8");
-    console.log(`\nベースラインを更新: ${BASELINE_PATH}`);
+    // ⚠️ かつては UPDATE_BASELINE=1 で全件が一括更新できた。意図した1件と
+    //    無関係な揺らぎ、さらに（もし実在すれば）本物の退行まで、区別なく
+    //    まとめて承認される。実際に踏んで巻き戻す事故が起きた（2026-08-29）。
+    //    更新はテンプレートIDの名指しに限る。禁止ではなく安全な口を残す:
+    //    正当な全件更新（生成器の意図的な全面改修）は all + 理由で通す。
+    //    使い方の誤りは検査の失敗ではないので EXIT=2 で区別する。
+    const req = process.env.UPDATE_BASELINE.trim();
+    const reason = (process.env.BASELINE_REASON || "").trim();
+    let old = {};
+    try { old = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); } catch (e) {}
+    const byId = new Map(rows.map(r => [r.id, r.n]));
+
+    if (req === "1" || req === "true") {
+      console.error("❌ UPDATE_BASELINE=1（一括更新）は廃止しました。");
+      console.error("   一括更新は、意図した1件と無関係な揺らぎと本物の退行を区別なく承認します。");
+      console.error("   更新するテンプレートIDを名指ししてください:");
+      console.error('     UPDATE_BASELINE=soneki_discount_01,shugo_min_01 node test/generator.spec.js');
+      console.error("   全件を意図して更新する場合（生成器の全面改修など）:");
+      console.error('     UPDATE_BASELINE=all BASELINE_REASON="理由" node test/generator.spec.js');
+      process.exit(2);
+    }
+    const targets = req === "all" ? rows.map(r => r.id)
+                  : [...new Set(req.split(",").map(s => s.trim()).filter(Boolean))];
+    const unknown = targets.filter(id => !byId.has(id));
+    if (unknown.length) {
+      console.error(`❌ 実在しないテンプレートID: ${unknown.join(", ")}（タイポの可能性。何も更新していません）`);
+      process.exit(2);
+    }
+    const changes = targets.map(id => {
+      const o = old[id], n = byId.get(id);
+      const big = o !== undefined && o > 0 && Math.abs(n - o) > o * 0.2;
+      return { id, o, n, big };
+    });
+    if ((req === "all" || changes.some(c => c.big)) && !reason) {
+      console.error('❌ この更新には理由が要ります。BASELINE_REASON="..." を付けて再実行してください。');
+      for (const c of changes.filter(c => c.big)) {
+        console.error(`   - ${c.id}: ${c.o} → ${c.n}（${(100 * (c.n - c.o) / c.o).toFixed(0)}% の変化。20%を超えている）`);
+      }
+      if (req === "all") console.error("   （all 指定は変化量にかかわらず常に理由が必要です）");
+      console.error("   何も更新していません。");
+      process.exit(2);
+    }
+    // 名指しした分だけ書き換え、他は旧値のまま残す。
+    // 実在しなくなったテンプレートの記録だけは落とす（名指しでは永遠に消せないため）。
+    const merged = {};
+    for (const id of Object.keys(old)) if (byId.has(id)) merged[id] = old[id];
+    const dropped = Object.keys(old).filter(id => !byId.has(id));
+    for (const c of changes) merged[c.id] = c.n;
+    const sorted = {};
+    for (const k of Object.keys(merged).sort()) sorted[k] = merged[k];
+    fs.writeFileSync(BASELINE_PATH, JSON.stringify(sorted, null, 2) + "\n", "utf8");
+    console.log(`\nベースラインを更新: ${changes.length}件${reason ? `（理由: ${reason}）` : ""}`);
+    for (const c of changes) {
+      console.log(`   - ${c.id}: ${c.o === undefined ? `新規 ${c.n}` : `${c.o} → ${c.n}${c.big ? " ⚠️ 20%超" : ""}`}`);
+    }
+    if (dropped.length) console.log(`   実在しないテンプレートの記録を削除: ${dropped.join(", ")}`);
   }
 
   let baseline = {};
   try { baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); }
-  catch (e) { console.log("\n⚠️ ベースラインが読めません。UPDATE_BASELINE=1 で作成してください。"); }
+  catch (e) { console.log("\n⚠️ ベースラインが読めません。UPDATE_BASELINE=all BASELINE_REASON=\"初回作成\" で作成してください。"); }
 
   const byCat = {};
   for (const r of rows) (byCat[r.cat] ||= []).push(r);
@@ -371,7 +423,7 @@ if (failures.length) process.exitCode = 1;
   console.log(`\n   目標(${DIVERSITY_TARGET}種類)未満: ${totalShort} / ${rows.length} テンプレート（既知の宿題）`);
 
   if (improved.length) {
-    console.log(`   📈 改善したテンプレート ${improved.length}件（UPDATE_BASELINE=1 で記録を更新してください）`);
+    console.log(`   📈 改善したテンプレート ${improved.length}件（UPDATE_BASELINE=<id> で記録を更新してください）`);
     for (const r of improved.slice(0, 5)) console.log(`      - ${r.id}: ${r.base} → ${r.n}`);
   }
 
