@@ -263,9 +263,18 @@ function restoreActive() {
   try { current = fs.readFileSync(a.abs, "utf8"); }
   catch (e) { /* 読めなくても復元は試みる。差異は下の read-back で出る */ }
   if (current !== null && a.mutated !== undefined && current !== a.mutated) {
+    // ⚠️ 「書き換えられていた」だけでは、誰が何をしたのか分からない。
+    //    症状ではなく中身を出す。整形し直された跡なのか、行が足されたのか、
+    //    一部が消えたのかで、書いた主体の見当がつく。
+    let i = 0;
+    while (i < current.length && i < a.mutated.length && current[i] === a.mutated[i]) i++;
+    const near = (str) => JSON.stringify(str.slice(Math.max(0, i - 40), i + 60));
     reasons.push(`変異の実行中に ${a.file} が外部から書き換えられていた。`
       + "復元で上書きしたため、その編集は失われている。"
-      + "実行中のエディタ保存や並行エージェントの作業が無いか確認すること");
+      + "実行中のエディタ保存や並行エージェントの作業が無いか確認すること"
+      + `\n     ${a.mutated.length}バイト→${current.length}バイト / 相違位置 ${i}`
+      + `\n     変異直後: ${near(a.mutated)}`
+      + `\n     実行後  : ${near(current)}`);
   }
 
   try {
