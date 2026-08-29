@@ -53,8 +53,12 @@ if (!fs.existsSync(ciPath)) {
   ci = [...new Set([...yml.matchAll(/node\s+(test\/[a-z0-9-]+\.spec\.js)/g)].map(m => m[1]))].sort();
   // CIが変異ランナーを回しているかも見る。回していなければ SPECS 側の
   // 登録が正しくても、破壊テストは一度も動かない。
-  if (!/node\s+test\/mutation-runner\.js/.test(yml)) {
-    fail("CIが破壊テストを回していない", "SPECS に登録しても実行されない");
+  // ⚠️ 引数なしの実行（＝全件の破壊テスト）だけを数える。
+  //    --check-ledger は台帳の構造を見るだけで、変異は1件も回さない。
+  //    文字列 mutation-runner.js の有無で見ると、--check-ledger の行があるだけで
+  //    「破壊テストを回している」ことになってしまう（実際に変異が検出できなかった）。
+  if (!/node\s+test\/mutation-runner\.js\s*$/m.test(yml)) {
+    fail("CIが破壊テストを回していない", "SPECS に登録しても実行されない。--check-ledger だけでは変異を1件も回さない");
   }
 }
 cov.covered("CIが実行する検査", ci.length, 5);

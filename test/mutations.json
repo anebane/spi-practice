@@ -721,10 +721,10 @@
   },
   {
     "name": "CIから破壊テストを外す",
-    "why": "SPECS に登録しても破壊テストが動かない。登録だけして走らない状態になる",
+    "why": "SPECS に登録しても破壊テストが動かない。登録だけして走らない状態になる（--check-ledger の行と区別するため改行まで含める）",
     "file": ".github/workflows/test.yml",
-    "find": "        run: node test/mutation-runner.js",
-    "replace": "        run: echo skipped",
+    "find": "        run: node test/mutation-runner.js\n",
+    "replace": "        run: echo skipped\n",
     "expect": "wiring"
   },
   {
@@ -1517,6 +1517,54 @@
     "file": "test/helpers/runner-lock.js",
     "find": "  if (process.env.IGNORE_RUNNER_LOCK) {",
     "replace": "  if (false) {",
+    "expect": "wiring"
+  },
+  {
+    "name": "ベースラインの署名を食い違わせる",
+    "why": "ゲートを通さない手編集が見えなくなる。ベースラインを下げるのは退行を隠す方向。署名を付け直すと find が外れるが、そのときはランナーが一致0箇所で落ちるので気づける",
+    "file": "test/diversity-baseline.json",
+    "find": "    \"signature\": \"6b76fc66031ec0df\",",
+    "replace": "    \"signature\": \"0000000000000000\",",
+    "expect": "generator"
+  },
+  {
+    "name": "取得系の実験台が動かないことにする",
+    "why": "実験台が動かないまま緑にすると、取得系を1本も見ていないのに「守られている」と読まれる",
+    "file": "test/tools.spec.js",
+    "find": "[\"-c\", \"import google.analytics.data_v1beta, googleapiclient\"]",
+    "replace": "[\"-c\", \"import module_that_does_not_exist_xyz\"]",
+    "expect": "tools"
+  },
+  {
+    "name": "取得系の対照が成立しないようにする",
+    "why": "正常な応答でも書けないなら、以下の判定はすべて意味を持たない",
+    "file": "test/helpers/probe-fetch.py",
+    "find": "    \"normal\":        _gsc_normal,",
+    "replace": "    \"normal\":        lambda b: {},",
+    "expect": "tools"
+  },
+  {
+    "name": "分析の明示の口を効かなくする",
+    "why": "本当に0件のときに回避できないと、検査ごと外される",
+    "file": "tools/gsc/analyze.py",
+    "find": "        if not a.allow_empty:",
+    "replace": "        if True:",
+    "expect": "tools"
+  },
+  {
+    "name": "取得系の検査で0件ガードを効かなくする",
+    "why": "対照を1件も見ていなくても緑になる",
+    "file": "test/tools.spec.js",
+    "find": "  cov.covered(\"対照（正常な応答）\", n, 2);",
+    "replace": "  cov.covered(\"対照（正常な応答）\", n, 99);",
+    "expect": "tools"
+  },
+  {
+    "name": "門番のメッセージを変えて識別できなくする",
+    "why": "止めたのが門番なのか別の理由なのか区別できなくなる。ガードが互いを隠す形（性質A3）",
+    "file": "test/helpers/runner-lock.js",
+    "find": "  console.error(`❌ 変異ランナーが動いている間は ${what} を書き換えられません。`);",
+    "replace": "  console.error(`❌ 書き換えを止めました: ${what}`);",
     "expect": "wiring"
   }
 ]
