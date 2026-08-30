@@ -623,10 +623,20 @@ if (failures.length) process.exitCode = 1;
       //    .5境界に乗るか、境界から 1e-4 以上離れるかのどちらか。float の表現誤差で
       //    72.5 が 72.4999… になり半下げに転ぶ偽陽性が実際に出た（7.25% → 7.2 と誤算）。
       const rounded = /小数第2位を四捨五入/.test(q.text);
-      x = rounded ? Math.round(x * 10 + 1e-9) / 10 : Math.round(x + 1e-9);
+      // ⚠️ 真値がちょうど .5 境界のときは、上下どちらの丸めも正解として許容する。
+      //    生成側の Math.round は浮動小数の表現誤差で境界がどちらにも転ぶ
+      //    （実測: 7.25% がシステム 7.3 / 検査 7.2 になった回と、102.5% が
+      //    システム 102 / 検査 103 になった回の両方が出た）。入力は整数なので
+      //    真値は分母の小さい有理数で、「境界から1e-6以内」は「ちょうど境界」と
+      //    同値。境界以外は従来どおり1択で照合するので、+1のずれは必ず落ちる。
+      const scale = rounded ? 10 : 1;
+      const xs = Math.abs(x * scale - Math.floor(x * scale) - 0.5) < 1e-6
+        ? [Math.floor(x * scale) / scale, (Math.floor(x * scale) + 1) / scale]
+        : [Math.round(x * scale + 1e-9) / scale];
+      x = xs.length === 1 ? xs[0] : xs.join("か");
       const tol = rounded ? 0.05 : 0.5;
       checked++;
-      if (!(Math.abs(x - q.correctAnswer) <= tol + 1e-9)) {
+      if (!xs.some(v => Math.abs(v - q.correctAnswer) <= tol + 1e-9)) {
         mismatch++;
         if (bad.length < 5) bad.push(`${t.id}: 文面から=${x} / システム=${q.correctAnswer} 「${String(q.text).slice(0, 50)}」`);
       }
@@ -773,7 +783,11 @@ if (failures.length) process.exitCode = 1;
       const i1 = tb.header.indexOf(m[2] + "年"), i2 = tb.header.indexOf(m[3] + "年");
       if (i1 < 0 || i2 < 0) return null;
       const a = tb.body[m[1]][i1], b = tb.body[m[1]][i2];
-      return { x: Math.round((b - a) / a * 100 + 1e-9), tol: 0.5 };
+      // .5境界は上下どちらの丸めも許容（濃度算と同じ理由。102.5% で実測）
+      const r = (b - a) / a * 100;
+      const cands = Math.abs(r - Math.floor(r) - 0.5) < 1e-6
+        ? [Math.floor(r), Math.floor(r) + 1] : [Math.round(r + 1e-9)];
+      return { cands, tol: 0.5 };
     },
     (q) => { // 構成比から金額（table_composition_01）
       const t1 = String(q.text).match(/総額: ([\d,]+)円/);
@@ -844,6 +858,97 @@ if (failures.length) process.exitCode = 1;
     console.log(`   ❌ 不一致 ${mismatch} / 解き直せない ${unparsed}`);
     if (mismatch) fail("表の読み取り", "独立再計算と答えが不一致", bad.join(" / "));
     if (unparsed) fail("表の読み取り", "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
+  }
+}
+
+// --- 仕事算・集合: 問題文から独立に解き直す ---
+//
+// 濃度算・四則逆算・表と同じ方針・同じ作業順序（answerFormula は読まずに、
+// 文面と定石だけで書き、素の緑を確認してから実装をプローブの照準に使う）。
+// 仕事算は言い回しが揺れる（職人/機械/ポンプ…）が、工期の数値は
+// 「N日 / N時間」の単位つきでしか現れないので、単位で拾って定石
+// （仕事率の和）で解く。集合は骨格が固定なので数値をそのまま取る。
+// テンプレIDはソルバの振り分けにだけ使う（答えの導出には使わない）。
+{
+  const N = 100;
+  const nums = (text, unit) => {
+    const out = []; const re = new RegExp("(\\d+(?:\\.\\d+)?)" + unit, "g");
+    let m; while ((m = re.exec(text))) out.push(+m[1]);
+    return out;
+  };
+  const harmonic = (ds) => 1 / ds.reduce((a, d) => a + 1 / d, 0);
+  const SOLVERS = {
+    shigoto_basic_01: (t) => { const d = nums(t, "日"); return d.length === 2 ? harmonic(d) : null; },
+    shigoto_3people_01: (t) => { const d = nums(t, "日"); return d.length === 3 ? harmonic(d) : null; },
+    shigoto_tank_01: (t) => { const d = nums(t, "時間"); return d.length === 2 ? harmonic(d) : null; },
+    shigoto_efficiency_01: (t) => {
+      const d = nums(t, "日"); const k = t.match(/(\d+(?:\.\d+)?)倍の速さ/);
+      return d.length === 1 && k ? d[0] / +k[1] : null;
+    },
+    shigoto_switch_01: (t) => {  // a日・b日・最初にd日間 → Bの日数 = (1 - d/a) × b
+      const d = nums(t, "日"); return d.length === 3 ? (1 - d[2] / d[0]) * d[1] : null;
+    },
+    shigoto_join_01: (t) => {   // p日・先行d1日間・合流後さらにd2日 → q = d2 / (1 - (d1+d2)/p)
+      const d = nums(t, "日"); return d.length === 3 ? d[2] / (1 - (d[1] + d[2]) / d[0]) : null;
+    },
+    shugo_2set_01: (t) => {
+      const m = t.match(/^(\d+)人のクラスで、英語が好きな人が(\d+)人、数学が好きな人が(\d+)人、両方好きな人が(\d+)人いる/);
+      return m ? +m[1] - (+m[2] + +m[3] - +m[4]) : null;
+    },
+    shugo_2set_02: (t) => {
+      const m = t.match(/^(\d+)人にアンケートを取ったところ、商品Aを買ったことがある人が(\d+)人、商品Bを買ったことがある人が(\d+)人、どちらも買ったことがない人が(\d+)人/);
+      return m ? +m[2] + +m[3] - (+m[1] - +m[4]) : null;
+    },
+    shugo_3set_01: (t) => {
+      const m = t.match(/^(\d+)人のクラスで、国語が好きな人が(\d+)人、数学が好きな人が(\d+)人、英語が好きな人が(\d+)人いる。国語と数学の両方が好きな人が(\d+)人、数学と英語の両方が好きな人が(\d+)人、国語と英語の両方が好きな人が(\d+)人、3教科すべてが好きな人が(\d+)人/);
+      if (!m) return null;
+      const [T, a, b, c, ab, bc, ac, abc] = m.slice(1).map(Number);
+      return T - (a + b + c - ab - bc - ac + abc);
+    },
+    shugo_2set_03: (t) => {
+      const m = t.match(/社員(\d+)人のうち、電車通勤の人が(\d+)人、バス通勤の人が(\d+)人いる。電車とバスの両方を使う人が最も多い場合/);
+      return m ? Math.min(+m[2], +m[3]) : null;
+    },
+    shugo_min_01: (t) => {
+      const m = t.match(/^(\d+)人の社員のうち、英語ができる人が(\d+)人、中国語ができる人が(\d+)人いる。英語と中国語の両方ができる人は少なくとも/);
+      return m ? Math.max(0, +m[2] + +m[3] - +m[1]) : null;
+    },
+    shugo_percent_01: (t) => {
+      const m = t.match(/^(\d+)人にアンケートを取ったところ、スポーツが好きな人は全体の(\d+)%、音楽が好きな人は全体の(\d+)%、両方好きな人は全体の(\d+)%/);
+      return m ? +m[1] * (100 - (+m[2] + +m[3] - +m[4])) / 100 : null;
+    }
+  };
+
+  for (const [famLabel, cat] of [["仕事算", "仕事算"], ["集合", "集合"]]) {
+    const fams = TEMPLATES.filter(t => t.category === cat && SOLVERS[t.id]);
+    let checked = 0, mismatch = 0, unparsed = 0;
+    const bad = [];
+    for (const t of fams) {
+      for (let i = 0; i < N; i++) {
+        const q = GEN.generateQuestion(t);
+        if (!q) continue;
+        const x = SOLVERS[t.id](String(q.text));
+        if (x === null || x === undefined || !isFinite(x)) {
+          unparsed++;
+          if (bad.length < 3) bad.push(`${t.id}: 文面を読めない「${String(q.text).slice(0, 50)}」`);
+          continue;
+        }
+        checked++;
+        if (Math.abs(x - q.correctAnswer) > 0.01) {
+          mismatch++;
+          if (bad.length < 5) bad.push(`${t.id}: 文面から=${x} / システム=${q.correctAnswer} 「${String(q.text).slice(0, 50)}」`);
+        }
+      }
+    }
+    cov.covered(`問題文からの独立再計算（${famLabel}）`, checked, 400);
+    console.log(`\n${famLabel}の独立再計算: ${checked.toLocaleString()}問を文面から解き直して照合`);
+    if (checked && mismatch === 0 && unparsed === 0) {
+      console.log("   ✅ 文面から解いた答えと、システムの答えがすべて一致");
+    } else {
+      console.log(`   ❌ 不一致 ${mismatch} / 解き直せない ${unparsed}`);
+      if (mismatch) fail(famLabel, "独立再計算と答えが不一致", bad.join(" / "));
+      if (unparsed) fail(famLabel, "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
+    }
   }
 }
 

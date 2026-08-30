@@ -1846,5 +1846,37 @@
     "find": "の年間売上の合計はいくらか。",
     "replace": "の年間売上の総額はいくらか。",
     "expect": "generator"
+  },
+  {
+    "name": "仕事算の答えをオフバイワンにする",
+    "why": "答えの誤りは解説にも同じ値が伝播して内部整合する。文面の工期から仕事率の和で解き直す検査でしか捕まらない（濃度算で実測した穴の仕事算版）",
+    "file": "src/questions/06-shigoto.js",
+    "find": "      return v.daysA * v.daysB / (v.daysA + v.daysB);",
+    "replace": "      return v.daysA * v.daysB / (v.daysA + v.daysB) + 1;",
+    "expect": "generator"
+  },
+  {
+    "name": "仕事算の単位の言い回しを変えて独立再計算から見えなくする",
+    "why": "「日」を「営業日」に変えるだけで工期の抽出が外れる。黙って0件になると検査が消えたのと同じなので「解き直せない」として表に出す番人",
+    "file": "src/questions/06-shigoto.js",
+    "find": "ある仕事をAだけですると{{daysA}}日、Bだけですると{{daysB}}日かかる。最初にAが",
+    "replace": "ある仕事をAだけですると{{daysA}}営業日、Bだけですると{{daysB}}日かかる。最初にAが",
+    "expect": "generator"
+  },
+  {
+    "name": "集合の答えをオフバイワンにする",
+    "why": "ベン図の計算誤りは解説にも同じ値が出て内部整合する。文面の人数からの再計算でしか捕まらない",
+    "file": "src/questions/03-shugo.js",
+    "find": "      return v.total - (v.a + v.b - v.ab);",
+    "replace": "      return v.total - (v.a + v.b - v.ab) + 1;",
+    "expect": "generator"
+  },
+  {
+    "name": "集合の文言を変えて独立再計算から見えなくする",
+    "why": "「両方好きな人」を「どちらも好きな人」に変えると抽出が外れる。「解き直せない」として表に出す番人",
+    "file": "src/questions/03-shugo.js",
+    "find": "両方好きな人が{{ab}}人いる。英語も数学も好きではない人は何人か",
+    "replace": "どちらも好きな人が{{ab}}人いる。英語も数学も好きではない人は何人か",
+    "expect": "generator"
   }
 ]
