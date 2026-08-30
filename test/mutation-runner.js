@@ -857,7 +857,14 @@ if (AGG) {
 }
 
 if (!failures.length) {
-  console.log(`   ✅ ${ran}件すべて、壊すと検査が落ちた（検査が本当に効いている）`);
+  // ⚠️ 集約は変異を1件も当てない。ここで「0件すべて、壊すと検査が落ちた」と
+  //    出すと、0件について成功を主張することになる。
+  //    「何も見ていないのに緑」に見える文言は出さない。
+  if (AGG) {
+    console.log("   ✅ 全シャードの発火を合わせて、未カバーの失敗経路はありません");
+  } else {
+    console.log(`   ✅ ${ran}件すべて、壊すと検査が落ちた（検査が本当に効いている）`);
+  }
 } else {
   console.log(`\n   ❌ ${failures.length}件`);
   for (const f of failures) console.log(`   - ${f.name}: ${f.detail}`);
