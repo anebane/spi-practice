@@ -530,11 +530,33 @@ let ran = 0, skipped = 0;
 const results = [];
 let lockLost = false;   // 実行中にロックを失ったら立てる。以降の変異と最終確認を中止する
 
+// シャードへの割り当て。対象 spec ごとに順番に配る。
+//
+// ⚠️ 単純に「何番目か」で配ると、重い変異が特定のシャードに偏る。
+//    実測（2026-08-30）: spec 1回の実行は generator 16.6秒 / wiring 6.4秒 /
+//    他は0.1秒前後。generator を狙う変異が46件あり、番号順だと
+//    13件と10件に分かれて 448秒 対 333秒（34%差）になった。
+//    spec ごとに配れば、重い spec が何件あっても均等に割れる。
+//
+// ⚠️ コストの表は持たない。持つと実測とずれたとき誰も気づかない
+//    （同じ事実を2箇所に書かない）。「同じ spec は均等に配る」だけで、
+//    重さそのものは知らなくていい。
+const shardOf = [];
+{
+  const seq = new Map();
+  const n = shard ? shard.n : 1;
+  for (const m of mutations) {
+    const k = m.expect;
+    const c = seq.get(k) || 0;
+    shardOf.push(c % n);
+    seq.set(k, c + 1);
+  }
+}
+
 for (const [mIndex, m] of mutations.entries()) {
   if (AGG) break;                       // 集約モードは変異を当てない
   if (only && m.name.indexOf(only) === -1) { skipped++; continue; }
-  // 何番目かで割り当てる。定義の並び順が変わらない限り、同じシャードが同じ変異を担当する。
-  if (shard && (mIndex % shard.n) !== (shard.i - 1)) { skipped++; continue; }
+  if (shard && shardOf[mIndex] !== shard.i - 1) { skipped++; continue; }
 
   // ロックの所有を1件ごとに確かめる。外部でロックが消される・奪われると
   // 二重起動が起き、互いの復元を上書きする（2026-08-28に実際に起きた）。

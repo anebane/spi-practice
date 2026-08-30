@@ -105,7 +105,13 @@ jobs:
   # 検査側の欠陥（5択でNaN / ガードの隠し合い / ハーネスの作り直し / TDZ /
   # 検査を足したことで既存変異が無効化）は、すべてこれで出ている。
   #
-  # 220件超を直列で回すと13〜34分かかるので分割する。
+  # 225件超を直列で回すと13〜34分かかるので分割する。
+  # 分割数は実測で決めた（2026-08-30 ローカル）:
+  #   直列の総作業量 約26分。spec 1回の実行は generator 16.6秒 / wiring 6.4秒 /
+  #   他は0.1秒前後で、generator を狙う変異46件が所要時間を支配する。
+  #   4分割 約7.8分 / 6分割 約5.6分 / 8分割 約4.6分（+ジョブ起動 約1分）。
+  #   8以上は短縮幅が縮む一方でジョブ起動の総和が増えるので6にした。
+  #   ⚠️ 変異が増えたらこの数字を上げる。いまは46件のgeneratorが下限を決めている。
   # ⚠️ 未カバーの判定はここではしない。各シャードは自分が回した変異の発火しか
   #    知らないので、シャード単位で判定すると全シャードが「未カバーだらけ」と
   #    誤報する。判定は下の集約ジョブが、全シャードの発火の和集合で行う。
@@ -115,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false          # 1つ落ちても他を最後まで回す（全体像が要る）
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -129,8 +135,8 @@ jobs:
       - name: Python の依存（取得系の検査に要る）
         run: pip install --quiet google-api-python-client google-analytics-data
 
-      - name: 破壊テスト（${{ matrix.shard }}/4）
-        run: node test/mutation-runner.js --shard ${{ matrix.shard }}/4 --coverage-out cov-${{ matrix.shard }}.log
+      - name: 破壊テスト（${{ matrix.shard }}/6）
+        run: node test/mutation-runner.js --shard ${{ matrix.shard }}/6 --coverage-out cov-${{ matrix.shard }}.log
 
       # 発火記録を集約ジョブへ渡す。ここが欠けると未カバーの判定が成立しない。
       - uses: actions/upload-artifact@v4
@@ -156,4 +162,4 @@ jobs:
           pattern: coverage-*
           path: cov
       - name: 未カバーの失敗経路（全シャードの発火を合わせて判定）
-        run: node test/mutation-runner.js --coverage-check cov --expect-shards 4
+        run: node test/mutation-runner.js --coverage-check cov --expect-shards 6
