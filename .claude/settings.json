@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node)",
+      "Bash(git add)",
+      "Bash(git commit)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log)",
+      "Bash(git checkout)",
+      "Bash(git fetch)",
+      "Bash(git branch)",
+      "Bash(mkdir *)",
+      "Bash(git diff --stat)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git clean -*)",
+      "Bash(git revert *)",
+      "Bash(git remote *)",
+      "Bash(npm install *)",
+      "Bash(npm install)",
+      "Bash(rm *)",
+      "Bash(rm -rf *)",
+      "Bash(brew *)",
+      "Bash(curl *)",
+      "Bash(gh *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -fdx*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~/)",
+      "Bash(rm -rf *)",
+      "Bash(sudo *)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "echo 'spi-practice'"
+  }
+}
