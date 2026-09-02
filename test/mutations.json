@@ -1009,10 +1009,10 @@
   },
   {
     "name": "affiliate_view を二重送信する",
-    "why": "コピペで送信が2回入る。表示回数が水増しされ、クリック率が実態より低く見える",
+    "why": "コピペで送信が2回入る。表示回数が水増しされ、クリック率が実態より低く見える。2026-09-03に affiliate_view の呼び出しを viewParams 経由に変えたため find を更新",
     "file": "affiliate.js",
-    "find": "    track(\"affiliate_view\", {\n      score_band: opt.band || \"unknown\",\n      placement: opt.placement || \"unknown\",\n      creative_count: ids.length,\n      audience: aud || \"unknown\"\n    });\n    return true;",
-    "replace": "    track(\"affiliate_view\", {\n      score_band: opt.band || \"unknown\",\n      placement: opt.placement || \"unknown\",\n      creative_count: ids.length,\n      audience: aud || \"unknown\"\n    });\n    track(\"affiliate_view\", {\n      score_band: opt.band || \"unknown\",\n      placement: opt.placement || \"unknown\",\n      creative_count: ids.length,\n      audience: aud || \"unknown\"\n    });\n    return true;",
+    "find": "    track(\"affiliate_view\", viewParams);\n",
+    "replace": "    track(\"affiliate_view\", viewParams);\n    track(\"affiliate_view\", viewParams);\n",
     "expect": "affiliate"
   },
   {
@@ -1729,10 +1729,10 @@
   },
   {
     "name": "面談型の注記から面談の記述を消す",
-    "why": "登録だけで終わったつもりになる。利用者の期待と違い、成果にもならない",
+    "why": "登録だけで終わったつもりになる。利用者の期待と違い、成果にもならない。2026-09-03に注記の対象学年と勤務地を成果条件へ合わせたため find を更新",
     "file": "affiliate.js",
-    "find": "      note: \"対象は2027年卒・2028年卒の学生の方です。登録後にキャリアアドバイザーとの面談があります。\"",
-    "replace": "      note: \"対象は2027年卒・2028年卒の学生の方です。\"",
+    "find": "      note: \"対象は2026年卒・2027年卒の学生で、希望勤務地が東京・神奈川・千葉・埼玉・大阪・京都・兵庫の方です。登録後にキャリアアドバイザーとの面談があります。\",",
+    "replace": "      note: \"対象は2026年卒・2027年卒の学生で、希望勤務地が東京・神奈川・千葉・埼玉・大阪・京都・兵庫の方です。\",",
     "expect": "affiliate"
   },
   {
