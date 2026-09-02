@@ -945,9 +945,9 @@
   },
   {
     "name": "テンプレの制限時間を0にする",
-    "why": "0秒の問題は開いた瞬間に時間切れになる。定義の書き間違い1つで起きる",
+    "why": "0秒の問題は開いた瞬間に時間切れになる。定義の書き間違い1つで起きる ／ 2026-09-02: 時間切れ対策で 60→90 に変えたため find を追随させた",
     "file": "src/questions/07-noudo.js",
-    "find": "    timeLimitSec: 60\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
+    "find": "    timeLimitSec: 90\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
     "replace": "    timeLimitSec: 0\n  });\n\n  QUESTION_TEMPLATES.push({\n    id: \"noudo_mix_01\",",
     "expect": "generator"
   },
