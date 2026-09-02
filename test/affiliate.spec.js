@@ -528,6 +528,46 @@ function checkNoteAfterEveryLink(host, where, programs) {
   cov.covered("成果条件を調べた素材", checked, 4);
 }
 
+// --- ASPで確認した事実と、画面に出す文言が食い違っていないか ---
+//
+// ⚠️ これまで anchor と note は手書きで、照合する相手が無かった。
+//    その結果 neo で2箇所ずれたまま本番に出ていた（2026-09-03に発見）:
+//      ・anchor「最短1日で内定獲得可能！」← 配布物は「最短10日」。10倍の誇張
+//      ・note「対象は2027年卒・2028年卒」← 成果条件は「2026年卒・2027年卒」
+//    後者は対象外の学年に申し込ませる形なので、出れば全件否認になる。
+//    どちらも「注記がある」「面談に触れている」という既存の検査は通る。
+//    そこで verified（管理画面で見た事実）を持たせ、突き合わせる。
+//
+// 未確認の素材は verified を持たない。件数を出して宿題として見えるようにする
+// （0件にする閾値にはしない。全件そろうまで検査が動かないほうが困る）。
+{
+  const h = loadAffiliate();
+  const P = h.Affiliate._programs;
+  let checked = 0, unverified = [];
+  for (const id of Object.keys(P)) {
+    const p = P[id], v = p.verified;
+    if (!v) { unverified.push(id); continue; }
+    checked++;
+
+    if (p.anchor !== v.anchor) {
+      fail("アンカーが配布物と違う",
+        `${id}: 画面「${p.anchor}」/ 配布物「${v.anchor}」… 素材の改変にあたる`);
+    }
+    // note に書いた学年と、成果条件の対象学年が集合として一致するか。
+    // 部分一致で見ると「2026年卒」を含んだまま2028年卒を足しても通ってしまう。
+    const inNote = (p.note || "").match(/20\d{2}(?=年卒)/g) || [];
+    const a = inNote.slice().sort().join(","), b = v.years.slice().sort().join(",");
+    if (a !== b) {
+      fail("注記の対象学年が成果条件と違う",
+        `${id}: 注記[${a || "なし"}] / 成果条件[${b}]… 対象外の学年に申し込ませると全件否認`);
+    }
+  }
+  if (unverified.length) {
+    console.log(`   ・未確認（verified 無し）: ${unverified.length}件 — ${unverified.join(", ")}`);
+  }
+  cov.covered("ASPの事実と突き合わせた素材", checked, 1);
+}
+
 // --- 投入した素材が、実際にどこかの枠に出るか ---
 //
 // ⚠️ PROGRAMS に足しただけで出し分けに足し忘れると、素材は存在するのに

@@ -1894,5 +1894,21 @@
     "find": "<meta property=\"og:image\" content=\"https://tekisei-drill.com/ogp.png\">",
     "replace": "<meta property=\"og:image\" content=\"/ogp.png\">",
     "expect": "html"
+  },
+  {
+    "name": "neo のアンカーを配布物と違う文言に戻す",
+    "why": "2026-09-03まで「最短1日で内定獲得可能！」と出ていたが、A8の配布物は「最短10日」。10倍の誇張で、優良誤認と素材改変の両方にあたる。目視では気づけなかった",
+    "file": "affiliate.js",
+    "find": "      anchor: \"最短10日で内定獲得可能！就職エージェントneo\",",
+    "replace": "      anchor: \"最短1日で内定獲得可能！就職エージェントneo\",",
+    "expect": "affiliate"
+  },
+  {
+    "name": "neo の注記の対象学年を成果条件とずらす",
+    "why": "2026-09-03まで「2027年卒・2028年卒」と書いていたが、成果条件は「2026年卒・2027年卒」。対象外の学年に申し込ませる形で、出れば全件否認になる",
+    "file": "affiliate.js",
+    "find": "      note: \"対象は2026年卒・2027年卒の学生で、",
+    "replace": "      note: \"対象は2027年卒・2028年卒の学生で、",
+    "expect": "affiliate"
   }
 ]
