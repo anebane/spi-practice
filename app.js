@@ -12,6 +12,20 @@
     }
   }
 
+  // noteの記事へのリンク（フッター・運営者情報）。
+  // ⚠️ transport_type: "beacon" が要る。別ドメインへ遷移するため、
+  //    通常の送信だと遷移で中断されてクリックが記録されない。
+  //    どのページから押されたかが分からないと、置き場所の良し悪しを判断できないので
+  //    page_path を一緒に送る。
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a.js-note-link");
+    if (!a) return;
+    trackEvent("note_link_click", {
+      page_path: location.pathname,
+      transport_type: "beacon"
+    });
+  });
+
   // 解説ページが用意されている分野。ページが無い分野へリンクすると
   // 404になるので、ここに載っている分野だけ導線を出す。
   var CATEGORY_PAGES = {
