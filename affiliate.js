@@ -98,6 +98,42 @@ var Affiliate = (function () {
     if (typeof gtag === "function") gtag("event", name, params || {});
   }
 
+  /**
+   * 枠が実際に画面に入ったときだけ affiliate_visible を1回送る。
+   *
+   * なぜ要るか: affiliate_view は「描画した瞬間」に飛ぶ。結果画面のこの枠は
+   * 分野別成績より下にあるので、そこまでスクロールしていない人も分母に入る。
+   * 2026-09-03に実測した CTR 0.148%（affiliate_view 677 に対しクリック1）は
+   * その分母で割った値で、「見られていない」のか「見られたが押されない」のかを
+   * 区別できていなかった。打ち手が正反対になるので、ここを分ける。
+   *
+   * affiliate_view は消さない。消すと過去分と比較できなくなる。
+   *
+   * 「50%以上が1秒以上」を見られたとする。一瞬かすめただけを数えると、
+   * 結局 affiliate_view と同じものを測ることになる。
+   */
+  function observeVisible(host, params) {
+    if (!host || typeof IntersectionObserver !== "function") return;
+    var timer = null, done = false;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (done) return;
+        if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+          if (timer) return;
+          timer = setTimeout(function () {
+            done = true;
+            io.disconnect();
+            track("affiliate_visible", params);
+          }, 1000);
+        } else if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      });
+    }, { threshold: [0, 0.5, 1] });
+    io.observe(host);
+  }
+
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -195,12 +231,15 @@ var Affiliate = (function () {
 
     // audience を乗せないと「どちらの層が反応したか」を後から言えない。
     // 出し分けの効果測定はこの1個のパラメータに乗っている。
-    track("affiliate_view", {
+    var viewParams = {
       score_band: opt.band || "unknown",
       placement: opt.placement || "unknown",
       creative_count: ids.length,
       audience: aud || "unknown"
-    });
+    };
+    track("affiliate_view", viewParams);
+    // 描画した回数（上）と、実際に見られた回数（下）を分けて測る。
+    observeVisible(host, viewParams);
     return true;
   }
 
