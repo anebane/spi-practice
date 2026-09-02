@@ -1033,6 +1033,23 @@
           '<a class="cta-btn" href="categories/' + CATEGORY_PAGES[target] + '/">' +
           escapeHtml(target) + ' の解き方を見る</a>';
         weakEl.style.display = "";
+
+        // ⚠️ このCTAのクリックは、これまで一度も計測されていなかった。
+        //    .cta-btn のクリックは analytics.js が拾うが、index.html は
+        //    それを読み込んでいない（GA4を自前で初期化しており、読ませると
+        //    二重初期化になる）。結果 cta_click の実績20件はすべて記事ページの
+        //    もので、結果画面のぶんは0件だった。2026-09-02 に app.js から送る。
+        //    beacon は遷移で送信が中断されないため（離脱の記録で同じ問題を踏んだ）。
+        var ctaEl = weakEl.querySelector(".cta-btn");
+        if (ctaEl) {
+          ctaEl.addEventListener("click", function () {
+            trackEvent("weak_category_cta", {
+              category: target,
+              rate: targetRate,
+              transport_type: "beacon"
+            });
+          });
+        }
       } else {
         weakEl.style.display = "none";
       }
