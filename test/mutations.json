@@ -1878,5 +1878,21 @@
     "find": "両方好きな人が{{ab}}人いる。英語も数学も好きではない人は何人か",
     "replace": "どちらも好きな人が{{ab}}人いる。英語も数学も好きではない人は何人か",
     "expect": "generator"
+  },
+  {
+    "name": "og:image を1ページから消す",
+    "why": "og:imageが無いと note・X・Slack・LINE で画像なしのカードになる。2026-09-02に17ページ中0ページで発覚した",
+    "file": "about.html",
+    "find": "<meta property=\"og:image\" content=\"https://tekisei-drill.com/ogp.png\">",
+    "replace": "",
+    "expect": "html"
+  },
+  {
+    "name": "og:image を相対URLにする",
+    "why": "相対URLのog:imageは多くのSNSで解決されず、画像なしのカードになる",
+    "file": "index.html",
+    "find": "<meta property=\"og:image\" content=\"https://tekisei-drill.com/ogp.png\">",
+    "replace": "<meta property=\"og:image\" content=\"/ogp.png\">",
+    "expect": "html"
   }
 ]

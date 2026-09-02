@@ -42,6 +42,13 @@ for (const p of pages) {
   if (!/name="description" content="[^"]{20,}"/.test(html)) fail(p, "descriptionが無い/短い", "");
   if (!/rel="canonical" href="https:\/\//.test(html)) fail(p, "canonicalが無い", "");
 
+  // 2b. og:image（無いと note・X・Slack・LINE で画像なしのカードになる）
+  //     ⚠️ 2026-09-02 の実測: 17ページ中0ページに og:image が無く、
+  //        noteの埋め込みが真っ白なカードで出ていた。共有導線すべてに効くので全ページで検査する。
+  const ogImg = html.match(/property="og:image" content="([^"]+)"/);
+  if (!ogImg) fail(p, "og:imageが無い（共有時に画像なしのカードになる）", "");
+  else if (!/^https:\/\//.test(ogImg[1])) fail(p, "og:imageが絶対URLでない（相対URLは多くのSNSで解決されない）", ogImg[1]);
+
   // 3. canonical が自分自身を指しているか（コピペ時の典型的な事故）
   const c = html.match(/rel="canonical" href="([^"]+)"/);
   if (c) {
