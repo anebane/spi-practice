@@ -2401,6 +2401,39 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 正解が負になりうる設問に、符号の指示があるか ---
+// ⚠️ 2026-08-26 に利用者から報告があった。「増減率は何%か」に符号の指示が無く、
+//    減少のとき絶対値で答えると不正解になる。実測で正解が負なのは 33.7%。
+//    設問文だけの修正なので、検査が無いと次の編集で簡単に戻る。
+{
+  let checked = 0, missing = 0;
+  const examples = [];
+  for (const t of TEMPLATES) {
+    for (let i = 0; i < ITERATIONS; i++) {
+      let q;
+      try { q = GEN.generateQuestion(t); } catch (e) { continue; }
+      if (!q || q.answerType !== "number") continue;
+      const a = Number(q.correctAnswer);
+      if (!Number.isFinite(a) || a >= 0) continue;   // 正解が負のものだけが対象
+      checked++;
+      if (!/マイナス|負の数|符号/.test(q.text || "")) {
+        missing++;
+        if (examples.length < 3) examples.push(`${t.id}: 正解 ${a} なのに設問に符号の指示が無い`);
+      }
+    }
+  }
+  cov.covered("正解が負になる問題", checked, 50);
+  console.log(`\n負の正解に対する符号の指示: ${checked.toLocaleString()}問を検査`);
+  if (checked && missing === 0) {
+    console.log("   ✅ すべてに符号の指示がある");
+  } else if (missing) {
+    console.log(`   ❌ 符号の指示が無い ${missing}件`);
+    for (const e of examples) console.log(`   - ${e}`);
+    process.exitCode = 1;
+  }
+}
+
+
 // --- 検査対象の内訳。合否より先に「何件見たか」を出す ---
 console.log("\n検査した対象の内訳");
 cov.print();

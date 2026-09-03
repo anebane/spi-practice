@@ -2677,6 +2677,11 @@ var COND_SCENES_P = [
 })();
 
 // カテゴリ4: 損益算
+// ⚠️ 「利益はいくらか」「利益率は何%か」には（赤字の場合はマイナスを付ける）を明記している。
+//    値引き次第で利益は負になる。実測で soneki_discount_01 は 17.9%、
+//    soneki_profitrate_01 は 9.6% が負の正解。符号の指示が無いと、
+//    利用者が絶対値で答えて不正解になる。
+//    2026-08-26 の利用者報告（図表の増減率で同じ指摘）から横展開して発見した。
 // ============================================================
 (function() {
   QUESTION_TEMPLATES.push({
@@ -2705,7 +2710,7 @@ var COND_SCENES_P = [
     category: "損益算",
     categoryId: 4,
     difficulty: 2,
-    templateText: "ある商品を原価{{cost}}円で仕入れ、原価の{{markupRate}}%の利益を見込んで定価をつけた。しかし売れなかったので、定価の{{discountRate}}%引きで販売した。このとき、利益はいくらか。",
+    templateText: "ある商品を原価{{cost}}円で仕入れ、原価の{{markupRate}}%の利益を見込んで定価をつけた。しかし売れなかったので、定価の{{discountRate}}%引きで販売した。このとき、利益はいくらか。（赤字の場合はマイナスを付ける）",
     variables: {
       // 1円未満が出る組を出さない制約を足したぶん、組み合わせが減った
       // （180組→146組、実測の種類数が163→140でベースラインの下限すれすれ）。
@@ -2813,7 +2818,7 @@ var COND_SCENES_P = [
     category: "損益算",
     categoryId: 4,
     difficulty: 3,
-    templateText: "原価{{cost}}円の商品に{{markupRate}}%の利益を見込んで定価をつけ、定価の{{discountRate}}%引きで売った。原価に対する利益率は何%か。",
+    templateText: "原価{{cost}}円の商品に{{markupRate}}%の利益を見込んで定価をつけ、定価の{{discountRate}}%引きで売った。原価に対する利益率は何%か。（赤字の場合はマイナスを付ける）",
     variables: {
       cost: { type: "int", min: 1000, max: 5000, step: 500 },
       markupRate: { type: "choice", options: [20, 25, 30, 40, 50] },
@@ -4133,6 +4138,10 @@ var CONSEC_SCENES = [
       });
       return { rows: products, cols: years, data: data, unit: "個" };
     },
+    // ⚠️ 設問に「減少ならマイナス」を明記している。
+    //    2026-08-26 に利用者から報告があった（他の増減系では符号の指示があるのに
+    //    この問題には無い、という指摘）。実測すると正解が負になるのは 33.7%（3000回中1012件）。
+    //    符号の指示が無いと、減少のとき利用者が絶対値で答えて不正解になる。
     questionGenerator: function(tableData) {
       var product = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
@@ -4140,7 +4149,7 @@ var CONSEC_SCENES = [
       var val2 = tableData.data[product][cols[cols.length - 1]];
       var changeRate = Math.round((val2 - val1) / val1 * 100);
       return {
-        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入）",
+        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）",
         answer: changeRate,
         unit: "%",
         explanation: product + "の販売数:\n" + cols[0] + ": " + val1 + "個\n" + cols[cols.length-1] + ": " + val2 + "個\n\n増減率 = (" + val2 + " - " + val1 + ") / " + val1 + " × 100 = " + changeRate + "%"

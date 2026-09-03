@@ -60,6 +60,10 @@
       });
       return { rows: products, cols: years, data: data, unit: "個" };
     },
+    // ⚠️ 設問に「減少ならマイナス」を明記している。
+    //    2026-08-26 に利用者から報告があった（他の増減系では符号の指示があるのに
+    //    この問題には無い、という指摘）。実測すると正解が負になるのは 33.7%（3000回中1012件）。
+    //    符号の指示が無いと、減少のとき利用者が絶対値で答えて不正解になる。
     questionGenerator: function(tableData) {
       var product = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
@@ -67,7 +71,7 @@
       var val2 = tableData.data[product][cols[cols.length - 1]];
       var changeRate = Math.round((val2 - val1) / val1 * 100);
       return {
-        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入）",
+        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）",
         answer: changeRate,
         unit: "%",
         explanation: product + "の販売数:\n" + cols[0] + ": " + val1 + "個\n" + cols[cols.length-1] + ": " + val2 + "個\n\n増減率 = (" + val2 + " - " + val1 + ") / " + val1 + " × 100 = " + changeRate + "%"
