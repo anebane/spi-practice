@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>速度算の解き方｜単位をそろえる・和と差で解く【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPI速度算の解き方。速さ・時間・距離の関係、単位のそろえ方、出会いと追いつき（旅人算）、通過算、平均の速さまで例題つきで解説します。読んだあとすぐ速度算だけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/sokudo/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>速度算の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 速度算</p>
+
+      <p class="article-lead">速度算は式そのものは簡単なのに、正答率が伸びません。原因のほとんどは<strong>単位がそろっていないこと</strong>と、<strong>速さを足していいのか引いていいのかを取り違えること</strong>の2つです。逆にいえば、この2つを潰せば大半が解けます。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#shiki">速さ・時間・距離の関係</a></li>
+          <li><a href="#tani">まず単位をそろえる</a></li>
+          <li><a href="#tabibito">例題：出会いと追いつき</a></li>
+          <li><a href="#tsuuka">例題：通過算</a></li>
+          <li><a href="#heikin">平均の速さ</a></li>
+          <li><a href="#mistake">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="shiki">1. 速さ・時間・距離の関係</h2>
+      <table class="compare-table">
+        <thead><tr><th>求めるもの</th><th>式</th></tr></thead>
+        <tbody>
+          <tr><th>距離</th><td>速さ × 時間</td></tr>
+          <tr><th>速さ</th><td>距離 ÷ 時間</td></tr>
+          <tr><th>時間</th><td>距離 ÷ 速さ</td></tr>
+        </tbody>
+      </table>
+      <p>1つの式を変形しただけなので、覚えるのは <code>距離 = 速さ × 時間</code> の1行で足ります。</p>
+
+      <h2 id="tani">2. まず単位をそろえる</h2>
+      <div class="callout">
+        <div class="callout-title">最重要：計算する前に単位をそろえる</div>
+        <p>速度算の失点の大半はここです。<strong>時速（km/h）と分、mが混ざったまま計算を始めると必ずずれます。</strong>問題文を読んだ直後に、すべて同じ単位に直してから式を立ててください。</p>
+      </div>
+      <table class="compare-table">
+        <thead><tr><th>変換</th><th>やり方</th></tr></thead>
+        <tbody>
+          <tr><th>km/h → m/分</th><td>× 1000 ÷ 60（＝<code>× 50/3</code>）</td></tr>
+          <tr><th>km/h → m/秒</th><td>× 1000 ÷ 3600（＝<code>÷ 3.6</code>）</td></tr>
+          <tr><th>m/秒 → km/h</th><td><code>× 3.6</code></td></tr>
+        </tbody>
+      </table>
+      <p>特によく使うのは <strong>m/秒 → km/h は3.6倍</strong>です。秒速10mは時速36km。これは覚えてしまったほうが速いです。</p>
+      <p>「45分」のような時間も、時速で計算するなら <code>45 ÷ 60 = 0.75時間</code> に直します。<strong>0.45時間としてしまう誤りが非常に多い</strong>ので注意してください。</p>
+
+      <h2 id="tabibito">3. 例題：出会いと追いつき</h2>
+      <p>2人が動く問題は、<strong>速さを足すか引くか</strong>だけで決まります。</p>
+      <ul>
+        <li><strong>向かい合って進む（出会う）</strong> → 速さの<strong>和</strong>で近づく</li>
+        <li><strong>同じ向きに進む（追いつく）</strong> → 速さの<strong>差</strong>で近づく</li>
+      </ul>
+
+      <h3>例題</h3>
+      <p>1,800m離れた地点から、AとBが向かい合って同時に歩き始めた。Aは分速70m、Bは分速80mで進む。2人が出会うのは何分後か。</p>
+
+      <h3>解き方</h3>
+      <ol>
+        <li>向かい合っているので、近づく速さは <code>70 + 80 = 150</code> m/分</li>
+        <li><code>1,800 ÷ 150 = 12</code> → <strong>12分後</strong></li>
+      </ol>
+      <p>追いつく場合も同じ形です。「Aが出発してから5分後にBが追いかける」なら、まずAが進んだ距離（<code>70 × 5 = 350</code>m）を出し、それを速さの差で割ります。</p>
+
+      <h2 id="tsuuka">4. 例題：通過算</h2>
+      <p>列車の問題では、<strong>列車自身の長さを距離に足す</strong>のを忘れないでください。ここが通過算の唯一のポイントです。</p>
+      <ul>
+        <li><strong>鉄橋やトンネルを渡り切る</strong> → 進む距離 = 橋の長さ ＋ <strong>列車の長さ</strong></li>
+        <li><strong>電柱を通過する</strong> → 進む距離 = <strong>列車の長さ</strong>だけ</li>
+      </ul>
+
+      <h3>例題</h3>
+      <p>長さ120mの列車が、長さ480mの鉄橋を渡り始めてから渡り終わるまでに30秒かかった。この列車の速さは秒速何mか。</p>
+
+      <h3>解き方</h3>
+      <ol>
+        <li>進んだ距離 = <code>480 + 120 = 600</code>m（先頭が渡り始めてから最後尾が渡り終わるまで）</li>
+        <li><code>600 ÷ 30 = 20</code> → <strong>秒速20m</strong>（時速なら <code>20 × 3.6 = 72</code>km）</li>
+      </ol>
+      <p>ここで <code>480 ÷ 30 = 16</code> としてしまうのが典型的な誤りです。<strong>列車の最後尾が橋を出るまで「渡り終わった」ことにならない</strong>ので、列車の長さぶん余計に進んでいます。</p>
+
+      <h2 id="heikin">5. 平均の速さ</h2>
+      <p><strong>速さは単純平均できません。</strong>ここが濃度算と同じ構造のつまずきです。</p>
+
+      <h3>例題</h3>
+      <p>ある道のりを、行きは時速4km、帰りは時速6kmで往復した。往復の平均の速さは時速何kmか。</p>
+
+      <h3>解き方</h3>
+      <p>片道の距離を12km（4と6の最小公倍数）と<strong>仮に置く</strong>と楽です。距離は問われていないので、何とおいても答えは変わりません。</p>
+      <ol>
+        <li>行き <code>12 ÷ 4 = 3</code>時間、帰り <code>12 ÷ 6 = 2</code>時間 → 合計5時間</li>
+        <li>往復の距離は <code>12 × 2 = 24</code>km</li>
+        <li><code>24 ÷ 5 = 4.8</code> → <strong>時速4.8km</strong></li>
+      </ol>
+      <p><code>(4 + 6) ÷ 2 = 5</code> km/h としてしまうのが誤りです。<strong>遅いほうに長い時間がかかるので、平均は遅い側に寄ります。</strong>4.8は5より小さく、4と6の間にある——これが検算になります。</p>
+
+      <h2 id="mistake">6. つまずきやすい点</h2>
+
+      <h3>単位をそろえずに計算を始める</h3>
+      <p>最も多い失点です。分速と時速、mとkmが混ざったまま式を立ててしまいます。<strong>問題文を読んだ直後にそろえる</strong>ことを手順として固定してください。</p>
+
+      <h3>「45分」を0.45時間にしてしまう</h3>
+      <p>時間の単位は60進法なので、<code>45 ÷ 60 = 0.75</code>時間です。10進法の感覚で書き換えると必ずずれます。</p>
+
+      <h3>速さを平均してしまう</h3>
+      <p>往復や区間ごとに速さが違う問題で、単純平均は使えません。<strong>「距離の合計 ÷ 時間の合計」に戻る</strong>のが唯一の正しい手順です。</p>
+
+      <h3>通過算で列車の長さを足し忘れる</h3>
+      <p>橋やトンネルでは列車の長さを足します。逆に「電柱を通過する」なら足しません。<strong>どこからどこまでを「通過」と呼んでいるか</strong>を、図を描いて確かめると確実です。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">速度算だけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=5">速度算の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおくだけで解ける</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/noudo/">濃度算の解き方</a><span>食塩の重さは変わらない、で解く</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>推論・損益算・確率・濃度算・速度算</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>
