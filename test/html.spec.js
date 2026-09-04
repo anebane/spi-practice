@@ -96,6 +96,29 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   if (!fs.existsSync(path.join(ROOT, rel))) fail("sitemap.xml", "存在しないURLを登録", m[1]);
 }
 
+// 6b. 実在する公開ページが sitemap に載っているか（逆方向）
+// ⚠️ 6 は「sitemapのURLが実在するか」しか見ておらず、
+//    ページを作って sitemap に入れ忘れる方向を素通りさせていた。
+//    2026-09-04 に categories/shugo/ を作った際、実際に入れ忘れた。
+//    載っていないページはクローラに見つけてもらえず、作った意味が薄れる。
+{
+  const smUrls = new Set([...sm.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map(m => m[1].replace(SITE, "").replace(/^\//, "").replace(/index\.html$/, "")));
+  // 検索に出す必要のないページは除く
+  const EXCLUDE = new Set(["offline.html", "privacy.html", "contact.html", "about.html"]);
+  let checked = 0;
+  const missing = [];
+  for (const p of pages) {
+    if (EXCLUDE.has(p)) continue;
+    checked++;
+    const key = p.replace(/index\.html$/, "");
+    if (!smUrls.has(key)) missing.push(p);
+  }
+  if (!checked) fail("sitemap.xml", "検査対象が0件", "pages が空。空回りしている");
+  for (const p of missing) fail("sitemap.xml", "実在するページが未登録", p);
+  console.log(`sitemap の網羅: ${checked}ページを検査`);
+}
+
 // 7. 出題分野のチェックボックスが、実在するカテゴリと一致しているか
 //
 // 分野の追加・付け替えのときに揃える箇所が複数ある（テンプレート定義と
@@ -236,17 +259,42 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
     const head = (idx.match(/<title>([\s\S]*?)<\/title>/) || ["", ""])[1]
       + " " + (idx.match(/<meta name="description" content="([^"]*)"/) || ["", ""])[1];
 
+    // ⚠️ 2026-09-04: 全13分野に解き方ページを作ったため notListed が0件になり、
+    //    「解き方が無い分野を宣伝していないか」は対象が消滅して空回りした。
+    //    検査を消すのではなく、全分野を対象にする形に作り替える。
+    //    ・宣伝しているのに実在しない → 従来どおり落とす（notListed が復活したとき効く）
+    //    ・実在するのに1つもリンクが無い → 作ったのに導線が無い状態を落とす
+    // ⚠️ 旧版は notListed（テンプレに無い分野）だけを走査していた。
+    //    全分野にページができて notListed が0件になると、何も照合しなくなる。
+    //    「宣伝に出てくる分野名が、すべて実在するか」の向きに変える。
+    //    こちらなら対象が消えない（宣伝文は必ず何かを名乗っているため）。
     let checked = 0;
-    for (const c of notListed) {
+    // 宣伝文のうち「A・B・C の解法を確認して」の、中黒で並んだ部分だけを対象にする。
+    // ⚠️ 文全体から名詞らしきものを拾うと「解き方と練習問題」まで分野名として数えてしまう。
+    const listPart = (head.match(/。([^。]*?)の解法を/) || ["", ""])[1];
+    const advertised = listPart ? listPart.split("・").filter(Boolean) : [];
+    for (const name of advertised) {
       checked++;
-      if (head.includes(c)) {
+      const hit = allCats.some(c => c === name || c.replace(/・/g, "と") === name);
+      if (!hit) {
         fail("categories/index.html", "実在しない解き方を宣伝している",
-          `「${c}」の解き方は無いのに title/description に書かれている`);
+          `「${name}」は出題テンプレに無いのに title/description に書かれている`);
       }
     }
-    // 0件だと「宣伝が無い」ではなく「1分野も照合していない」。
-    cov.covered("解き方が無い分野との照合", checked, 5);
-    console.log(`解き方の一覧: 実在 ${dirs.length}本 / 解き方が無い分野 ${notListed.length}件を照合`);
+
+    let linked = 0;
+    const idxLinks = new Set([...idx.matchAll(/href="(?:\/categories\/|\.\/)?([a-z]+)\/"/g)].map(m => m[1]));
+    for (const [cat, slug] of pairs) {
+      linked++;
+      if (!idxLinks.has(slug)) {
+        fail("categories/index.html", "解き方ページへの導線が無い",
+          `「${cat}」(${slug}) のページは実在するが、一覧からリンクされていない`);
+      }
+    }
+    // 0件だと「不足が無い」ではなく「1分野も照合していない」。
+    cov.covered("解き方ページと一覧の照合", linked, 5);
+    cov.covered("宣伝文の分野名の実在確認", checked, 3);
+    console.log(`解き方の一覧: 実在 ${dirs.length}本 / 一覧からの導線 ${linked}件 / 宣伝文の分野名 ${checked}件を照合`);
   }
 }
 

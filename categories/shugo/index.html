@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>集合の解き方｜ベン図と包除原理で二重カウントを防ぐ【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPI集合問題の解き方。A∪B = A + B − A∩B の使い方、「どちらでもない」からの逆算、3集合の包除原理を例題つきで解説します。読んだあとすぐ集合だけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/shugo/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>集合の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 集合</p>
+
+      <p class="article-lead">集合の問題で間違える原因は、ほぼ<strong>重なりの二重カウント</strong>です。ベン図を描いて公式を1本覚えれば、あとは足し引きするだけの分野になります。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#ben">まずベン図を描く</a></li>
+          <li><a href="#kousiki">2つの集合の公式</a></li>
+          <li><a href="#rei1">例題：どちらでもない人を求める</a></li>
+          <li><a href="#rei2">例題：重なりを逆算する</a></li>
+          <li><a href="#three">3つの集合（包除原理）</a></li>
+          <li><a href="#tsumazuki">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="ben">1. まずベン図を描く</h2>
+      <p>集合の問題は、公式を暗記するより<strong>先に図を描く</strong>ほうが速く着きます。円を2つ（または3つ）描き、重なりに「両方あてはまる人数」を書き込む。それだけで、どこを足してどこを引くかが目で分かります。</p>
+      <p>暗算で処理しようとすると、重なりを二重に数える誤りがほぼ必ず起きます。SPIの集合問題は、この二重カウントを見抜けるかどうかだけを問うていると言ってもいいくらいです。</p>
+
+      <h2 id="kousiki">2. 2つの集合の公式</h2>
+      <p>2つの集合では、次の1本だけ覚えれば足ります。</p>
+      <p><code>A∪B = A + B − A∩B</code></p>
+      <p>「AまたはB」は、AとBを足してから、重なりを1回引く。足しただけだと重なりを2回数えてしまうからです。</p>
+      <p>そして、問題文が何を与えているかで、この式をどう変形するかが決まります。</p>
+      <ul>
+        <li>重なりが与えられている → そのまま代入して「どちらか」を求める</li>
+        <li>「どちらでもない」が与えられている → 全体から引いて「どちらか」を出し、そこから重なりを逆算する</li>
+      </ul>
+
+      <h2 id="rei1">3. 例題：どちらでもない人を求める</h2>
+      <p class="q-example">35人のクラスで、英語が好きな人が21人、数学が好きな人が18人、両方好きな人が5人いる。英語も数学も好きではない人は何人か。</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>英語または数学が好きな人 ＝ <code>21 + 18 − 5 = 34人</code></li>
+        <li>どちらも好きではない人 ＝ <code>35 − 34 = 1人</code></li>
+      </ul>
+      <p>両方好きな5人を引かないと、34人ではなく39人になり、全体の35人を超えてしまいます。<strong>答えが全体人数を超えたら、重なりを引き忘れています。</strong>この検算は一瞬で効きます。</p>
+
+      <h2 id="rei2">4. 例題：重なりを逆算する</h2>
+      <p class="q-example">70人にアンケートを取ったところ、商品Aを買ったことがある人が30人、商品Bを買ったことがある人が30人、どちらも買ったことがない人が15人だった。両方買ったことがある人は何人か。</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>どちらか一方以上を買った人 ＝ <code>70 − 15 = 55人</code></li>
+        <li>公式を変形して <code>A∩B = A + B − A∪B</code></li>
+        <li>両方買った人 ＝ <code>30 + 30 − 55 = 5人</code></li>
+      </ul>
+      <p>「どちらでもない」が出てきたら、<strong>まず全体から引いて和集合を出す</strong>。これが逆算問題の入口です。</p>
+
+      <h2 id="three">5. 3つの集合（包除原理）</h2>
+      <p>3つになると式は長くなりますが、考え方は同じです。2つずつの重なりを引き、3つ全部の重なりは引きすぎているので足し戻します。</p>
+      <p><code>A∪B∪C = A + B + C − A∩B − B∩C − A∩C + A∩B∩C</code></p>
+      <p class="q-example">45人のクラスで、国語が好きな人が15人、数学が好きな人が16人、英語が好きな人が16人いる。国語と数学の両方が好きな人が3人、数学と英語の両方が好きな人が3人、国語と英語の両方が好きな人が4人、3教科すべてが好きな人が3人いる。3教科のどれも好きではない人は何人か。</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>いずれかが好きな人 ＝ <code>15 + 16 + 16 − 3 − 3 − 4 + 3 = 40人</code></li>
+        <li>どれも好きではない人 ＝ <code>45 − 40 = 5人</code></li>
+      </ul>
+      <p>最後の <code>+ A∩B∩C</code> を足し忘れるのが定番の誤りです。3つ全部にあてはまる人は、2つずつの引き算で3回引かれているため、1回足し戻す必要があります。</p>
+
+      <h2 id="tsumazuki">6. つまずきやすい点</h2>
+      <h3>「両方」と「どちらか一方だけ」は別物</h3>
+      <p>「英語だけが好きな人」を問われたら、英語が好きな人から両方好きな人を引きます。<code>21 − 5 = 16人</code>。公式の A∩B をそのまま答えると誤りです。設問が<strong>「だけ」と書いているかどうか</strong>を必ず確認してください。</p>
+      <h3>「どちらでもない」を0と決めつけない</h3>
+      <p>全体人数が与えられているのに使わずに解けた場合、たいてい「どちらでもない」を見落としています。与えられた数字が余ったら、一度立ち止まったほうが安全です。</p>
+      <h3>3集合で足し戻しを忘れる</h3>
+      <p>答えが実際より小さく出ます。全体人数と比べて明らかに小さいときは、<code>+ A∩B∩C</code> の抜けを疑ってください。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">集合だけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=3">集合の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおいて基準を揃える</span></li>
+          <li><a href="/categories/sokudo/">速度算の解き方</a><span>単位をそろえ、和と差で解く</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>解き方をまとめています</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>

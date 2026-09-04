@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>割合・比の解き方｜基準の取り違えを防ぐ手順【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPIの割合・比の解き方。基準の決め方、増減率、比を実数に直す手順、連続する増減の扱いを例題つきで解説します。読んだあとすぐ割合・比だけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/wariai/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>割合・比の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 割合・比</p>
+
+      <p class="article-lead">割合で間違える原因は計算ではなく<strong>基準の取り違え</strong>です。「何に対する割合か」を先に決めれば、あとは掛けるか割るかだけになります。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#motoni">「何に対する割合か」を先に決める</a></li>
+          <li><a href="#kihon">基本の3パターン</a></li>
+          <li><a href="#zougen">増減率</a></li>
+          <li><a href="#hi">比を実数に直す</a></li>
+          <li><a href="#renzoku">連続する増減</a></li>
+          <li><a href="#jinkou">男女別・部門別に増減が違う問題</a></li>
+          <li><a href="#kensan">検算のしかた</a></li>
+          <li><a href="#haichi">出題のされ方</a></li>
+          <li><a href="#tsumazuki">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="motoni">1. 「何に対する割合か」を先に決める</h2>
+      <p>割合の問題で間違える原因は、計算ではなく<strong>基準の取り違え</strong>です。「Aの30%増し」なら基準はA、「Bより20%少ない」なら基準はB。問題文の「〜の」の直前が基準です。</p>
+      <p>基準さえ固定できれば、あとは掛けるだけになります。</p>
+
+      <h2 id="kihon">2. 基本の3パターン</h2>
+      <ul>
+        <li><strong>割合を求める</strong>：<code>比べる量 ÷ もとにする量</code></li>
+        <li><strong>比べる量を求める</strong>：<code>もとにする量 × 割合</code></li>
+        <li><strong>もとにする量を求める</strong>：<code>比べる量 ÷ 割合</code></li>
+      </ul>
+      <p class="q-example">ある学校の生徒数は200人で、そのうち25%が女子である。女子の人数は何人か。</p>
+      <p>もとにする量が200人、割合が0.25なので <code>200 × 0.25 = 50人</code>。</p>
+
+      <h2 id="zougen">3. 増減率</h2>
+      <p class="q-example">ある商品の価格が2500円から3000円に変わった。値上がり率は何%か。</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>増えた分 ＝ <code>3000 − 2500 = 500円</code></li>
+        <li>増減率 ＝ <code>500 ÷ 2500 = 0.2 → 20%</code></li>
+      </ul>
+      <p>割るのは<strong>変化前</strong>の値です。3000で割ると約16.7%になり、別の答えになってしまいます。「何に対して増えたか」は変化前です。</p>
+      <p>減少のときは答えがマイナスになります。当サイトの問題では、そういう設問には「減少の場合はマイナスを付ける」と明記しています。</p>
+
+      <h2 id="hi">4. 比を実数に直す</h2>
+      <p class="q-example">AとBの比が3:7で、合計が700のとき、Aはいくらか。</p>
+      <p>比の合計は <code>3 + 7 = 10</code>。全体700をこの10で割ると、比1つぶんが70。Aは3つぶんなので <code>70 × 3 = 210</code>。</p>
+      <p><strong>比は「何個ぶんか」を数えているだけ</strong>と考えると迷いません。1つぶんの大きさを先に出す。これが手順です。</p>
+
+      <h3>3つの比をつなぐ</h3>
+      <p class="q-example">A:B = 4:1、B:C = 3:2 のとき、合計1700円をこの比で分けるとBの取り分はいくらか。</p>
+      <p>共通するBの数字を揃えます。A:B = 4:1 を3倍して 12:3、B:C = 3:2 はそのまま。よって A:B:C = 12:3:2。合計は17なので、1つぶんは <code>1700 ÷ 17 = 100</code>。Bは3つぶんで300円です。</p>
+      <p>比をつなぐときは<strong>共通する項目の数字を最小公倍数に揃える</strong>。これだけです。</p>
+
+      <h2 id="renzoku">5. 連続する増減</h2>
+      <p class="q-example">ある会の会員数が最初に30%減少し、その後50%減少した。最終的な会員数は元の会員数の何%か。</p>
+      <p><code>0.7 × 0.5 = 0.35</code> なので35%です。<strong>30% + 50% = 80%減</strong>としてしまうのが典型的な誤りです。2回目の50%は、1回目で減ったあとの人数に掛かります。</p>
+      <p>増減が続くときは<strong>足さずに掛ける</strong>。基準が毎回変わるからです。</p>
+
+      <h2 id="jinkou">6. 男女別・部門別に増減が違う問題</h2>
+      <p class="q-example">ある市の人口は去年15000人だった。今年は男性が8%増加し、女性が5%減少した。去年の男女比が2:1のとき、今年の人口は何人か。</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>去年の男性 ＝ <code>15000 × 2/3 = 10000人</code></li>
+        <li>去年の女性 ＝ <code>15000 × 1/3 = 5000人</code></li>
+        <li>今年の男性 ＝ <code>10000 × 1.08 = 10800人</code></li>
+        <li>今年の女性 ＝ <code>5000 × 0.95 = 4750人</code></li>
+        <li>合計 ＝ <strong>15550人</strong></li>
+      </ul>
+      <p>全体に対して <code>+8% − 5% = +3%</code> と処理してはいけません。<strong>増減率が違うものが混ざっているときは、必ず分けてから計算する。</strong>男女比が1:1でない限り、まとめて処理した答えは合いません。</p>
+      <p>この形は「部門別の売上」「商品別の販売数」でも同じ構造で出ます。<strong>比で分ける → それぞれに率を掛ける → 足す</strong>。手順は固定です。</p>
+
+      <h2 id="kensan">7. 検算のしかた</h2>
+      <p>割合の答えは、<strong>大きさの感覚</strong>で検算できます。</p>
+      <ul>
+        <li>「30%増加」の答えが元より小さい → 逆数を取り違えている</li>
+        <li>「2割引」の答えが元の8割より大きい → 掛ける数を間違えている</li>
+        <li>比で分けた答えを全部足して、合計に戻るか</li>
+      </ul>
+      <p>とくに<strong>比の問題は、足し戻すだけで確実に検算できます。</strong>A:B = 3:7 で合計700、Aが210なら、Bは490。<code>210 + 490 = 700</code>。合えば正解です。</p>
+
+      <h2 id="tsumazuki">8. つまずきやすい点</h2>
+      <h3>%どうしを足し引きしない</h3>
+      <p>基準が違う%は足せません。「原価の40%の利益」と「定価の25%引き」は引き算できない、というのが損益算でも同じ形で出ます。</p>
+      <h3>「増加後」と「増加分」を混同しない</h3>
+      <p>「30%増加した」の答えは <code>1.3倍</code> であって <code>0.3倍</code> ではありません。設問が増加後の総量を聞いているのか、増えた分だけを聞いているのかを読み分けてください。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">割合・比だけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=8">割合・比の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/shugo/">集合の解き方</a><span>ベン図と包除原理で数え落としを防ぐ</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおいて基準を揃える</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>解き方をまとめています</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>

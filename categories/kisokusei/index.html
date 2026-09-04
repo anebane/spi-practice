@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>規則性・方角の解き方｜差を取る、直角三角形に落とす【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="数列の規則性と方角・直線距離の解き方。まず差を取る手順、階差数列、三平方の定理でよく出る整数の組を例題つきで解説します。読んだあとすぐ規則性・方角だけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/kisokusei/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>規則性・方角の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 規則性・方角</p>
+
+      <p class="article-lead">数列は<strong>まず差を取る</strong>。方角は<strong>十字を描いて直角三角形に落とす</strong>。この2つで、ほとんどの問題が形になります。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#sa">数列は、まず差を取る</a></li>
+          <li><a href="#kata">よく出る並びの型</a></li>
+          <li><a href="#hougaku">方角の問題は直角三角形</a></li>
+          <li><a href="#pythagoras">覚えておくと速い組み合わせ</a></li>
+          <li><a href="#modori">戻る動きがある問題</a></li>
+          <li><a href="#tejun">数列で詰まったときの手順</a></li>
+          <li><a href="#hani">この分野の位置づけ</a></li>
+          <li><a href="#tsumazuki">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="sa">1. 数列は、まず差を取る</h2>
+      <p>数の並びの規則を見つける問題では、<strong>となり合う数の差</strong>を書き出すのが最初の手です。差が一定なら等差数列、差がまた規則的に増えるなら階差数列です。</p>
+      <p class="q-example">次の数の並びは、ある規則にしたがっている。<br>1, 2, 4, 7, 11, 16, ?</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>差を並べる：<code>1, 2, 3, 4, 5</code></li>
+        <li>差が1ずつ増えている（階差数列）</li>
+        <li>次の差は6なので <code>16 + 6 = 22</code></li>
+      </ul>
+      <p>差が一定でなくても、<strong>差の差</strong>を見れば規則が現れることがよくあります。1段でわからなければ、もう1段下りてください。</p>
+
+      <h2 id="kata">2. よく出る並びの型</h2>
+      <ul>
+        <li><strong>等差</strong>：一定の数を足す（3, 7, 11, 15…）</li>
+        <li><strong>等比</strong>：一定の数を掛ける（2, 6, 18, 54…）</li>
+        <li><strong>階差</strong>：差が規則的に増える（1, 2, 4, 7, 11…）</li>
+        <li><strong>交互</strong>：2つの規則が交互に現れる（1, 10, 2, 20, 3…）</li>
+        <li><strong>フィボナッチ型</strong>：前2項の和（1, 1, 2, 3, 5, 8…）</li>
+      </ul>
+      <p>差を取って一定なら等差、比を取って一定なら等比。<strong>まず差、だめなら比</strong>の順で試すと速く着きます。</p>
+
+      <h2 id="hougaku">3. 方角の問題は直角三角形</h2>
+      <p class="q-example">Aさんは自宅から北へ70m歩き、次に東へ240m歩いた。自宅からの直線距離は何mか。</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>北と東は直角に交わる</li>
+        <li>直線距離 ＝ 斜辺なので三平方の定理</li>
+        <li><code>√(70² + 240²) = √(4900 + 57600) = √62500 = 250m</code></li>
+      </ul>
+      <p>方角の問題は、<strong>紙に十字を描いて動きをたどる</strong>だけで、ほぼ直角三角形に落ちます。暗算で処理しようとせず、図を描いてください。</p>
+
+      <h2 id="pythagoras">4. 覚えておくと速い組み合わせ</h2>
+      <p>三平方の定理で出る整数の組は、実際にはごく限られています。</p>
+      <ul>
+        <li><code>3 : 4 : 5</code>（→ 30:40:50、60:80:100、70:240:250 も同型ではないが頻出）</li>
+        <li><code>5 : 12 : 13</code></li>
+        <li><code>7 : 24 : 25</code>（上の例題がこれ。70:240:250）</li>
+        <li><code>8 : 15 : 17</code></li>
+      </ul>
+      <p>上の例題は <code>7 : 24 : 25</code> を10倍した形です。<strong>この4組を知っていれば、平方根の計算をせずに答えが出ます。</strong></p>
+
+      <h2 id="modori">5. 戻る動きがある問題</h2>
+      <p>「北へ100m、東へ50m、南へ40m」のように往復が混ざる場合は、<strong>方向ごとに合算してから</strong>三角形にします。</p>
+      <ul>
+        <li>南北：北100 − 南40 ＝ 北へ60</li>
+        <li>東西：東へ50</li>
+        <li>直線距離 ＝ <code>√(60² + 50²)</code></li>
+      </ul>
+      <p>1歩ずつ図に描くより、<strong>南北と東西を別々に足し引きする</strong>ほうが速く、間違えません。</p>
+
+      <h2 id="tejun">6. 数列で詰まったときの手順</h2>
+      <p>差を取っても規則が見えないときは、この順で試します。</p>
+      <ul>
+        <li><strong>比を取る</strong>：2倍、3倍と一定なら等比</li>
+        <li><strong>1つおきに見る</strong>：奇数番目と偶数番目で別の規則が動いていることがある</li>
+        <li><strong>前2項を足す</strong>：フィボナッチ型</li>
+        <li><strong>項番との関係を見る</strong>：1番目が1、2番目が4、3番目が9なら平方数</li>
+      </ul>
+      <p>4つ試して見えなければ、その問題は飛ばしたほうが総得点は上がります。<strong>規則性は「見えるか見えないか」で、粘っても時間だけが減る</strong>タイプの問題です。</p>
+
+      <h2 id="hani">7. この分野の位置づけ</h2>
+      <p>規則性と方角は、<strong>SPIの推論には出題されない形式</strong>です。TG-WEB・SCOAなどで出るため、当サイトでは分野として残しています。</p>
+      <p>SPIだけを対策する場合は、出題分野の設定から外してください。逆に、受ける企業がどの検査を使うか分からない段階では、<strong>一度は触れておく価値があります。</strong>初見だと手が止まる形式だからです。</p>
+      <p>とくに方角の問題は、<strong>三平方の定理を思い出せるかどうか</strong>だけで決まります。整数の組を4つ覚えておけば、計算らしい計算は不要です。数列のほうは、差を取る手順さえ身につけば大半が解けます。</p>
+      <p>どちらも<strong>覚える量が少なく、身につけば取りこぼさない</strong>分野です。出題される検査を受けるなら、優先度は高くなります。</p>
+
+      <h2 id="tsumazuki">8. つまずきやすい点</h2>
+      <h3>差を取らずに規則を探す</h3>
+      <p>並びを眺めているだけでは規則は見えません。<strong>必ず差を書き出す。</strong>これだけで多くの問題が解けます。</p>
+      <h3>直線距離と歩いた距離の混同</h3>
+      <p>「自宅からの直線距離」は斜辺です。歩いた合計（70 + 240 = 310m）ではありません。設問がどちらを聞いているか確認してください。</p>
+      <h3>方角を90度取り違える</h3>
+      <p>北・東・南・西を図に描かずに進めると、東西と南北を入れ替えてしまいます。<strong>十字を描いてから動かす</strong>のが確実です。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">規則性・方角だけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=13">規則性・方角の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/shugo/">集合の解き方</a><span>ベン図と包除原理で数え落としを防ぐ</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおいて基準を揃える</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>解き方をまとめています</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>

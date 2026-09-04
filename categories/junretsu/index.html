@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>順列・組み合わせの解き方｜PとCの使い分け【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPIの順列・組み合わせの解き方。順序を区別するかどうかでPとCを使い分ける判断、隣り合う条件、円卓、順位づけを例題つきで解説します。読んだあとすぐ順列・組み合わせだけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/junretsu/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>順列・組み合わせの解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 順列・組み合わせ</p>
+
+      <p class="article-lead">この分野で判断することは1つだけです。<strong>並べる順番に意味があるか</strong>。それさえ決まれば、あとは掛けるか割るかしかありません。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#kubetsu">順序を区別するかどうか、だけ</a></li>
+          <li><a href="#junretsu">順列の計算</a></li>
+          <li><a href="#kumiawase">組み合わせの計算</a></li>
+          <li><a href="#kakeru">「AかつB」は掛ける</a></li>
+          <li><a href="#tonari">隣り合う・円になる</a></li>
+          <li><a href="#rank">順位をつける問題</a></li>
+          <li><a href="#michi">最短経路の問題</a></li>
+          <li><a href="#kensan">検算のしかた</a></li>
+          <li><a href="#tsumazuki">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="kubetsu">1. 順序を区別するかどうか、だけ</h2>
+      <p>この分野は、判断すべきことが1つしかありません。<strong>並べる順番に意味があるか</strong>。</p>
+      <ul>
+        <li>意味が<strong>ある</strong> → 順列（P）</li>
+        <li>意味が<strong>ない</strong> → 組み合わせ（C）</li>
+      </ul>
+      <p>「1位・2位・3位を決める」「順番に提供する」「役職を割り当てる」なら順列。「3人を選ぶ」「同時に取り出す」「代表を選ぶ」なら組み合わせです。</p>
+      <p>問題文に<strong>「同時に」「選ぶだけ」</strong>とあれば組み合わせ、<strong>「順に」「並べる」「順位」</strong>とあれば順列。この語で9割は判定できます。</p>
+
+      <h2 id="junretsu">2. 順列の計算</h2>
+      <p class="q-example">7種類の料理から3品を選び、コースの提供順を決める方法は何通りあるか。</p>
+      <p>順に出すので順列。<code>7 × 6 × 5 = 210通り</code>。</p>
+      <p>公式は <code>nPr = n × (n−1) × … </code> をr個ぶん掛けるだけです。7から始めて3個掛ける、と考えれば階乗の式を書く必要はありません。</p>
+
+      <h2 id="kumiawase">3. 組み合わせの計算</h2>
+      <p class="q-example">6枚のカードから3枚を同時に引く方法は何通りあるか。</p>
+      <p>「同時に」なので順序は関係ありません。組み合わせです。</p>
+      <p><code>6 × 5 × 4 ÷ (3 × 2 × 1) = 20通り</code>。</p>
+      <p>順列で数えてから、並べ替えの重複で割る。これが組み合わせの正体です。<strong>3個を選ぶなら、3個の並べ方 <code>3! = 6</code> で割る。</strong></p>
+
+      <h2 id="kakeru">4. 「AかつB」は掛ける</h2>
+      <p class="q-example">男子4人と女子4人の中から、男子1人と女子1人を選ぶ方法は何通りあるか。</p>
+      <p>男子の選び方4通り、女子の選び方4通り。両方を選ぶので <code>4 × 4 = 16通り</code>。</p>
+      <p><strong>「かつ」なら掛ける、「または」なら足す。</strong>これは場合の数の全体に通じる原則です。</p>
+
+      <h2 id="tonari">5. 隣り合う・円になる</h2>
+      <h3>隣り合う条件</h3>
+      <p class="q-example">4個の箱を一列に置くとき、特定の2個が隣り合う置き方は何通りあるか。</p>
+      <p>隣り合う2個を<strong>1つのかたまり</strong>とみなします。すると箱は3個ぶん。<code>3! = 6通り</code>。かたまりの中で2個が入れ替われるので <code>× 2 = 12通り</code>。</p>
+      <p>「隣り合う」は<strong>まとめて1個と数え、あとで中の並べ替えを掛ける</strong>。手順は固定です。</p>
+      <h3>円卓</h3>
+      <p class="q-example">5人が円卓に着席する方法は何通りあるか。</p>
+      <p>円卓では、全員が同じだけ回転した配置は同じとみなします。1人を固定して残りを並べるので <code>(5−1)! = 24通り</code>。</p>
+      <p><strong>円なら1引いてから階乗</strong>。これだけ覚えれば足ります。</p>
+
+      <h2 id="rank">6. 順位をつける問題</h2>
+      <p class="q-example">7人の応募者から金賞1人、銀賞1人、銅賞1人を選ぶ方法は何通りあるか。</p>
+      <p>賞に違いがあるので順序に意味があります。順列です。<code>7 × 6 × 5 = 210通り</code>。</p>
+      <p>もし「入賞者3人を選ぶ」だけなら組み合わせになり、<code>210 ÷ 6 = 35通り</code>。<strong>同じ「7人から3人」でも、賞名の有無で答えが6倍変わります。</strong></p>
+
+      <h2 id="michi">7. 最短経路の問題</h2>
+      <p>碁盤の目状の道を、右と上だけで進んで最短で行く経路の数も、組み合わせで解けます。</p>
+      <p>右に3回、上に2回進むなら、全部で5回の移動のうち<strong>どの2回を「上」にするか</strong>を選ぶだけです。<code>5 × 4 ÷ (2 × 1) = 10通り</code>。</p>
+      <p>経路を1本ずつ数えようとすると必ず抜けます。<strong>「移動の並びから、上を選ぶ組み合わせ」</strong>に読み替えるのが定石です。</p>
+
+      <h2 id="kensan">8. 検算のしかた</h2>
+      <p>この分野は、<strong>桁の感覚</strong>で誤りに気づけます。</p>
+      <ul>
+        <li>組み合わせの答えが、順列の答えより大きい → 割り忘れではなく、逆に割りすぎ</li>
+        <li>「7人から3人選ぶ」が210なら、それは順列。組み合わせなら35</li>
+        <li>円卓の答えが (n−1)! を超えていたら、1引き忘れ</li>
+      </ul>
+      <p><strong>順列と組み合わせは、必ず順列のほうが大きくなります。</strong>選んでから並べるぶん、順列は組み合わせの r! 倍です。この関係を覚えておくと、どちらで答えたかを自分で確かめられます。</p>
+
+      <h2 id="tsumazuki">9. つまずきやすい点</h2>
+      <h3>「選ぶ」と「並べる」を読み飛ばす</h3>
+      <p>この分野の失点は、ほぼここに集中します。計算より先に、<strong>設問のどの語が順序を示しているか</strong>に線を引いてください。</p>
+      <h3>割り忘れ</h3>
+      <p>組み合わせで <code>÷ r!</code> を忘れると、答えが r! 倍になります。3個選ぶなら6倍、4個なら24倍。<strong>選択肢に極端に大きい数が混ざっていたら、割り忘れの誘導です。</strong></p>
+      <h3>円卓で階乗をそのまま使う</h3>
+      <p>5人の円卓を <code>5! = 120</code> としてしまう誤りです。回転して同じになる配置を5回ずつ数えているので、5で割った24が正解です。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">順列・組み合わせだけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=10">順列・組み合わせの練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/shugo/">集合の解き方</a><span>ベン図と包除原理で数え落としを防ぐ</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおいて基準を揃える</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>解き方をまとめています</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>

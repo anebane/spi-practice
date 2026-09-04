@@ -601,10 +601,10 @@
   },
   {
     "name": "実在しない分野の解き方を宣伝する",
-    "why": "検索結果に出しておいて来た人が見つけられない。数を消しても分野名で書けば同じことが起きる",
+    "why": "実在しない解き方を title/description に書くと、期待して来た人が空振りする。⚠️ 2026-09-04に全13分野のページを作ったため、実在分野を使う旧版のfindは成立しなくなった。テンプレに存在しない分野名を使う形に作り替えた",
     "file": "categories/index.html",
-    "find": "推論・損益算・場合の数と確率の解法を確認して、",
-    "replace": "推論・損益算・速度算の解法を確認して、",
+    "find": "SPI非言語の解き方と練習問題。推論・",
+    "replace": "SPI非言語の解き方と練習問題。長文読解・推論・",
     "expect": "html"
   },
   {
@@ -1926,5 +1926,21 @@
     "find": "このとき、利益はいくらか。（赤字の場合はマイナスを付ける）",
     "replace": "このとき、利益はいくらか。",
     "expect": "generator"
+  },
+  {
+    "name": "分野ページをsitemapから外す",
+    "why": "作ったページをsitemapに入れ忘れるとクローラに見つからない。2026-09-04にshugoで実際に踏んだ。従来の検査はsitemap→実在の一方向しか見ていなかった",
+    "file": "sitemap.xml",
+    "find": "    <loc>https://tekisei-drill.com/categories/shugo/</loc>",
+    "replace": "    <loc>https://tekisei-drill.com/categories/suiron/</loc>",
+    "expect": "html"
+  },
+  {
+    "name": "分野ページへの導線を一覧から外す",
+    "why": "ページを作っても一覧からリンクしないと誰も辿り着けない。8ページ作った際に実際に全部漏れていた",
+    "file": "categories/index.html",
+    "find": "<a href=\"shugo/\">集合の解き方</a>",
+    "replace": "<a href=\"suiron/\">集合の解き方</a>",
+    "expect": "html"
   }
 ]

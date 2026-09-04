@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>図表の読み取りの解き方｜設問が要求するセルだけを見る【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPI図表の読み取りの解き方。表を全部読まず設問から逆算する手順、増減率・構成比・最大値・差の解き方を例題つきで解説します。読んだあとすぐ図表だけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/zuhyo/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>図表の読み取りの解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 図表の読み取り</p>
+
+      <p class="article-lead">図表で時間を失う原因は<strong>表を先に読むこと</strong>です。設問を読んでから、必要なセルだけを取りに行く。この順番で時間が余ります。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#setsumon">表より先に設問を読む</a></li>
+          <li><a href="#zougen">増減率を問う問題</a></li>
+          <li><a href="#wariai">構成比を問う問題</a></li>
+          <li><a href="#saidai">「最も多い／少ない」を問う問題</a></li>
+          <li><a href="#sa">差を問う問題</a></li>
+          <li><a href="#graph">グラフの問題</a></li>
+          <li><a href="#jikan">時間の使い方</a></li>
+          <li><a href="#tsumazuki">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="setsumon">1. 表より先に設問を読む</h2>
+      <p>図表の問題で時間を失う最大の原因は、<strong>表を先に読んでしまうこと</strong>です。表には設問に関係のない数字がたくさん並んでいます。全部を理解しようとすると、それだけで制限時間が終わります。</p>
+      <p>手順は逆です。設問を読み、<strong>必要なセルだけを探しに行く</strong>。多くの問題は、表の中の1〜3個の数字しか使いません。</p>
+
+      <h2 id="zougen">2. 増減率を問う問題</h2>
+      <p class="q-example">次の表は各商品の年間販売数を示している。商品Cの2022年から2024年への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）</p>
+      <h3>解き方</h3>
+      <ul>
+        <li>使うのは2つのセルだけ：2022年の値と2024年の値</li>
+        <li>増減率 ＝ <code>(新 − 旧) ÷ 旧 × 100</code></li>
+      </ul>
+      <p>たとえば2022年が2500、2024年が2400なら <code>(2400 − 2500) ÷ 2500 × 100 = −4%</code>。</p>
+      <p><strong>割るのは必ず「もとの年」の値</strong>です。新しい年で割ると別の数字になります。そして減少なら答えはマイナス。当サイトではこの点を設問に明記しています。</p>
+
+      <h2 id="wariai">3. 構成比を問う問題</h2>
+      <p class="q-example">【月間支出の内訳】総額300,000円。食費が全体に占める割合は何%か。</p>
+      <p>構成比は <code>部分 ÷ 全体 × 100</code>。総額が与えられているので、食費の金額を総額で割るだけです。</p>
+      <p>逆に「構成比が◯%のとき金額はいくらか」と問われたら <code>全体 × 割合</code>。<strong>どちらが与えられ、どちらを求めるのか</strong>を先に確かめてください。</p>
+
+      <h2 id="saidai">4. 「最も多い／少ない」を問う問題</h2>
+      <p>一見やさしいのですが、<strong>比べる対象を取り違えると全滅します。</strong></p>
+      <ul>
+        <li>「最も売上が多い店舗」なら、店舗ごとの合計を比べる</li>
+        <li>「最も伸びた店舗」なら、増加<strong>量</strong>か増加<strong>率</strong>かを読み分ける</li>
+      </ul>
+      <p>増加量と増加率は別物です。売上100→150の店（+50、+50%）と、1000→1100の店（+100、+10%）では、量なら後者、率なら前者が勝ちます。<strong>設問がどちらを聞いているかで答えが入れ替わります。</strong></p>
+
+      <h2 id="sa">5. 差を問う問題</h2>
+      <p>2つのセルを引くだけですが、<strong>順序を間違えると符号が反転します。</strong>「AはBより何多いか」ならA − B。設問の語順どおりに引いてください。</p>
+      <p>また「差」を問う問題では、答えが負になる設定を出さないのが普通です。負が出たら引く順序を疑ってください。</p>
+
+      <h2 id="graph">6. グラフの問題</h2>
+      <p>棒グラフでも考え方は表と同じです。ただし<strong>目盛りの読み取り誤差</strong>が加わります。</p>
+      <ul>
+        <li>目盛りの単位を先に確認する（千円か、万円か、%か）</li>
+        <li>棒の高さは、目盛り線と照合して読む</li>
+        <li>選択肢に近い値が2つ並んでいたら、読み取り精度を上げる必要がある設問</li>
+      </ul>
+
+      <h2 id="jikan">7. 時間の使い方</h2>
+      <p>図表は1問120〜150秒と、他分野より長めの制限時間が設定されています。<strong>それでも足りなくなるのは、表を読む時間に使ってしまうから</strong>です。</p>
+      <p>配分の目安はこうです。</p>
+      <ul>
+        <li>設問を読む：10秒</li>
+        <li>必要なセルを探す：20秒</li>
+        <li>計算する：30秒</li>
+        <li>選択肢と照合する：10秒</li>
+      </ul>
+      <p>残りは予備です。<strong>表の全体像を把握する時間は、この配分に入っていません。</strong>把握しなくても解けるように設問から入るのが、この分野の戦い方です。</p>
+      <p>複数の設問が同じ表を使う場合は、2問目以降が速くなります。1問目で表の構造（行が何、列が何、単位は何）だけ掴んでおくと、あとが楽になります。</p>
+
+      <h2 id="tsumazuki">8. つまずきやすい点</h2>
+      <h3>表を全部読もうとする</h3>
+      <p>設問に必要なセルは1〜3個です。それ以外は<strong>読まなくてよい</strong>と決めてかかると、時間が余ります。</p>
+      <h3>単位の見落とし</h3>
+      <p>「単位：千円」と書かれた表で、そのまま円として計算する誤りです。表の見出しと注記は必ず先に見てください。</p>
+      <h3>率と量を取り違える</h3>
+      <p>「最も伸びた」「最も増えた」という表現は、量とも率とも読めます。設問に%が付いているかどうかで判断します。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">図表の読み取りだけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=9">図表の読み取りの練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/shugo/">集合の解き方</a><span>ベン図と包除原理で数え落としを防ぐ</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおいて基準を揃える</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>解き方をまとめています</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>
