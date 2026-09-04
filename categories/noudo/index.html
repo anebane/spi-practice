@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>濃度算の解き方｜食塩の重さは変わらない、で全部解ける【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="SPI濃度算の解き方。「混ぜても水を足しても食塩の重さは変わらない」という1つの原理で、水を加える問題・混合問題・蒸発の問題を解く手順を例題つきで解説します。てんびん法も紹介。読んだあとすぐ濃度算だけを練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/noudo/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>濃度算の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 濃度算</p>
+
+      <p class="article-lead">濃度算は<strong>覚える式が1つしかない</strong>のに、正答率が最も低い分野です。原因は式ではなく、<strong>「濃度」をそのまま足したり平均したりしてしまうこと</strong>にあります。濃度は割合なので、足せません。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#shiki">式は1つだけ</a></li>
+          <li><a href="#fuhen">食塩の重さは変わらない</a></li>
+          <li><a href="#mizu">例題：水を加える</a></li>
+          <li><a href="#mazeru">例題：2つを混ぜる</a></li>
+          <li><a href="#tenbin">てんびん法で速く解く</a></li>
+          <li><a href="#mistake">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="shiki">1. 式は1つだけ</h2>
+      <table class="compare-table">
+        <thead><tr><th>求めるもの</th><th>式</th></tr></thead>
+        <tbody>
+          <tr><th>濃度</th><td>食塩の重さ ÷ <strong>食塩水の重さ</strong> × 100</td></tr>
+          <tr><th>食塩の重さ</th><td>食塩水の重さ × 濃度</td></tr>
+          <tr><th>食塩水の重さ</th><td>食塩の重さ ÷ 濃度</td></tr>
+        </tbody>
+      </table>
+      <p>3つとも同じ式を変形しただけです。覚えるのは1行で足ります。</p>
+
+      <div class="callout">
+        <div class="callout-title">最重要：分母は「食塩水」であって「水」ではない</div>
+        <p><strong>食塩水の重さ ＝ 水の重さ ＋ 食塩の重さ</strong>です。「水200gに食塩20gを溶かした」なら、食塩水は220g。濃度は 20 ÷ 220 で、20 ÷ 200 ではありません。ここを取り違えると、以降の計算がすべてずれます。</p>
+      </div>
+
+      <h2 id="fuhen">2. 食塩の重さは変わらない</h2>
+      <p>濃度算の問題は、ほぼすべてこの一文で解けます。</p>
+      <p><strong>水を加えても、蒸発させても、別の食塩水と混ぜても、食塩そのものの重さは足し算でしか動きません。</strong></p>
+      <ul>
+        <li>水を加える → 食塩はそのまま、食塩水だけ増える</li>
+        <li>水を蒸発させる → 食塩はそのまま、食塩水だけ減る</li>
+        <li>食塩を加える → 食塩も食塩水も、加えた分だけ増える</li>
+        <li>2つを混ぜる → 食塩は足し算、食塩水も足し算</li>
+      </ul>
+      <p>つまり手順は毎回同じです。<strong>①それぞれの食塩の重さを出す ②足す ③全体の重さで割る</strong>。濃度を直接いじろうとすると間違えます。</p>
+
+      <h2 id="mizu">3. 例題：水を加える</h2>
+      <p>10%の食塩水200gに、水を50g加えた。できた食塩水の濃度は何%か。</p>
+
+      <h3>解き方</h3>
+      <ol>
+        <li><strong>食塩の重さ</strong> = 200 × 0.10 = <strong>20g</strong>（水を足しても変わらない）</li>
+        <li><strong>食塩水の重さ</strong> = 200 + 50 = <strong>250g</strong></li>
+        <li><strong>濃度</strong> = 20 ÷ 250 = 0.08 = <strong>8%</strong></li>
+      </ol>
+      <p>加えたのが水なので、1行目は最後まで20gのままです。ここを動かさないことが濃度算の要です。</p>
+      <p>蒸発の問題も同じです。「50g蒸発させた」なら食塩水が 200 − 50 = 150g になるだけで、食塩は20gのまま。濃度は 20 ÷ 150 ≒ 13.3% と<strong>濃くなります</strong>。</p>
+
+      <h2 id="mazeru">4. 例題：2つを混ぜる</h2>
+      <p>8%の食塩水300gと、12%の食塩水200gを混ぜた。できた食塩水の濃度は何%か。</p>
+
+      <h3>解き方</h3>
+      <ol>
+        <li><strong>食塩</strong> = 300 × 0.08 + 200 × 0.12 = 24 + 24 = <strong>48g</strong></li>
+        <li><strong>食塩水</strong> = 300 + 200 = <strong>500g</strong></li>
+        <li><strong>濃度</strong> = 48 ÷ 500 = 0.096 = <strong>9.6%</strong></li>
+      </ol>
+      <p>ここで <code>(8 + 12) ÷ 2 = 10%</code> としてしまうのが最も多い誤りです。<strong>重さが違うので単純平均はできません。</strong>この問題では8%のほうが多いので、答えは真ん中の10%より8%側に寄って9.6%になります。</p>
+      <p>逆にいえば、<strong>答えは必ず2つの濃度の間に入ります</strong>。9.6%は8と12の間なので妥当、という検算に使えます。範囲の外に出たら計算間違いです。</p>
+
+      <h2 id="tenbin">5. てんびん法で速く解く</h2>
+      <p>混合の問題は、比を使うと計算せずに答えが出ます。</p>
+      <p><strong>混ぜる重さの比の逆が、濃度差の比になります。</strong>上の例題なら、重さは 300:200 = <strong>3:2</strong>。濃度差はこれをひっくり返して <strong>2:3</strong> に分けます。</p>
+      <p>8%と12%の差は4なので、8%側から <code>4 × 2/5 = 1.6</code> 動いた点、つまり <code>8 + 1.6 = 9.6%</code>。同じ答えになります。</p>
+      <p>選択肢から選ぶ形式では、この方法だと<strong>10秒ほどで済みます</strong>。ただし慣れないうちは、先に紹介した「食塩を足して全体で割る」で確実に解いてください。<strong>速さより、確実に合うほうが点になります。</strong></p>
+
+      <h2 id="mistake">6. つまずきやすい点</h2>
+
+      <h3>濃度を足す・平均する</h3>
+      <p>最も多い誤りです。濃度は割合なので、足しても平均しても意味がありません。<strong>足せるのは食塩の重さと食塩水の重さだけ</strong>です。重さに直してから足す、と覚えてください。</p>
+
+      <h3>「水」と「食塩水」の取り違え</h3>
+      <p>「水180gに食塩20gを溶かす」と「20%の食塩水200g」は同じものですが、問題文の書き方が違うだけで別物に見えます。<strong>問題文が水の重さを言っているのか、食塩水の重さを言っているのかを最初に確かめる</strong>と防げます。</p>
+
+      <h3>蒸発で食塩が減ると思ってしまう</h3>
+      <p>蒸発するのは水だけです。食塩は残ります。だから蒸発させると濃度は<strong>上がります</strong>。「減らしたのだから薄くなる」という直感が働きやすいので注意してください。</p>
+
+      <h3>食塩を加える問題で分母を忘れる</h3>
+      <p>食塩を10g加えたら、食塩の重さだけでなく<strong>食塩水の重さも10g増えます</strong>。分子だけ足して分母をそのままにする誤りが起きやすい形です。</p>
+
+      <div class="cta-box">
+        <p class="cta-title">濃度算だけを練習する</p>
+        <p>問題は毎回自動生成されるので、同じ問題が再び出ることはほとんどありません。登録不要・無料。</p>
+        <a class="cta-btn" href="/?cat=7">濃度算の練習を始める</a>
+      </div>
+
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/suiron/">推論の解き方</a><span>最頻出。表に落として機械的に解く</span></li>
+          <li><a href="/categories/soneki/">損益算の解き方</a><span>原価を100とおいて割合で解く</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>推論・損益算・確率・濃度算</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>
