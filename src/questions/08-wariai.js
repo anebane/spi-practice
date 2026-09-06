@@ -45,6 +45,12 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_change_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      var changeRate = [5, 10, 15, 20, 25, 30][Math.floor(Math.random() * 6)];
+      v.changed = Math.round(v.original * (1 + changeRate / 100));
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -72,6 +78,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      var sum = v.ratioA + v.ratioB;
+      var multiplier = 10 + Math.floor(Math.random() * 10) * 10; // 10〜100（10刻み）
+      v.total = sum * multiplier;
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -179,6 +192,19 @@ var CONSEC_SCENES = [
   // 割合: 3つの比
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio3_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      var a = v.ab1 * v.bc1;
+      var b = v.ab2 * v.bc1;
+      var c = v.ab2 * v.bc2;
+      var sum = a + b + c;
+      var mult = 100 + Math.floor(Math.random() * 10) * 100; // 100〜1000（100刻み）
+      // 割り切れるようにする
+      while (mult % sum !== 0 && mult < 10000) mult += 100;
+      if (mult % sum !== 0) mult = sum * (10 + Math.floor(Math.random() * 10) * 10);
+      v.total = mult;
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {

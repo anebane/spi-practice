@@ -2897,6 +2897,13 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "soneki_loss_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // 原価を 500〜3000円（100円刻み）で決め、listPrice = 原価 × (1+利益率)
+      var baseCost = 500 + Math.floor(Math.random() * 26) * 100;
+      v.listPrice = Math.round(baseCost * (1 + v.markupRate / 100));
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -2924,6 +2931,14 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "soneki_multiple_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      v.sold1 = Math.floor(v.quantity * (0.4 + Math.random() * 0.3));
+      // sold1 は quantity より小さい正の整数
+      if (v.sold1 >= v.quantity) v.sold1 = v.quantity - 1;
+      if (v.sold1 < 1) v.sold1 = 1;
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -2970,6 +2985,13 @@ var COND_SCENES_P = [
   // 損益算: 売価から原価逆算
   QUESTION_TEMPLATES.push({
     id: "soneki_reverse_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // 原価を 500〜3000円（100円刻み）で決め、salePrice = 原価 × (1+利益率)
+      var baseCost = 500 + Math.floor(Math.random() * 26) * 100;
+      v.salePrice = Math.round(baseCost * (1 + v.profitRate / 100));
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -3674,6 +3696,22 @@ var WORK_SCENES_3 = [
 
   QUESTION_TEMPLATES.push({
     id: "shigoto_switch_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // Aが何日か働いた後の残りをBが整数日で終えられるようにする
+      for (var attempt = 0; attempt < 50; attempt++) {
+        var dAlone = 1 + Math.floor(Math.random() * (v.daysA - 1)); // 1〜daysA-1
+        var remaining = 1 - dAlone / v.daysA;
+        var bDays = remaining * v.daysB;
+        if (remaining > 0 && Math.abs(bDays - Math.round(bDays)) < 0.01) {
+          v.daysAlone = dAlone;
+          return;
+        }
+      }
+      // フォールバック
+      v.daysAlone = Math.floor(v.daysA / 2);
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -4127,6 +4165,14 @@ var WORK_JOIN_SCENES = [
   // 濃度算: 目標濃度にするための混合量
   QUESTION_TEMPLATES.push({
     id: "noudo_target_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // concA < concTarget < concB になるように設定
+      v.concTarget = v.concA + Math.floor((v.concB - v.concA) * (0.3 + Math.random() * 0.4));
+      if (v.concTarget <= v.concA) v.concTarget = v.concA + 1;
+      if (v.concTarget >= v.concB) v.concTarget = v.concB - 1;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -4238,6 +4284,12 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_change_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      var changeRate = [5, 10, 15, 20, 25, 30][Math.floor(Math.random() * 6)];
+      v.changed = Math.round(v.original * (1 + changeRate / 100));
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -4265,6 +4317,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      var sum = v.ratioA + v.ratioB;
+      var multiplier = 10 + Math.floor(Math.random() * 10) * 10; // 10〜100（10刻み）
+      v.total = sum * multiplier;
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -4372,6 +4431,19 @@ var CONSEC_SCENES = [
   // 割合: 3つの比
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio3_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      var a = v.ab1 * v.bc1;
+      var b = v.ab2 * v.bc1;
+      var c = v.ab2 * v.bc2;
+      var sum = a + b + c;
+      var mult = 100 + Math.floor(Math.random() * 10) * 100; // 100〜1000（100刻み）
+      // 割り切れるようにする
+      while (mult % sum !== 0 && mult < 10000) mult += 100;
+      if (mult % sum !== 0) mult = sum * (10 + Math.floor(Math.random() * 10) * 10);
+      v.total = mult;
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {

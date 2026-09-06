@@ -181,6 +181,14 @@
   // 濃度算: 目標濃度にするための混合量
   QUESTION_TEMPLATES.push({
     id: "noudo_target_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // concA < concTarget < concB になるように設定
+      v.concTarget = v.concA + Math.floor((v.concB - v.concA) * (0.3 + Math.random() * 0.4));
+      if (v.concTarget <= v.concA) v.concTarget = v.concA + 1;
+      if (v.concTarget >= v.concB) v.concTarget = v.concB - 1;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,

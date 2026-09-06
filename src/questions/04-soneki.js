@@ -75,6 +75,13 @@
 
   QUESTION_TEMPLATES.push({
     id: "soneki_loss_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // 原価を 500〜3000円（100円刻み）で決め、listPrice = 原価 × (1+利益率)
+      var baseCost = 500 + Math.floor(Math.random() * 26) * 100;
+      v.listPrice = Math.round(baseCost * (1 + v.markupRate / 100));
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -102,6 +109,14 @@
 
   QUESTION_TEMPLATES.push({
     id: "soneki_multiple_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      v.sold1 = Math.floor(v.quantity * (0.4 + Math.random() * 0.3));
+      // sold1 は quantity より小さい正の整数
+      if (v.sold1 >= v.quantity) v.sold1 = v.quantity - 1;
+      if (v.sold1 < 1) v.sold1 = 1;
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
@@ -148,6 +163,13 @@
   // 損益算: 売価から原価逆算
   QUESTION_TEMPLATES.push({
     id: "soneki_reverse_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // 原価を 500〜3000円（100円刻み）で決め、salePrice = 原価 × (1+利益率)
+      var baseCost = 500 + Math.floor(Math.random() * 26) * 100;
+      v.salePrice = Math.round(baseCost * (1 + v.profitRate / 100));
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {

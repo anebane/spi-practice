@@ -221,6 +221,22 @@ var WORK_SCENES_3 = [
 
   QUESTION_TEMPLATES.push({
     id: "shigoto_switch_01",
+    // 変数生成の制約。以前は generator.js の resolveCustomVariables に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    resolve: function(v) {
+      // Aが何日か働いた後の残りをBが整数日で終えられるようにする
+      for (var attempt = 0; attempt < 50; attempt++) {
+        var dAlone = 1 + Math.floor(Math.random() * (v.daysA - 1)); // 1〜daysA-1
+        var remaining = 1 - dAlone / v.daysA;
+        var bDays = remaining * v.daysB;
+        if (remaining > 0 && Math.abs(bDays - Math.round(bDays)) < 0.01) {
+          v.daysAlone = dAlone;
+          return;
+        }
+      }
+      // フォールバック
+      v.daysAlone = Math.floor(v.daysA / 2);
+    },
     // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
     // template.id で分岐して書かれていた（2026-09-06に移設）。
     derive: function(v, answer) {
