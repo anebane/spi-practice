@@ -29,7 +29,7 @@
 // 以前ここには「2回目で直る」と書いてあったが誤りだった。
 // 実際、2026-08-28 の開発中に app.js を直したのに反映されず、
 // Service Worker を手で解除するまで旧版が配られ続けた。
-const VERSION = "2026-09-06d";
+const VERSION = "2026-09-06e";
 const PRECACHE = `precache-${VERSION}`;
 const RUNTIME = `runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -43,6 +43,7 @@ const PRECACHE_URLS = [
   "/favicon.svg",
   "/manifest.json",
   OFFLINE_URL,
+  "/koumuin/",
   "/tamatebako-shisoku/",
   "/tamatebako-shisoku/app.js",
   "/icons/icon-192.png",

@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要で何度でも練習</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <meta name="description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率などの主要分野に対応。登録不要・ブラウザで即スタート。問題はランダム生成で何度でも本番さながらに繰り返し練習できます。">
-  <link rel="canonical" href="https://tekisei-drill.com/">
+  <title>公務員試験 数的処理・判断推理 無料練習 | 登録不要・問題は毎回変わる</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <meta name="description" content="公務員試験の教養択一で出る数的処理・判断推理・資料解釈を無料で練習。判断推理は解が1つに定まる問題だけを出題。登録不要、ブラウザで即スタート。問題はランダム生成なので答えを覚えられません。">
+  <link rel="canonical" href="https://tekisei-drill.com/koumuin/">
   <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:title" content="SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要">
-  <meta property="og:description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率などの主要分野に対応。問題はランダム生成で何度でも練習可能。登録不要。">
+  <meta property="og:title" content="公務員試験 数的処理・判断推理 無料練習 | 登録不要">
+  <meta property="og:description" content="公務員試験の数的処理・判断推理・資料解釈を無料で練習。問題は毎回ランダム生成。登録不要。">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://tekisei-drill.com/">
+  <meta property="og:url" content="https://tekisei-drill.com/koumuin/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要">
   <meta name="twitter:description" content="SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率などの主要分野に対応。ランダム生成で何度でも練習可能。">
@@ -100,7 +100,7 @@
     gtag('config', 'G-SPDZ1K30TB');
   </script>
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../style.css">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1a237e">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
@@ -119,7 +119,7 @@
   <div id="screen-start" class="screen active">
     <div class="start-container">
       <p class="brand-name">適性検査 無限ドリル</p>
-      <h1 class="start-title">SPI非言語 無料模擬試験 <span class="beta-badge">β</span></h1>
+      <h1 class="start-title">公務員試験 数的処理・判断推理 <span class="beta-badge">β</span></h1>
       <p class="start-subtitle">SPI3 WEBテスティング形式対応</p>
       <div class="hero-badges">
         <span class="hero-badge">登録不要</span>
@@ -175,7 +175,6 @@
         <div class="config-group">
           <label class="config-label">難易度</label>
           <div class="difficulty-grid" id="difficulty-select">
-            <label class="difficulty-item"><input type="checkbox" value="1" checked><span>易</span></label>
             <label class="difficulty-item"><input type="checkbox" value="2" checked><span>中</span></label>
             <label class="difficulty-item"><input type="checkbox" value="3" checked><span>難</span></label>
           </div>
@@ -194,7 +193,6 @@
             <label class="category-item"><input type="checkbox" value="8" checked><span>割合・比</span></label>
             <label class="category-item"><input type="checkbox" value="9" checked><span>図表の読み取り</span></label>
             <label class="category-item"><input type="checkbox" value="10" checked><span>順列・組み合わせ</span></label>
-            <label class="category-item"><input type="checkbox" value="13" checked><span>規則性・方角</span></label>
           </div>
           <div class="category-actions">
             <button class="link-btn" id="select-all">すべて選択</button>
@@ -231,18 +229,18 @@
       <section class="home-articles">
         <h2 class="faq-heading">受検前に知っておきたいこと</h2>
         <ul class="home-article-links">
-          <li><a href="categories/">分野別の解き方（推論・損益算ほか）</a><span>解法を確認して、その分野だけ練習できます</span></li>
-          <li><a href="tamatebako-shisoku/">四則逆算（玉手箱形式）の模擬試験</a><span>9分50問。こちらも登録不要・無限に出題</span></li>
-          <li><a href="language/">語句の関係（SPI言語）の解き方と練習</a><span>包含・部分・用途など6つの型で解く</span></li>
-          <!-- ⚠️ 公務員試験はSPIとは別の試験。トップの主役はSPIのままにする（2026-09-06）。
-               同じ数的処理を使う人向けの導線として、既存の一覧に1行だけ足す。 -->
-          <li><a href="koumuin/">公務員試験の数的処理・判断推理</a><span>教養択一で出る計算・推理。SPIと同じ分野を難しめに出題</span></li>
-          <li><a href="articles/webtesting-toha.html">WEBテスティングとテストセンターの違い</a><span>電卓は使える？答えは選ぶ？入力する？</span></li>
-          <li><a href="articles/testcenter.html">テストセンターの服装・持ち物・当日の流れ</a><span>初めてでも迷わないための実務まとめ</span></li>
-          <li><a href="articles/spi-seikaku-kensa.html">性格検査は対策できる？落ちる理由</a><span>正解はないが、準備できることはある</span></li>
-          <li><a href="articles/spi-kakomon-pdf.html">SPIに過去問はある？配布PDFの正体</a><span>結論、過去問は存在しません</span></li>
+          <!-- ⚠️ トップへ戻る導線。生成元の index.html には自己リンクが無いので、
+               ここで足さないと公務員ページが行き止まりになる（2026-09-06）。 -->
+          <li><a href="../">SPI非言語の模擬試験</a><span>民間の適性検査向け。同じ分野を易しめから出題</span></li>
+          <li><a href="../categories/">分野別の解き方（推論・損益算ほか）</a><span>解法を確認して、その分野だけ練習できます</span></li>
+          <li><a href="../tamatebako-shisoku/">四則逆算（玉手箱形式）の模擬試験</a><span>9分50問。こちらも登録不要・無限に出題</span></li>
+          <li><a href="../language/">語句の関係（SPI言語）の解き方と練習</a><span>包含・部分・用途など6つの型で解く</span></li>
+          <li><a href="../articles/webtesting-toha.html">WEBテスティングとテストセンターの違い</a><span>電卓は使える？答えは選ぶ？入力する？</span></li>
+          <li><a href="../articles/testcenter.html">テストセンターの服装・持ち物・当日の流れ</a><span>初めてでも迷わないための実務まとめ</span></li>
+          <li><a href="../articles/spi-seikaku-kensa.html">性格検査は対策できる？落ちる理由</a><span>正解はないが、準備できることはある</span></li>
+          <li><a href="../articles/spi-kakomon-pdf.html">SPIに過去問はある？配布PDFの正体</a><span>結論、過去問は存在しません</span></li>
         </ul>
-        <p class="home-articles-more"><a href="articles/">解説記事をすべて見る →</a></p>
+        <p class="home-articles-more"><a href="../articles/">解説記事をすべて見る →</a></p>
       </section>
 
       <section class="home-about">
@@ -251,9 +249,9 @@
 
         <p>最大の特徴は、<strong>問題文の数値をその場で生成している</strong>ことです。あらかじめ用意した問題を並び替えているのではなく、出題のたびに数値を決めています。そのため同じ問題が再び出ることはほとんどなく、答えを覚えてしまう心配がありません。市販の問題集や固定の練習サイトでは、2周目以降は「解き方を思い出す」のではなく「答えを覚えている」状態になり、実力が測れなくなります。この問題を構造的に避けるための設計です。</p>
 
-        <p>会員登録は不要です。受験履歴と成績は、お使いのブラウザ内の記憶領域にのみ保存されます。当サイトのサーバーへ送信・蓄積されることはありません。ブラウザの閲覧データを削除すれば、履歴もそのまま消えます。詳細は<a href="privacy.html">プライバシーポリシー</a>をご確認ください。</p>
+        <p>会員登録は不要です。受験履歴と成績は、お使いのブラウザ内の記憶領域にのみ保存されます。当サイトのサーバーへ送信・蓄積されることはありません。ブラウザの閲覧データを削除すれば、履歴もそのまま消えます。詳細は<a href="../privacy.html">プライバシーポリシー</a>をご確認ください。</p>
 
-        <p>回答形式は、WEBテスティングに合わせて<strong>数値を直接入力する記述式</strong>を中心にしています。会場で受検するテストセンターは選択式で電卓も使えないため、対策の仕方が変わります。違いは<a href="articles/webtesting-toha.html">こちらの解説</a>にまとめました。</p>
+        <p>回答形式は、WEBテスティングに合わせて<strong>数値を直接入力する記述式</strong>を中心にしています。会場で受検するテストセンターは選択式で電卓も使えないため、対策の仕方が変わります。違いは<a href="../articles/webtesting-toha.html">こちらの解説</a>にまとめました。</p>
 
         <p class="legal-note">「SPI」「SPI3」は株式会社リクルートマネジメントソリューションズの登録商標です。当サイトは同社およびその関連会社とは関係がなく、公式に許諾を受けたサービスではありません。上記の表記は、対応する試験形式を説明する目的で使用しています。</p>
       </section>
@@ -264,12 +262,12 @@
 
       <footer class="site-footer">
         <nav class="site-footer-nav">
-          <a href="categories/">分野別の解き方</a>
-          <a href="articles/">解説記事</a>
-          <a href="about.html">運営者情報</a>
+          <a href="../categories/">分野別の解き方</a>
+          <a href="../articles/">解説記事</a>
+          <a href="../about.html">運営者情報</a>
           <a href="https://note.com/cesuac/n/n82465024620a?utm_source=tekisei-drill&utm_medium=referral&utm_content=footer" target="_blank" rel="noopener" class="js-note-link">開発の記録（note）</a>
-          <a href="privacy.html">プライバシーポリシー</a>
-          <a href="contact.html">お問い合わせ</a>
+          <a href="../privacy.html">プライバシーポリシー</a>
+          <a href="../contact.html">お問い合わせ</a>
         </nav>
         <p class="site-footer-copy">&copy; 2026 適性検査無限ドリル</p>
       </footer>
@@ -431,10 +429,12 @@
     </div>
   </div>
 
-  <script src="questions.js"></script>
-  <script src="generator.js"></script>
-  <script src="affiliate.js"></script>
-  <script src="app.js"></script>
+  <!-- ⚠️ この宣言で app.js が出す試験が決まる。questions.js より後、app.js より前に置く。 -->
+  <script src="../questions.js"></script>
+  <script>var ACTIVE_PROFILE = "koumuin";</script>
+  <script src="../generator.js"></script>
+  <script src="../affiliate.js"></script>
+  <script src="../app.js"></script>
   <script src="/pwa.js" defer></script>
 </body>
 </html>

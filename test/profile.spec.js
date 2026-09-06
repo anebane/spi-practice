@@ -41,6 +41,7 @@ if (!profiles || !profiles.spi) {
 }
 const P = profiles.spi;
 const all = P.examCategories.concat(P.extraCategories || []);
+const allProfiles = Object.keys(profiles).map(k => profiles[k]);
 
 // --- 1. 宣言した分野が、テンプレートとして実在するか ---
 {
@@ -72,9 +73,12 @@ const all = P.examCategories.concat(P.extraCategories || []);
   cov.covered("テンプレートの分野", inTemplates.size, 12);
 }
 
-// --- 3. index.html のチェックボックスと、examCategories が一致するか ---
+// --- 3. 画面のチェックボックスと、examCategories が一致するか ---
+// page を持つプロファイルすべてを見る（/ と /koumuin/ など）。
 {
-  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+for (const prof of allProfiles.filter(x => x.page)) {
+  const rel = prof.page === "/" ? "index.html" : prof.page.replace(/^\/|\/$/g, "") + "/index.html";
+  const html = fs.readFileSync(path.join(ROOT, rel), "utf8");
   const block = html.match(/id="category-select"([\s\S]*?)<\/div>/);
   if (!block) {
     fail("index.html の分野選択が見つからない", 'id="category-select" のブロックが無い');
@@ -82,20 +86,42 @@ const all = P.examCategories.concat(P.extraCategories || []);
   } else {
     const boxes = [...block[1].matchAll(/value="(\d+)"[^>]*><span>([^<]+)<\/span>/g)]
       .map(m => ({ id: Number(m[1]), name: m[2] }));
-    const want = P.examCategories;
+    const want = prof.examCategories;
 
     for (const b of boxes) {
       const c = want.find(x => x.id === b.id);
-      if (!c) fail("画面にあるがプロファイルに無い分野", `${b.name}（id ${b.id}）`);
-      else if (c.name !== b.name) fail("画面とプロファイルで分野名が違う", `画面「${b.name}」 / 宣言「${c.name}」（id ${b.id}）`);
+      if (!c) fail("画面にあるがプロファイルに無い分野", `${rel}: ${b.name}（id ${b.id}）`);
+      else if (c.name !== b.name) fail("画面とプロファイルで分野名が違う", `${rel}: 画面「${b.name}」 / 宣言「${c.name}」（id ${b.id}）`);
     }
     for (const c of want) {
       if (!boxes.find(b => b.id === c.id)) {
-        fail("プロファイルにあるが画面に無い分野", `${c.name}（id ${c.id}）。模擬試験に出す宣言なのに選べない`);
+        fail("プロファイルにあるが画面に無い分野", `${rel}: ${c.name}（id ${c.id}）。模擬試験に出す宣言なのに選べない`);
       }
     }
-    cov.covered("画面のチェックボックス", boxes.length, 10);
+    cov.covered("画面のチェックボックス（" + prof.id + "）", boxes.length, 10);
   }
+
+  // --- 難易度のチェックボックスが、宣言した帯と一致するか ---
+  // ⚠️ ここが最重要。画面が「易」を出していると、利用者が選べてしまい
+  //    プロファイルの difficulties が**上書きされる**。
+  //    2026-09-06に実際に踏んだ: /koumuin/ が難易度[2,3]を宣言しているのに
+  //    画面は易/中/難を全部チェック済みで出していて、難易度1が出題されていた。
+  //    宣言が静かに無効化され、SPIと同じ問題が出る状態だった。
+  {
+    const dblock = html.match(/id="difficulty-select"([\s\S]*?)<\/div>/);
+    if (!dblock) {
+      fail("画面の難易度選択が見つからない", `${rel}: id="difficulty-select" が無い`);
+    } else {
+      const vals = [...dblock[1].matchAll(/value="(\d+)"/g)].map(m => Number(m[1])).sort();
+      const want = prof.difficulties.slice().sort();
+      if (JSON.stringify(vals) !== JSON.stringify(want)) {
+        fail("画面の難易度が宣言と違う",
+          `${rel}: 画面 [${vals}] / 宣言 [${want}]。画面で選べる帯が宣言を上書きする`);
+      }
+      cov.covered("難易度の選択肢（" + prof.id + "）", vals.length, 2);
+    }
+  }
+}
 }
 
 // --- 4. slug が指す解説ページが実在するか ---
@@ -131,27 +157,30 @@ const all = P.examCategories.concat(P.extraCategories || []);
 
 // --- 6. 問題数の選択肢が、画面と一致するか ---
 {
-  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+for (const prof of allProfiles.filter(x => x.page)) {
+  const rel = prof.page === "/" ? "index.html" : prof.page.replace(/^\/|\/$/g, "") + "/index.html";
+  const html = fs.readFileSync(path.join(ROOT, rel), "utf8");
   const block = html.match(/id="question-count"([\s\S]*?)<\/div>/);
   if (!block) {
     fail("index.html の問題数選択が見つからない", 'id="question-count" のブロックが無い');
     cov.covered("問題数の選択肢", 0, 2);
   } else {
     const vals = [...block[1].matchAll(/data-value="(\d+)"/g)].map(m => Number(m[1]));
-    const want = P.questionCounts;
+    const want = prof.questionCounts;
     if (JSON.stringify(vals) !== JSON.stringify(want)) {
       fail("問題数の選択肢が画面と違う", `画面 [${vals}] / 宣言 [${want}]`);
     }
     // 既定値が選択肢に無いと、画面の初期状態と宣言がずれる。
-    if (!want.includes(P.defaultQuestionCount)) {
-      fail("既定の問題数が選択肢に無い", `${P.defaultQuestionCount} が [${want}] に含まれない`);
+    if (!want.includes(prof.defaultQuestionCount)) {
+      fail("既定の問題数が選択肢に無い", `${rel}: ${prof.defaultQuestionCount} が [${want}] に含まれない`);
     }
     const active = block[1].match(/class="config-btn active" data-value="(\d+)"/);
-    if (active && Number(active[1]) !== P.defaultQuestionCount) {
-      fail("画面の初期選択と既定値が違う", `画面 ${active[1]}問 / 宣言 ${P.defaultQuestionCount}問`);
+    if (active && Number(active[1]) !== prof.defaultQuestionCount) {
+      fail("画面の初期選択と既定値が違う", `${rel}: 画面 ${active[1]}問 / 宣言 ${prof.defaultQuestionCount}問`);
     }
-    cov.covered("問題数の選択肢", vals.length, 2);
+    cov.covered("問題数の選択肢（" + prof.id + "）", vals.length, 2);
   }
+}
 }
 
 // --- 7. app.js がプロファイル由来の一覧を使っているか ---
@@ -176,6 +205,98 @@ const all = P.examCategories.concat(P.extraCategories || []);
     }
   }
   cov.covered("app.js の引き当て", 1, 1);
+}
+
+// --- 7b. 画面が自分のプロファイルを宣言しているか ---
+// ⚠️ app.js は ACTIVE_PROFILE が無ければ "spi" にフォールバックする。
+//    /koumuin/ で宣言を落とすと、見た目は公務員ページのままSPIの出題になる。
+//    2026-09-06に変異で試したら、他のどの検査も捕まえられなかった。
+//    分野や難易度の表示は画面側のHTMLなので、出題だけが静かに入れ替わる。
+{
+  let checked = 0;
+  for (const prof of allProfiles.filter(x => x.page)) {
+    const rel = prof.page === "/" ? "index.html" : prof.page.replace(/^\/|\/$/g, "") + "/index.html";
+    const html = fs.readFileSync(path.join(ROOT, rel), "utf8");
+    checked++;
+
+    // 既定は "spi"。/ は宣言しなくてよいが、それ以外は必須。
+    const m = html.match(/(^|[^\/*\s])\s*var\s+ACTIVE_PROFILE\s*=\s*"([^"]+)"\s*;/m);
+    if (prof.id === "spi") {
+      if (m && m[2] !== "spi") {
+        fail("トップページが別のプロファイルを宣言している", `${rel}: ACTIVE_PROFILE = "${m[2]}"`);
+      }
+    } else if (!m) {
+      fail("画面がプロファイルを宣言していない",
+        `${rel}: ACTIVE_PROFILE が無い。app.js は "spi" にフォールバックするので、見た目はそのままで出題だけSPIになる`);
+    } else if (m[2] !== prof.id) {
+      fail("画面が宣言しているプロファイルが違う", `${rel}: 宣言 "${m[2]}" / このページは "${prof.id}"`);
+    }
+
+    // 宣言の位置も見る。questions.js より前だと QUESTION_PROFILES がまだ無い。
+    if (m) {
+      // ⚠️ indexOf("app.js") ではコメント中の言及を拾う（実際に誤検知した）。
+      //    読み込み順を見たいので <script src=...> の位置だけを取る。
+      const at = (re) => { const m = html.match(re); return m ? m.index : -1; };
+      const iQ = at(/<script[^>]+src="[^"]*questions\.js"/);
+      const iP = html.indexOf("ACTIVE_PROFILE");
+      const iA = at(/<script[^>]+src="[^"]*app\.js"/);
+      if (iQ === -1 || iP < iQ) {
+        fail("プロファイルの宣言が questions.js より前にある", `${rel}: 宣言時点で QUESTION_PROFILES が読めない`);
+      }
+      if (iA !== -1 && iP > iA) {
+        fail("プロファイルの宣言が app.js より後にある", `${rel}: app.js が読む時点で未定義`);
+      }
+    }
+  }
+  cov.covered("プロファイル宣言を調べた画面", checked, 2);
+}
+
+// --- 8. どのプロファイルも、宣言した条件で試験を組めるか ---
+// ⚠️ 宣言はできても、その難易度帯・分野構成でテンプレートが足りなければ
+//    問題数がそろわない。「プロファイルを足したが実際には出題できない」を防ぐ。
+{
+  const gsrc = fs.readFileSync(path.join(ROOT, "generator.js"), "utf8");
+  const gctx = Object.assign({}, ctx);
+  vm.createContext(gctx);
+  vm.runInContext(gsrc, gctx);
+  const G = gctx.QuestionGenerator;
+
+  let checked = 0;
+  for (const prof of allProfiles) {
+    checked++;
+    const want = prof.defaultQuestionCount;
+    const cfg = ctx.profileExamConfig(prof.id, { totalQuestions: want });
+    if (!cfg) { fail("プロファイルの設定を作れない", prof.id); continue; }
+
+    const seen = {};
+    let short = 0;
+    for (let i = 0; i < 20; i++) {
+      const set = G.generateExamSet(cfg);
+      if (set.length !== want) short++;
+      for (const q of set) seen[q.difficulty] = (seen[q.difficulty] || 0) + 1;
+    }
+    if (short > 0) {
+      fail("宣言した条件で問題数がそろわない",
+        `${prof.id}: ${want}問に届かない回が20回中${short}回。分野か難易度の宣言に対してテンプレートが足りない`);
+    }
+    // 宣言した難易度帯の外が混ざっていないか（帯の宣言が効いていない証拠になる）
+    for (const d of Object.keys(seen)) {
+      if (prof.difficulties.indexOf(Number(d)) === -1) {
+        fail("宣言していない難易度が出ている", `${prof.id}: 難易度${d} が ${seen[d]}問。difficulties の宣言が効いていない`);
+      }
+    }
+    // 宣言した帯のうち、実際には1問も出ない帯があれば知らせる。
+    // ⚠️ 落とさない。テンプレートが偏っているだけで、出題自体は成立するため。
+    //    ただし黙っていると「難しい試験だ」と宣言しただけの状態に気づけない。
+    const total = Object.values(seen).reduce((a, b) => a + b, 0);
+    for (const d of prof.difficulties) {
+      const n = seen[d] || 0;
+      if (total > 0 && n / total < 0.1) {
+        console.log(`   ℹ️ ${prof.id}: 宣言した難易度${d}が全体の${(n / total * 100).toFixed(1)}%しか出ていない（テンプレートが少ない）`);
+      }
+    }
+  }
+  cov.covered("試験を組めるか調べたプロファイル", checked, 2);
 }
 
 // --- 出力 ---

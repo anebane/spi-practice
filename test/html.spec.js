@@ -315,10 +315,25 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
 // ⚠️ 枠の div だけ入れて script を入れ忘れると、枠は永久に空のまま。
 //    画面上は何も起きないので、誰も気づかない。両方そろっていることを見る。
 {
-  // 枠を置く面。トップ(index.html)は app.js が結果画面に描くので別扱い。
+  // 枠を置く面。**アプリ面は app.js が結果画面に描くので別扱い**。
   // 法務系（privacy/about/contact）と offline は対象外。
-  const EXCLUDE = new Set(["index.html", "privacy.html", "about.html", "contact.html", "offline.html"]);
-  const targets = pages.filter((p) => !EXCLUDE.has(p));
+  //
+  // ⚠️ アプリ面はプロファイルの page から引く。ページを直書きすると、
+  //    展開先を足すたびにここに手で足すことになり、書き忘れれば
+  //    「記事面なのに枠が無い」と誤って落ちる（2026-09-06に /koumuin/ で発生）。
+  const vmAds = require("vm");
+  const ctxAds = vmAds.createContext({ QUESTION_TEMPLATES: [], console, Math, Date, JSON, parseInt, parseFloat, isNaN, isFinite });
+  vmAds.runInContext(fs.readFileSync(path.join(ROOT, "questions.js"), "utf8"), ctxAds, { filename: "questions.js" });
+  const profilesForAds = ctxAds.QUESTION_PROFILES || {};
+  const appPages = new Set(
+    Object.keys(profilesForAds).map((k) => {
+      const pg = profilesForAds[k].page;
+      if (!pg) return null;
+      return pg === "/" ? "index.html" : pg.replace(/^\/|\/$/g, "") + "/index.html";
+    }).filter(Boolean)
+  );
+  const EXCLUDE = new Set(["privacy.html", "about.html", "contact.html", "offline.html"]);
+  const targets = pages.filter((p) => !EXCLUDE.has(p) && !appPages.has(p));
   // 0件だと「不足が無い」ではなく「1ページも見ていない」。
   cov.covered("広告枠を置く面", targets.length, 10);
 

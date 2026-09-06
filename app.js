@@ -32,7 +32,14 @@
   // ⚠️ 一覧の実体は src/questions/_profile.js（出題プロファイル）が持つ。
   //    以前はここに13件を直書きしていたが、index.html のチェックボックスと
   //    二重に持つ形で、片方だけ直すと静かにずれた。出所を1つにした。
-  var CATEGORY_PAGES = profileCategoryPages("spi");
+  // このページがどの試験を出すか。ページ側が ACTIVE_PROFILE を宣言する。
+  // ⚠️ 宣言が無ければ "spi"。既存の / は宣言しないので従来どおり動く。
+  //    出題内容の差はこの1変数に集約する。app.js を試験ごとに複製しない。
+  var PROFILE_ID = (typeof ACTIVE_PROFILE !== "undefined" && QUESTION_PROFILES[ACTIVE_PROFILE])
+    ? ACTIVE_PROFILE : "spi";
+  var PROFILE = QUESTION_PROFILES[PROFILE_ID];
+
+  var CATEGORY_PAGES = profileCategoryPages(PROFILE_ID);
 
   // --- 誤り報告 ---
   var REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform?usp=pp_url";
@@ -59,9 +66,9 @@
     // シェアの動機を完全に潰していた。例外が出ないので気づけない類。
     state.answers.forEach(function(a) { if (a && a.isCorrect) totalCorrect++; });
     var percent = Math.round((totalCorrect / totalQuestions) * 100);
-    var text = "SPI非言語 模擬試験で " + percent + "% (" + totalCorrect + "/" + totalQuestions + "問正解) でした！"
+    var text = PROFILE.shareLabel + "で " + percent + "% (" + totalCorrect + "/" + totalQuestions + "問正解) でした！"
       + "\n無料・登録不要で何度でも練習できる"
-      + "\n#SPI #就活 #WEBテスティング";
+      + "\n" + PROFILE.shareTags;
     var url = "https://tekisei-drill.com/";
     window.open(
       "https://x.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(url),
@@ -281,7 +288,7 @@
   // --- 試験開始 ---
   // 「10問だけもう一度」で使う問題数。
   // 20問を解き終えた直後にもう20問は重い、という仮説に対する軽い口。
-  var SHORT_RETRY_COUNT = 10;
+  var SHORT_RETRY_COUNT = PROFILE.shortRetryCount;
 
   /**
    * @param {Object} [options] questionCount を渡すと画面の設定より優先する。

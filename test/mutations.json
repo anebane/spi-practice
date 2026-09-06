@@ -1998,5 +1998,29 @@
     "find": "slug: \"kisokusei\" }",
     "replace": "slug: \"kisokusei_typo\" }",
     "expect": "profile"
+  },
+  {
+    "name": "公務員の画面に難易度「易」を出す",
+    "why": "画面で選べる難易度帯がプロファイルの宣言を上書きする。2026-09-06に実際に踏み、公務員でSPIと同じ難易度1が出題されていた",
+    "file": "koumuin/index.html",
+    "find": "            <label class=\"difficulty-item\"><input type=\"checkbox\" value=\"2\" checked><span>中</span></label>",
+    "replace": "            <label class=\"difficulty-item\"><input type=\"checkbox\" value=\"1\" checked><span>易</span></label>\n            <label class=\"difficulty-item\"><input type=\"checkbox\" value=\"2\" checked><span>中</span></label>",
+    "expect": "profile"
+  },
+  {
+    "name": "公務員の画面から分野を1つ落とす",
+    "why": "宣言では出題対象なのに画面で選べない。出題構成が静かに変わる",
+    "file": "koumuin/index.html",
+    "find": "            <label class=\"category-item\"><input type=\"checkbox\" value=\"3\" checked><span>集合</span></label>\n",
+    "replace": "",
+    "expect": "profile"
+  },
+  {
+    "name": "公務員ページのプロファイル宣言を外す",
+    "why": "ACTIVE_PROFILE が無いと app.js は spi にフォールバックする。公務員ページなのにSPIの出題になり、見た目では気づけない",
+    "file": "koumuin/index.html",
+    "find": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>",
+    "replace": "  <script>/* var ACTIVE_PROFILE = \"koumuin\"; */</script>",
+    "expect": "profile"
   }
 ]
