@@ -244,8 +244,16 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   const vmPages = require("vm");
   const ctxPages = vmPages.createContext({ QUESTION_TEMPLATES: [], console, Math, Date, JSON, parseInt, parseFloat, isNaN, isFinite });
   vmPages.runInContext(fs.readFileSync(path.join(ROOT, "questions.js"), "utf8"), ctxPages, { filename: "questions.js" });
-  const pageMap = typeof ctxPages.profileCategoryPages === "function"
-    ? ctxPages.profileCategoryPages("spi") : {};
+  // ⚠️ "spi" だけを見ると、公務員専用の分野（整数の性質・操作と手順）が漏れて
+  //    「実在ページと食い違う」と誤検知する。**全プロファイルを合わせて見る。**
+  //    2026-09-06に同じ取り違えを3回した（profile.spec の検査2・検査4・ここ）。
+  const pageMap = {};
+  if (typeof ctxPages.profileCategoryPages === "function") {
+    for (const pid of Object.keys(ctxPages.QUESTION_PROFILES || {})) {
+      const m = ctxPages.profileCategoryPages(pid);
+      for (const k of Object.keys(m)) pageMap[k] = m[k];
+    }
+  }
   const pairs = Object.keys(pageMap).map(k => [k, pageMap[k]]);
 
   if (!pairs.length) {

@@ -40,8 +40,24 @@ if (!profiles || !profiles.spi) {
   process.exit(1);
 }
 const P = profiles.spi;
-const all = P.examCategories.concat(P.extraCategories || []);
 const allProfiles = Object.keys(profiles).map(k => profiles[k]);
+
+// ⚠️ **spi プロファイルの分野だけを見ると、公務員専用の分野が漏れる。**
+//    2026-09-06に同じ取り違えを4回した（この spec の検査1・2・4・5と html.spec）。
+//    分野を横断して見たいときは必ずこれを使う。spi 限定で見たい検査は
+//    profiles.spi から直接取ること（いまは無い）。
+const allCategories = [];
+{
+  const seen = new Set();
+  for (const prof of allProfiles) {
+    for (const c of prof.examCategories.concat(prof.extraCategories || [])) {
+      if (seen.has(c.id)) continue;
+      seen.add(c.id);
+      allCategories.push(c);
+    }
+  }
+}
+const all = allCategories;   // 既存の記述との互換。新しく書くなら allCategories を使う
 
 // --- 1. 宣言した分野が、テンプレートとして実在するか ---
 {
@@ -195,7 +211,15 @@ for (const prof of allProfiles.filter(x => x.page)) {
   const slugs = fs.readdirSync(dir, { withFileTypes: true })
     .filter(e => e.isDirectory())
     .map(e => e.name);
-  const declared = new Set(all.map(c => c.slug).filter(Boolean));
+  // ⚠️ `all` は spi プロファイルの分野だけ。公務員専用の分野が漏れる。
+  //    2026-09-06に同じ取り違えを4回した（検査2・検査4・html.spec・ここ）。
+  //    プロファイルが増えたら `all` ではなく全プロファイルを見る、が原則。
+  const declared = new Set();
+  for (const prof of allProfiles) {
+    for (const c of prof.examCategories.concat(prof.extraCategories || [])) {
+      if (c.slug) declared.add(c.slug);
+    }
+  }
   for (const s of slugs) {
     if (!declared.has(s)) {
       fail("プロファイルに載っていない解説ページがある", `categories/${s}/ を作ったのに導線が出ない`);
@@ -247,10 +271,14 @@ for (const prof of allProfiles.filter(x => x.page)) {
       `CATEGORY_PAGES = ${m[1].trim().slice(0, 40)} … 分野の一覧を二重に持つと静かにずれる`);
   } else {
     // 使っているだけでなく、中身が空でないことも見る。
+    // ⚠️ ここは spi 限定で比べる。profileCategoryPages("spi") が返すのは
+    //    spi プロファイルの分野だけなので、全プロファイルの合計と比べると
+    //    公務員専用の分野のぶんだけ必ず少なくなり、誤検知する（実際にした）。
+    const spiCats = P.examCategories.concat(P.extraCategories || []).filter(c => c.slug);
     const pages = ctx.profileCategoryPages("spi");
     const n = Object.keys(pages || {}).length;
-    if (n < all.filter(c => c.slug).length) {
-      fail("引き当てた一覧が宣言より少ない", `${n}件 / 宣言 ${all.filter(c => c.slug).length}件`);
+    if (n < spiCats.length) {
+      fail("引き当てた一覧が宣言より少ない", `${n}件 / spiの宣言 ${spiCats.length}件`);
     }
   }
   cov.covered("app.js の引き当て", 1, 1);

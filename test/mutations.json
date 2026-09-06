@@ -2161,18 +2161,18 @@
   },
   {
     "name": "解説ページの宿題を台帳から消す",
-    "why": "以前は検査が `if (!c.slug) continue;` で素通りしていたため、slug: null と書けば解説ページを作らずに分野を追加できた。コメントに『まだ作っていない』と書いても誰も催促しない",
-    "file": "test/category-pages-todo.json",
-    "find": "      \"id\": 14,\n      \"name\": \"整数の性質\",",
-    "replace": "      \"id\": 99,\n      \"name\": \"整数の性質\",",
+    "why": "宿題台帳（test/category-pages-todo.json）に載せずに slug を外すと、解説ページが無いまま出題される。以前は検査が `if (!c.slug) continue;` で素通りしていた",
+    "file": "src/questions/_profile.js",
+    "find": "      { id: 14, name: \"整数の性質\",     slug: \"seisu\" },",
+    "replace": "      { id: 14, name: \"整数の性質\",     slug: null },",
     "expect": "profile"
   },
   {
     "name": "解説ページを作らずに分野を足す",
-    "why": "新しい分野を出題だけして、解き方を確認する先が無い状態になる",
+    "why": "新しい分野を出題だけして、解き方を確認する先が無い状態になる。宿題台帳への登録も無ければ誰も催促しない",
     "file": "src/questions/_profile.js",
-    "find": "      { id: 15, name: \"操作と手順\",     slug: null }",
-    "replace": "      { id: 15, name: \"操作と手順\",     slug: null },\n      { id: 16, name: \"宿題未登録の分野\", slug: null }",
+    "find": "      { id: 15, name: \"操作と手順\",     slug: \"sousa\" }",
+    "replace": "      { id: 15, name: \"操作と手順\",     slug: \"sousa\" },\n      { id: 16, name: \"宿題未登録の分野\", slug: null }",
     "expect": "profile"
   }
 ]

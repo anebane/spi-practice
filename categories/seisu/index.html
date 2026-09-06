@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>整数の性質の解き方｜最大公約数・最小公倍数・余り・N進法【無料練習つき】</title>
+  <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+  <meta name="description" content="公務員試験の数的推理で出る整数の性質。「分ける」なら最大公約数、「そろう」なら最小公倍数という見分け方から、余りの条件が2つある問題、N進法、約数の個数までを例題つきで解説します。読んだあとすぐ練習できます。">
+  <link rel="canonical" href="https://tekisei-drill.com/categories/seisu/">
+  <link rel="stylesheet" href="../../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="テキドリ">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。
+       ⚠️ このスクリプトを入れただけでは広告は出ない。自動広告をONにすると
+          試験画面・結果画面にも出てしまうので、AdSense管理画面で必ずOFFにする。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+  <meta property="og:image" content="https://tekisei-drill.com/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-header">
+      <a href="/" class="legal-logo">適性検査無限ドリル</a>
+    </header>
+    <main class="legal-body article-body">
+      <h1>整数の性質の解き方</h1>
+      <p class="article-meta"><a href="/categories/">分野別の解き方</a> ＞ 整数の性質</p>
+
+      <p class="article-lead">整数の問題は<strong>解き方を知っていれば数十秒、知らなければ手が止まる</strong>という差が出やすい分野です。覚えることは少なく、「分けるのか、そろうのか」を見分けるところから始まります。</p>
+
+      <div class="article-toc">
+        <div class="article-toc-title">目次</div>
+        <ol>
+          <li><a href="#yakusu">「分ける」なら最大公約数、「そろう」なら最小公倍数</a></li>
+          <li><a href="#rei1">例題：最大公約数</a></li>
+          <li><a href="#rei2">例題：最小公倍数</a></li>
+          <li><a href="#amari">余りの条件が2つあるとき</a></li>
+          <li><a href="#shinho">N進法</a></li>
+          <li><a href="#kosu">約数の個数</a></li>
+          <li><a href="#mistake">つまずきやすい点</a></li>
+        </ol>
+      </div>
+
+      <h2 id="yakusu">1. 「分ける」なら最大公約数、「そろう」なら最小公倍数</h2>
+      <p>整数の問題は、まず<strong>どちらを聞かれているかを問題文の言葉で見分ける</strong>ところから始まります。ここを取り違えると、計算が合っていても答えが違います。</p>
+      <table class="compare-table">
+        <thead><tr><th>問題文の言葉</th><th>使うもの</th></tr></thead>
+        <tbody>
+          <tr><th>余りが出ないように分ける・配る・切る</th><td><strong>最大公約数</strong></td></tr>
+          <tr><th>次に同時になる・そろう・重なる</th><td><strong>最小公倍数</strong></td></tr>
+        </tbody>
+      </table>
+      <p>「最大何人に配れるか」は分けるので最大公約数、「次に同時に点灯するのは何秒後か」はそろうので最小公倍数です。</p>
+
+      <div class="callout">
+        <div class="callout-title">両方を出したいときは素因数分解が速い</div>
+        <p>2つの数を素因数分解すると、<strong>共通する素因数の積が最大公約数</strong>、<strong>すべての素因数を最大の指数で集めた積が最小公倍数</strong>になります。ユークリッドの互除法より、公務員試験で問われる規模なら素因数分解のほうが速いことが多いです。</p>
+      </div>
+
+      <h2 id="rei1">2. 例題：最大公約数</h2>
+      <p class="example-q">縦12cm、横63cmの長方形の紙を、余りが出ないように同じ大きさの正方形に切り分ける。正方形の1辺を最大何cmにできるか。</p>
+      <h3>解き方</h3>
+      <p>「余りが出ないように分ける」ので最大公約数です。</p>
+      <p>12 = 2² × 3、63 = 3² × 7。共通する素因数は 3 だけなので、最大公約数は <strong>3</strong>。1辺3cmの正方形にすれば、縦に4個・横に21個で余りが出ません。</p>
+
+      <h2 id="rei2">3. 例題：最小公倍数</h2>
+      <p class="example-q">赤いランプは30秒ごと、青いランプは27秒ごとに点灯する。同時に点灯した後、次に同時に点灯するのは何秒後か。</p>
+      <h3>解き方</h3>
+      <p>「次に同時に」なので最小公倍数です。</p>
+      <p>30 = 2 × 3 × 5、27 = 3³。最小公倍数は 2 × 3³ × 5 = <strong>270秒後</strong>。</p>
+      <div class="callout">
+        <div class="callout-title">検算に使える関係</div>
+        <p><strong>最大公約数 × 最小公倍数 = 2数の積</strong>です。この例なら 3 × 270 = 810 = 30 × 27。片方を出したらもう片方はこれで確かめられます。</p>
+      </div>
+
+      <h2 id="amari">4. 余りの条件が2つあるとき</h2>
+      <p class="example-q">7で割ると2余り、5で割ると3余る整数のうち、100以上699以下のものはいくつあるか。</p>
+      <h3>解き方</h3>
+      <p>条件を満たす数は<strong>2数の最小公倍数ごとに繰り返し現れます</strong>。最初の1つさえ見つかれば、あとは等差数列を数えるだけです。</p>
+      <p>7と5の最小公倍数は35。0から34まで順に調べると、23が条件を満たします（23÷7=3余り2、23÷5=4余り3）。以降は 23, 58, 93, 128, … と35ずつ増えます。</p>
+      <p>100以上699以下に入るのは128から688までで、<strong>17個</strong>。</p>
+      <div class="callout">
+        <div class="callout-title">⚠️ 範囲の指定を必ず確認する</div>
+        <p>範囲が無ければ答えは無限にあります。「〜以上〜以下」が付いていたら、その中に何個入るかを数える問題だと判断してください。</p>
+      </div>
+
+      <h2 id="shinho">5. N進法</h2>
+      <p class="example-q">5進法で表された数 3311 を10進法で表すといくつか。</p>
+      <h3>解き方</h3>
+      <p>N進法は<strong>各桁がNの累乗を表す</strong>という約束です。10進法で1234が 1×10³ + 2×10² + 3×10¹ + 4×10⁰ なのと同じ理屈です。</p>
+      <p>3×5³ + 3×5² + 1×5¹ + 1×5⁰ = 375 + 75 + 5 + 1 = <strong>456</strong>。</p>
+      <p>逆に10進法からN進法へ直すときは、Nで割った余りを下から並べます。</p>
+
+      <h2 id="kosu">6. 約数の個数</h2>
+      <p class="example-q">150の正の約数は全部でいくつあるか。</p>
+      <h3>解き方</h3>
+      <p>1つずつ数えると時間が足りません。<strong>素因数分解して「指数+1」を掛ける</strong>のが定石です。</p>
+      <p>150 = 2 × 3 × 5²。指数はそれぞれ 1, 1, 2 なので、(1+1)(1+1)(2+1) = <strong>12個</strong>。</p>
+      <p>なぜこの式かというと、約数は「2を0個か1個」「3を0個か1個」「5を0〜2個」から選んでできるからです。選び方の総数がそのまま約数の個数になります。</p>
+
+      <h2 id="mistake">7. つまずきやすい点</h2>
+      <h3>最大公約数と最小公倍数の取り違え</h3>
+      <p>いちばん多い間違いです。計算は合っているのに答えが違うときは、まずここを疑ってください。<strong>問題文の動詞</strong>（分ける／そろう）で判断します。</p>
+      <h3>N進法にその数字が出てくると思ってしまう</h3>
+      <p>5進法で使える数字は 0〜4 です。<strong>5進法に「5」は出てきません</strong>。選択肢に5以上の数字を含む表記があれば、それは誤答です。</p>
+      <h3>余りの問題で最小の1つを探さずに始める</h3>
+      <p>いきなり範囲の中を探すと時間がかかります。<strong>0から最小公倍数までの間で最初の1つを見つける</strong>のが最短です。
+      <section class="home-articles">
+        <h2 class="faq-heading">他の分野</h2>
+        <ul class="home-article-links">
+          <li><a href="/categories/wariai/">割合・比の解き方</a><span>比を1つの文字で置いて連立する</span></li>
+          <li><a href="/categories/kakuritsu/">場合の数・確率の解き方</a><span>順列と組み合わせの使い分け</span></li>
+          <li><a href="/koumuin/">公務員試験の練習</a><span>数的処理・判断推理を難易度高めで出題</span></li>
+          <li><a href="/categories/">分野別の解き方 一覧</a><span>推論・損益算・確率・濃度算ほか</span></li>
+        </ul>
+      </section>
+
+      <!-- 広告枠。中身は affiliate.js が描画する。
+           ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
+           test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-article"></div>
+    </main>
+    <footer class="legal-footer">
+      <nav class="legal-nav">
+        <a href="/">ホーム</a>
+        <a href="/categories/">分野別の解き方</a>
+        <a href="/articles/">解説記事</a>
+        <a href="/about.html">運営者情報</a>
+        <a href="/privacy.html">プライバシーポリシー</a>
+        <a href="/contact.html">お問い合わせ</a>
+      </nav>
+      <p class="legal-copy">&copy; 2026 適性検査無限ドリル</p>
+    </footer>
+  </div>
+  <script src="../../analytics.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/affiliate.js"></script>
+  <script src="/affiliate-article.js"></script>
+</body>
+</html>
