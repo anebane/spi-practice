@@ -1958,5 +1958,13 @@
     "find": "      track(\"affiliate_impression\", {\n        program: p.program,\n        creative: id,",
     "replace": "      track(\"affiliate_impression\", {\n        creative: id,",
     "expect": "affiliate"
+  },
+  {
+    "name": "affiliate_impression から creative を落とす",
+    "why": "program だけでは同じ広告主の素材（キミスカのSPI用と汎用）を区別できず、素材ごとの差が測れない",
+    "file": "affiliate.js",
+    "find": "        program: p.program,\n        creative: id,\n        score_band: opt.band || \"unknown\",\n        placement: opt.placement || \"unknown\",\n        audience: p.audience\n      });\n\n      // 計測用の1x1",
+    "replace": "        program: p.program,\n        score_band: opt.band || \"unknown\",\n        placement: opt.placement || \"unknown\",\n        audience: p.audience\n      });\n\n      // 計測用の1x1",
+    "expect": "affiliate"
   }
 ]
