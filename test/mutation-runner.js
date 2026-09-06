@@ -24,6 +24,14 @@
  * 義務はここで機械的に課す。どうしても変異を書けない失敗経路だけ、
  * 理由を添えて test/mutations-uncovered.json に登録する（台帳は縮む方向にのみ動かす）。
  *
+ * 【どこで実行するか】
+ * 変異と復元は、メインの作業ツリーではなく、起動時に作る一時的な git worktree
+ * （起動時点の作業ツリーのスナップショット）の中で行う。実行は約5分あり、
+ * その間のエディタ保存・並行エージェントの編集と実際に衝突した
+ * （2026-09-04 / 09-06 に計4回。復元が外部編集を上書きして消したこともある）。
+ * 詳細は下の「0. 隔離実行」。以下のロック・復元・点検は worktree の中で
+ * そのまま生きている（git が使えない環境での直接実行の保護も兼ねる）。
+ *
  * 【一番危ないところ】
  * find が0箇所しか一致しないと、変異が適用されないまま spec が緑になり、
  * 「壊しても落ちない」ではなく「壊せていない」のに合格扱いになる。
@@ -70,6 +78,7 @@ const SPECS = {
   deeplink: "test/deeplink.spec.js",
   generator: "test/generator.spec.js",
   html: "test/html.spec.js",
+  profile: "test/profile.spec.js",
   pwa: "test/pwa.spec.js",
   tools: "test/tools.spec.js",
   wiring: "test/wiring.spec.js"
@@ -212,6 +221,152 @@ if (opt["--check-mutations"]) {
   console.log(`   ❌ ${problems.length}件`);
   for (const p of problems) console.log(`   - ${p}`);
   process.exit(1);
+}
+
+// ============================================================
+// 0. 隔離実行（一時 git worktree の中で自分を再実行する）
+// ============================================================
+// ランナーは「書き換えて→検査して→戻す」を全変異ぶん繰り返し、約5分かかる。
+// これをメインの作業ツリーでやると、実行中のエディタ保存や並行エージェントの
+// 編集と衝突する（2026-09-04 / 09-06 に計4回。変異が残る・外部編集を復元で
+// 上書きして消す、が実際に起きた）。ロックや drift 検出は「起きた衝突に
+// 気づいて中断する」だけで、衝突そのものは防げない。触るツリーを分けて、
+// 原理的に衝突しないようにする:
+//   1. 起動時点の作業ツリーを、未コミットの変更・untracked も含めて
+//      スナップショットのコミットに写す（一時 index への git add -A。
+//      refs・本物の index・作業ツリーのどれにも触らない）
+//   2. それを一時 worktree に展開し、その中の自分を同じ引数で再実行する
+//   3. 変異・復元・再ビルドはすべて worktree 側で起きる
+// メインの作業ツリーは実行中も自由に編集してよい。検査対象は起動時点の中身。
+//
+// スナップショットが HEAD ではなく作業ツリーなのは、「書きかけの検査を
+// 検証したつもりが、コミット済みの旧版を検証していた」を防ぐため
+// （CLAUDE.md の手順は「変更→検証→コミット」の順）。
+// HEAD と違う中身を写したときは、そのファイル名を必ず表に出す。
+//
+// 集約（--coverage-check）は発火記録を読むだけでツリーに触らない。
+// --check-ledger / --check-mutations も読むだけで、上で終了済み。
+// git が使えない環境だけ、従来どおりその場で実行する（衝突の保護は無い）。
+// ロック・復元・drift 検出・開始前点検は worktree の中でそのまま生きている。
+const IN_WORKTREE = process.env.MUTATION_RUNNER_IN_WORKTREE === "1";
+if (!AGG && !IN_WORKTREE) {
+  const code = runInWorktree();
+  if (code !== null) process.exit(code);
+  console.log("   ℹ️ git が使えないため、隔離用の worktree を作れません。");
+  console.log("      従来どおりこの場で実行します。実行中は対象ファイルを編集しないでください。");
+}
+
+/** 戻り値: 終了コード（そのまま exit する）/ null = git が使えないので隔離なしで続行 */
+function runInWorktree() {
+  const os = require("os");
+  const git = (args, extraEnv) => cp.spawnSync("git", args, {
+    cwd: ROOT, encoding: "utf8",
+    env: extraEnv ? Object.assign({}, process.env, extraEnv) : process.env
+  });
+  if (git(["rev-parse", "--verify", "HEAD"]).status !== 0) return null;
+
+  const die = (msg) => {
+    console.log("破壊テスト: 起動しませんでした");
+    console.log(`   ❌ ${msg}`);
+    return 1;
+  };
+
+  // 前回の異常終了（SIGKILL等）が残した一時 worktree を掃除する。
+  // 下の finally は「この親プロセスが生きて終わる」場合しか走らない。
+  // 親ごと殺されると worktree の実体と登録が残るので、次の起動がここで拾う。
+  // 生きている別ランナーの worktree は消さない: worktree の中のロック
+  // （子ランナーの PID）が生きていれば並走中とみなして触らない。
+  // ロックがまだ無い一瞬（worktree 作成〜子の起動の間）を誤って消さないよう、
+  // ロック無しのものは 10 分以上前に作られた場合だけ消す。
+  {
+    const list = git(["worktree", "list", "--porcelain"]);
+    if (list.status === 0) {
+      for (const line of (list.stdout || "").split("\n")) {
+        if (line.indexOf("worktree ") !== 0) continue;
+        const p = line.slice("worktree ".length).trim();
+        if (!/mutation-runner-[^\/]+\/wt$/.test(p)) continue;
+        let pid = 0;
+        try { pid = parseInt(fs.readFileSync(path.join(p, "test", ".mutation-runner.lock"), "utf8").trim(), 10) || 0; } catch (e) {}
+        if (pid && processAlive(pid)) continue;   // 並走中のランナー。触らない
+        if (!pid) {
+          let bornMs = 0;
+          try { bornMs = fs.statSync(p).mtimeMs; } catch (e) {}
+          if (Date.now() - bornMs < 10 * 60 * 1000) continue;   // 起動直後かもしれない
+        }
+        console.log(`   ℹ️ 前回の異常終了が残した一時 worktree を掃除します: ${p}`);
+        git(["worktree", "remove", "--force", p]);
+        try { fs.rmSync(path.dirname(p), { recursive: true, force: true }); } catch (e) {}
+      }
+    }
+    git(["worktree", "prune"]);
+  }
+
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "mutation-runner-"));
+  const wt = path.join(base, "wt");
+  const idx = path.join(base, "index");
+  try {
+    // --- 1. スナップショットのコミットを作る ---
+    const idxEnv = { GIT_INDEX_FILE: idx };
+    let r = git(["read-tree", "HEAD"], idxEnv);
+    if (r.status !== 0) return die(`スナップショットの準備（read-tree）に失敗: ${(r.stderr || "").trim()}`);
+    r = git(["add", "-A"], idxEnv);
+    if (r.status !== 0) return die(`スナップショットの作成（add -A）に失敗: ${(r.stderr || "").trim()}`);
+    r = git(["write-tree"], idxEnv);
+    if (r.status !== 0) return die(`スナップショットの作成（write-tree）に失敗: ${(r.stderr || "").trim()}`);
+    const tree = r.stdout.trim();
+    r = git(["-c", "user.name=mutation-runner", "-c", "user.email=mutation-runner@localhost",
+             "commit-tree", tree, "-p", "HEAD", "-m",
+             "mutation-runner の隔離実行用スナップショット（どの ref からも参照されない）"]);
+    if (r.status !== 0) return die(`スナップショットの作成（commit-tree）に失敗: ${(r.stderr || "").trim()}`);
+    const commit = r.stdout.trim();
+
+    // --- 2. 一時 worktree に展開する ---
+    r = git(["worktree", "add", "--detach", wt, commit]);
+    if (r.status !== 0) return die(`一時 worktree を作れない: ${(r.stderr || "").trim()}`);
+
+    console.log(`隔離実行: 一時 worktree の中で検査します（${wt}）`);
+    console.log("   ℹ️ 実行中もこの作業ツリーは自由に編集してかまいません（検査対象は起動時点の中身）");
+    const diff = git(["diff", "--name-only", "HEAD", commit]);
+    const dirty = (diff.stdout || "").trim();
+    if (dirty) {
+      console.log("   ℹ️ HEAD ではなく、未コミットの変更ごと写しています:");
+      for (const f of dirty.split("\n")) console.log(`      - ${f}`);
+    }
+
+    // --- 3. worktree の中の自分を、同じ引数で再実行する ---
+    // --coverage-out だけは呼び出し元の cwd 基準の絶対パスに直す
+    // （worktree 側の cwd で解決されると、成果物が worktree ごと消えるため）。
+    const fwd = [];
+    for (let i = 0; i < RAW.length; i++) {
+      fwd.push(RAW[i]);
+      if (WITH_VALUE.indexOf(RAW[i]) !== -1) {
+        const v = RAW[++i];
+        if (v === undefined) continue;   // 値なしで終わる指定はそのまま渡す（子側が既存の文言で叱る）
+        fwd.push(fwd[fwd.length - 1] === "--coverage-out" ? path.resolve(v) : v);
+      }
+    }
+    const child = cp.spawnSync("node", [path.join(wt, "test", "mutation-runner.js")].concat(fwd), {
+      cwd: wt, stdio: "inherit",
+      env: Object.assign({}, process.env, { MUTATION_RUNNER_IN_WORKTREE: "1" })
+    });
+
+    // --- 4. 発火記録を写す（prune-uncovered.js の入力として意味を持ち続ける） ---
+    try {
+      const wtLog = path.join(wt, "test", ".mutation-coverage.log");
+      if (fs.existsSync(wtLog)) fs.copyFileSync(wtLog, COVLOG);
+    } catch (e) { console.error(`   ⚠️ 発火記録を写せませんでした: ${e.message}`); }
+
+    if (child.status === null) {
+      console.error(`   ⚠️ 隔離実行がシグナル（${child.signal || "不明"}）で終了しました`);
+      return 1;
+    }
+    return child.status;
+  } finally {
+    // 後片付け。すべて tmp と .git/worktrees 側で、作業ツリーには触らない。
+    // ここで死んでも tmp のゴミと登録が残るだけで、次回起動時の prune が拾う。
+    try { git(["worktree", "remove", "--force", wt]); } catch (e) {}
+    try { fs.rmSync(base, { recursive: true, force: true }); } catch (e) {}
+  }
 }
 
 /** src/questions/ を触ったら questions.js を作り直す。 */
