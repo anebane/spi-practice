@@ -28,28 +28,11 @@
 
   // 解説ページが用意されている分野。ページが無い分野へリンクすると
   // 404になるので、ここに載っている分野だけ導線を出す。
-  var CATEGORY_PAGES = {
-    "推論": "suiron",
-    "損益算": "soneki",
-    "場合の数・確率": "kakuritsu",
-    // 2026-09-04 追加。GA4の実データで正答率が最も低かった分野（39.7%・677問）。
-    // 次点の速度算55.8%より16ポイント低く、解き方の需要が最も大きい。
-    // 既存3分野は出題頻度と推定需要で選んでおり、正答率では選んでいなかった。
-    "濃度算": "noudo",
-    // 2026-09-04 追加。正答率55.8%（846問で標本は全分野で最多）。
-    "速度算": "sokudo",
-    // 2026-09-04 追加。AdSense審査が「有用性の低いコンテンツ」で不承認になった。
-    // 「13分野に対応」と謳っているのに解説ページは5分野しか無く、
-    // クローラから見て中身が薄かった。残り8分野を順に足していく。
-    "集合": "shugo",
-    "仕事算": "shigoto",
-    "割合・比": "wariai",
-    "四則逆算": "shisoku",
-    "図表の読み取り": "zuhyo",
-    "順列・組み合わせ": "junretsu",
-    "語句の関係": "goku",
-    "規則性・方角": "kisokusei"
-  };
+  //
+  // ⚠️ 一覧の実体は src/questions/_profile.js（出題プロファイル）が持つ。
+  //    以前はここに13件を直書きしていたが、index.html のチェックボックスと
+  //    二重に持つ形で、片方だけ直すと静かにずれた。出所を1つにした。
+  var CATEGORY_PAGES = profileCategoryPages("spi");
 
   // --- 誤り報告 ---
   var REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform?usp=pp_url";

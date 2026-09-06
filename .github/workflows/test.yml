@@ -75,6 +75,12 @@ jobs:
       - name: 台帳のルール
         run: node test/mutation-runner.js --check-ledger
 
+      # 出題プロファイル（src/questions/_profile.js）が唯一の出所になっているか。
+      # 分野の一覧は以前 index.html と app.js に二重に書かれていて、
+      # 片方だけ直しても何も落ちず静かにずれた。宣言と実体を突き合わせる。
+      - name: 出題プロファイルと実体の整合
+        run: node test/profile.spec.js
+
       - name: 検査の登録漏れ（CIと破壊テストの両方に載っているか）
         run: node test/wiring.spec.js
 

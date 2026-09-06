@@ -236,11 +236,20 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   // app.js の CATEGORY_PAGES が「分野名 → ページ」の唯一の出所。
   // 一覧の宣伝文はこの表に載っている分野しか名乗ってはいけない。
   const appSrc = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
-  const block = appSrc.match(/var CATEGORY_PAGES = \{([\s\S]*?)\};/);
-  const pairs = block ? [...block[1].matchAll(/"([^"]+)"\s*:\s*"([^"]+)"/g)].map(m => [m[1], m[2]]) : [];
+  // 2026-09-06: 分野名→ページの表は app.js の直書きから
+  // 出題プロファイル（src/questions/_profile.js）由来に変わった。
+  // ここはテキストで読むのをやめ、実際に引き当てた結果を見る。
+  // ⚠️ app.js が本当にプロファイルを使っているかは test/profile.spec.js が見る。
+  //    ここで引き当てだけ見ていると、app.js が自前の表に戻っても気づけない。
+  const vmPages = require("vm");
+  const ctxPages = vmPages.createContext({ QUESTION_TEMPLATES: [], console, Math, Date, JSON, parseInt, parseFloat, isNaN, isFinite });
+  vmPages.runInContext(fs.readFileSync(path.join(ROOT, "questions.js"), "utf8"), ctxPages, { filename: "questions.js" });
+  const pageMap = typeof ctxPages.profileCategoryPages === "function"
+    ? ctxPages.profileCategoryPages("spi") : {};
+  const pairs = Object.keys(pageMap).map(k => [k, pageMap[k]]);
 
   if (!pairs.length) {
-    fail("app.js", "CATEGORY_PAGES を読めない", "解説ページの一覧を突き合わせられないので、この検査は意味を持たない");
+    fail("_profile.js", "分野→ページの一覧を引けない", "profileCategoryPages(\"spi\") が空。突き合わせられないので、この検査は意味を持たない");
   } else {
     // 表と実物がずれていたら、どちらが正しいか決められない
     const slugs = pairs.map(([, v]) => v).sort();

@@ -609,11 +609,11 @@
   },
   {
     "name": "CATEGORY_PAGES と実在ページを食い違わせる",
-    "why": "分野名からページを引く表が実物とずれると、404へ誘導するか、あるページへ導線が出なくなる",
-    "file": "app.js",
-    "find": "    \"場合の数・確率\": \"kakuritsu\"",
-    "replace": "    \"速度算\": \"sokudo\"",
-    "expect": "html"
+    "why": "分野名からページを引く表が実物とずれると、404へ誘導するか、あるページへ導線が出なくなる（2026-09-06にプロファイル由来へ移したので、ずれはプロファイル側で起きる）",
+    "file": "src/questions/_profile.js",
+    "find": "      { id: 2,  name: \"場合の数・確率\",   slug: \"kakuritsu\" },",
+    "replace": "      { id: 2,  name: \"場合の数・確率\",   slug: \"sokudo\" },",
+    "expect": "profile"
   },
   {
     "name": "分野数の例外指定を実物から消す",
@@ -705,11 +705,11 @@
   },
   {
     "name": "CATEGORY_PAGES の名前を変えて読めなくする",
-    "why": "解説ページの一覧を突き合わせられなくなる。読めないまま緑になると検査が空回りする",
+    "why": "解説ページの一覧を引けなくなる。読めないまま緑になると検査が空回りする（引き当てはプロファイル由来になった）",
     "file": "app.js",
-    "find": "  var CATEGORY_PAGES = {",
-    "replace": "  var CATEGORY_PAGES_RENAMED = {",
-    "expect": "html"
+    "find": "  var CATEGORY_PAGES = profileCategoryPages(\"spi\");",
+    "replace": "  var CATEGORY_PAGES = {};",
+    "expect": "profile"
   },
   {
     "name": "CI設定の場所を見失わせる",
@@ -1974,5 +1974,29 @@
     "find": "      d.total = v.water + v.salt;\n      return d;\n    },",
     "replace": "      d.total = v.water + v.salt;\n      return d;\n    },\n    derive: function(v) { return {}; },",
     "expect": "generator"
+  },
+  {
+    "name": "プロファイルから分野を1つ落とす",
+    "why": "分野の一覧が index.html と二重に書かれていた頃は、片方だけ直しても何も落ちず静かにずれた",
+    "file": "src/questions/_profile.js",
+    "find": "      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n",
+    "replace": "",
+    "expect": "profile"
+  },
+  {
+    "name": "プロファイルの分野名をテンプレートとずらす",
+    "why": "分野名がずれると CATEGORY_PAGES の引き当てが静かに外れ、解説ページへの導線が消える",
+    "file": "src/questions/_profile.js",
+    "find": "      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },",
+    "replace": "      { id: 7,  name: \"濃度算 \",         slug: \"noudo\" },",
+    "expect": "profile"
+  },
+  {
+    "name": "存在しない解説ページのslugを宣言する",
+    "why": "404へのリンクを全ページに出すことになる",
+    "file": "src/questions/_profile.js",
+    "find": "slug: \"kisokusei\" }",
+    "replace": "slug: \"kisokusei_typo\" }",
+    "expect": "profile"
   }
 ]
