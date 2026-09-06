@@ -328,6 +328,30 @@ function checkNoteAfterEveryLink(host, where, programs) {
   }
 }
 
+// 案件別のCTRを出すには、表示側にも program / creative が要る。
+// ⚠️ 枠単位の affiliate_view しか無かった30日間、program は全件 (not set) で、
+//    どの素材が効いているかを一度も測れていなかった（2026-09-06に発覚）。
+{
+  const h = loadAffiliate();
+  const ids = Object.keys(h.Affiliate._programs);
+  if (!ids.length) {
+    cov.skipped("案件別の表示計測", 0, "素材が無い");
+  } else {
+    const host = h.makeHost();
+    h.Affiliate.render(host, { programs: ids.slice(0, 2), band: "high", placement: "test" });
+    const imp = h.events.filter(e => e.name === "affiliate_impression");
+    const want = Math.min(2, ids.length);
+    if (imp.length !== want) {
+      fail("affiliate_impression が案件の数と合わない", `${imp.length}件 / 素材${want}件`);
+    }
+    for (const e of imp) {
+      if (!e.params.program) fail("affiliate_impression に program が無い", JSON.stringify(e.params));
+      if (!e.params.creative) fail("affiliate_impression に creative が無い", JSON.stringify(e.params));
+    }
+    cov.covered("案件別の表示計測", imp.length, 1);
+  }
+}
+
 // ============================================================
 // 5. 素材が空なら枠ごと出さない
 // ============================================================

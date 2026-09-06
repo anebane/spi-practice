@@ -232,6 +232,20 @@ var Affiliate = (function () {
       });
       item.appendChild(a);
 
+      // 案件ごとの表示を1件ずつ記録する。
+      // ⚠️ affiliate_view は「枠が描画された回数」で、1枠に複数案件が並ぶと
+      //    どの案件が何回出たかが分からない。クリック側は program/creative を
+      //    送っているのに表示側が送っていないため、案件別のCTRが出せなかった
+      //    （2026-09-06に発覚。30日ぶんの program/creative が全件 (not set)）。
+      //    枠単位の affiliate_view は残す。消すと過去と比較できなくなる。
+      track("affiliate_impression", {
+        program: p.program,
+        creative: id,
+        score_band: opt.band || "unknown",
+        placement: opt.placement || "unknown",
+        audience: p.audience
+      });
+
       // 計測用の1x1。落とすとASP側の計測が壊れるので必ずセットで入れる。
       var img = document.createElement("img");
       img.src = p.pixel;

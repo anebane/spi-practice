@@ -1942,5 +1942,21 @@
     "find": "<a href=\"shugo/\">集合の解き方</a>",
     "replace": "<a href=\"suiron/\">集合の解き方</a>",
     "expect": "html"
+  },
+  {
+    "name": "affiliate_impression の送信をやめる",
+    "why": "表示側に案件IDが無いと案件別CTRが出せない。実際に30日ぶん program が全件 (not set) だった",
+    "file": "affiliate.js",
+    "find": "      track(\"affiliate_impression\", {\n        program: p.program,",
+    "replace": "      if (false) track(\"affiliate_impression\", {\n        program: p.program,",
+    "expect": "affiliate"
+  },
+  {
+    "name": "affiliate_impression から program を落とす",
+    "why": "creative だけ送っても、どの案件かを集計軸にできない",
+    "file": "affiliate.js",
+    "find": "      track(\"affiliate_impression\", {\n        program: p.program,\n        creative: id,",
+    "replace": "      track(\"affiliate_impression\", {\n        creative: id,",
+    "expect": "affiliate"
   }
 ]
