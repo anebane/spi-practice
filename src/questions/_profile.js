@@ -104,7 +104,8 @@ var QUESTION_PROFILES = {
       // 公務員だけの分野。SPIには出ないので spi プロファイルには入れない。
       // ⚠️ slug が null なのは解説ページをまだ作っていないから。
       //    test/profile.spec.js は slug が無い分野の導線を出さない。
-      { id: 14, name: "整数の性質",     slug: null }
+      { id: 14, name: "整数の性質",     slug: null },
+      { id: 15, name: "操作と手順",     slug: null }
     ],
     extraCategories: [],
 

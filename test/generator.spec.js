@@ -952,6 +952,118 @@ if (failures.length) process.exitCode = 1;
   }
 }
 
+// --- 操作と手順: 問題文から独立に解き直す ---
+//
+// 濃度算・仕事算と同じ方針・同じ作業順序（answerFormula は読まずに、
+// 文面と定石だけで書き、素の緑を確認する）。
+// 年齢算は方程式を解き直すのではなく、**候補を総当たりで問題文の条件に代入**する。
+// 生成側が式で解くので、代入なら式の変形ミスと相関しない。あわせて
+// 「条件を満たす答えがちょうど1つか」も数える（判断推理は解が複数ある問題を
+// 作りがち。線形の年齢算では複数解は出ないはずで、出たら生成の壊れ）。
+// 油分け算は生成側が幅優先探索なので、こちらは反復深化DFSで解き直す。
+// 探索の定石そのものを共有する限界は、濃度算の注記と同じ（守るのは実装の壊れまで）。
+{
+  const N = 100;
+
+  // 油分け算: 反復深化DFS。深さ d 以内で目標量が作れるかを、浅い d から順に試す。
+  // 最短路は同じ状態を2度通らないので、経路上の再訪だけ禁じれば最少回数が出る。
+  const aburaIDDFS = (a, b, c, t) => {
+    const caps = [a, b, c];
+    const dfs = (st, depth, onPath) => {
+      if (st[0] === t || st[1] === t || st[2] === t) return true;
+      if (depth === 0) return false;
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        if (i === j) continue;
+        const amt = Math.min(st[i], caps[j] - st[j]);
+        if (amt <= 0) continue;
+        const ns = st.slice(); ns[i] -= amt; ns[j] += amt;
+        const key = ns.join(",");
+        if (onPath.has(key)) continue;
+        onPath.add(key);
+        if (dfs(ns, depth - 1, onPath)) { onPath.delete(key); return true; }
+        onPath.delete(key);
+      }
+      return false;
+    };
+    for (let d = 0; d <= 12; d++) {
+      if (dfs([a, 0, 0], d, new Set([[a, 0, 0].join(",")]))) return d;
+    }
+    return -1;
+  };
+
+  // solve は「条件を満たす答えの候補すべて」を配列で返す。1つでなければ異常。
+  const FORMS = [
+    { id: "sousa_nenrei_01",
+      re: /^現在、父は(\d+)歳、子どもは(\d+)歳である。父の年齢が子どもの年齢のちょうど(\d+)倍になるのは何年後か。$/,
+      solve: (m) => { const f = +m[1], c = +m[2], k = +m[3], out = [];
+        for (let x = 1; x <= 300; x++) if (f + x === k * (c + x)) out.push(x);
+        return out; } },
+    { id: "sousa_nenrei_02",
+      re: /^現在、母は(\d+)歳、子どもは(\d+)歳である。母の年齢が子どもの年齢のちょうど(\d+)倍だったのは何年前か。$/,
+      solve: (m) => { const f = +m[1], c = +m[2], k = +m[3], out = [];
+        for (let x = 1; x < c; x++) if (f - x === k * (c - x)) out.push(x);
+        return out; } },
+    { id: "sousa_nenrei_03",
+      re: /^現在、父と子どもの年齢の和は(\d+)歳である。(\d+)年後には、父の年齢が子どもの年齢のちょうど(\d+)倍になるという。現在の子どもの年齢は何歳か。$/,
+      solve: (m) => { const s = +m[1], y = +m[2], k = +m[3], out = [];
+        for (let c = 1; c < s; c++) if ((s - c) + y === k * (c + y)) out.push(c);
+        return out; } },
+    { id: "sousa_tokei_01",
+      re: /^時計の針が(\d+)時(\d+)分を指している。長針と短針がつくる角のうち、小さいほうの角の大きさは何度か。$/,
+      solve: (m) => { const h = +m[1], mm = +m[2];
+        const d = Math.abs(5.5 * mm - 30 * h);   // 差は1分あたり 6 - 0.5 = 5.5度
+        return [Math.min(d, 360 - d)]; } },
+    { id: "sousa_abura_01",
+      re: /^容量(\d+)Lの容器Aにちょうど(\d+)Lの油が入っており、ほかに空の容器B（容量(\d+)L）と容器C（容量(\d+)L）がある。[\s\S]*ちょうど(\d+)Lの油を量り取るには、最少で何回の操作が必要か。$/,
+      solve: (m) => { if (m[1] !== m[2]) return [];
+        const r = aburaIDDFS(+m[1], +m[3], +m[4], +m[5]);
+        return r < 0 ? [] : [r]; } },
+    { id: "sousa_tenbin_01",
+      re: /^(\d+)枚の(?:金貨|メダル|硬貨|おもり)の中に、見た目は同じで本物より少しだけ軽い偽物が1枚だけまざっている。[\s\S]*最少で何回天秤を使えばよいか。$/,
+      solve: (m) => { const g = (n) => n <= 1 ? 0 : 1 + g(Math.ceil(n / 3));
+        return [g(+m[1])]; } }
+  ];
+
+  const fams = TEMPLATES.filter(t => t.category === "操作と手順");
+  let checked = 0, mismatch = 0, unparsed = 0, notUnique = 0;
+  const bad = [];
+  for (const t of fams) {
+    const form = FORMS.find(f => f.id === t.id);
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      const m = form ? String(q.text).match(form.re) : null;
+      if (!m) {
+        unparsed++;
+        if (bad.length < 3) bad.push(`${t.id}: 文面を読めない「${String(q.text).slice(0, 50)}」`);
+        continue;
+      }
+      const sols = form.solve(m);
+      checked++;
+      if (sols.length !== 1) {
+        notUnique++;
+        if (bad.length < 5) bad.push(`${t.id}: 条件を満たす答えが${sols.length}個（${sols.slice(0, 4).join(",")}）「${String(q.text).slice(0, 50)}」`);
+        continue;
+      }
+      if (Math.abs(sols[0] - q.correctAnswer) > 1e-9) {
+        mismatch++;
+        if (bad.length < 5) bad.push(`${t.id}: 文面から=${sols[0]} / システム=${q.correctAnswer} 「${String(q.text).slice(0, 50)}」`);
+      }
+    }
+  }
+
+  cov.covered("問題文からの独立再計算（操作と手順）", checked, 400);
+  console.log(`\n操作と手順の独立再計算: ${checked.toLocaleString()}問を文面から解き直して照合`);
+  if (checked && mismatch === 0 && unparsed === 0 && notUnique === 0) {
+    console.log("   ✅ 文面から解いた答えがすべて一意で、システムの答えとも一致");
+  } else {
+    console.log(`   ❌ 不一致 ${mismatch} / 解が1つでない ${notUnique} / 解き直せない ${unparsed}`);
+    if (mismatch) fail("操作と手順", "独立再計算と答えが不一致", bad.join(" / "));
+    if (notUnique) fail("操作と手順", "条件を満たす答えが1つに定まらない", bad.join(" / "));
+    if (unparsed) fail("操作と手順", "問題文から解き直せない", `文面の書式が変わったなら、この検査の型も更新すること: ${bad.join(" / ")}`);
+  }
+}
+
 // --- 生成された日本語が壊れていないか ---
 //
 // 既存の不変条件（未展開変数・答えの存在・選択肢の重複）は、文法や論理が

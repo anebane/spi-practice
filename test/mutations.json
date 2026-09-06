@@ -2030,5 +2030,29 @@
     "find": "      catTemplates = shuffleArray(catTemplates.slice());",
     "replace": "      // catTemplates = shuffleArray(catTemplates.slice());",
     "expect": "generator"
+  },
+  {
+    "name": "操作と手順の答えをオフバイワンにする",
+    "why": "ニセ金貨の計量回数を1回ずらしても、解説の式（3の累乗の掛け算）は内部的に整合したままなので、解説の検算では捕まらない。問題文からの独立再計算だけが「文面から解いた答えと違う」と言える",
+    "file": "src/questions/15-sousa.js",
+    "find": "      var k = 0, p = 1;\n      while (p < v.n) { p *= 3; k++; }\n      return k;",
+    "replace": "      var k = 0, p = 1;\n      while (p < v.n) { p *= 3; k++; }\n      return k + 1;",
+    "expect": "generator"
+  },
+  {
+    "name": "操作と手順の文言を変えて独立再計算から見えなくする",
+    "why": "独立再計算は問題文の書式に固定でマッチする。文面が変わると照合できなくなるが、それを黙って飛ばすと検査対象が0件のまま緑になる。「解き直せない」を失敗として表に出す経路の確認",
+    "file": "src/questions/15-sousa.js",
+    "find": "小さいほうの角の大きさは何度か。",
+    "replace": "小さい方の角の大きさは何度か。",
+    "expect": "generator"
+  },
+  {
+    "name": "年齢算の父の年齢を答えから逆算せずに作る",
+    "why": "年齢を逆算で作らないと「何年後」の答えが整数にならない問題が出る。解説の式は答えを使って書くので内部的には整合したまま。総当たりの代入で「条件を満たす整数の答えが1つも無い」ことを検出する経路の確認",
+    "file": "src/questions/15-sousa.js",
+    "find": "      // 答え x を先に決めて父の年齢を逆算する。割り切れない組は出ない。\n      v.f = v.k * (v.c + v.x) - v.x;",
+    "replace": "      // 答え x を先に決めて父の年齢を逆算する。割り切れない組は出ない。\n      v.f = v.k * (v.c + v.x) - v.x + 1;",
+    "expect": "generator"
   }
 ]
