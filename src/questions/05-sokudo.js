@@ -216,12 +216,27 @@ var TRAIN_SCENES = [
     categoryId: 5,
     difficulty: 2,
     templateText: "家から駅まで{{distance}}mある。行きは分速{{speedGo}}mで歩き、帰りは分速{{speedBack}}mで歩いた。往復の平均の速さは分速何mか。",
+    // ⚠️ 往復の平均速度は調和平均 2ab/(a+b) で、**距離に依存しない**。
+    //    以前は distance を 500〜3000 で振っていたが答えには一切影響せず、
+    //    速度の組が「整数になる」条件を満たすのが2通りしかなかったため、
+    //    **答えが48と75の2種類しか出なかった**（実測で最頻値51.5%＝2回解けば当たる）。
+    //    距離が変わるので問題文は毎回違って見え、気づけない形だった（2026-09-06に発覚）。
+    //    速度の組を「答えが整数になり、徒歩として現実的（分速45〜120m）で、
+    //    速い側が遅い側の2倍を超えない」もので列挙し、そこから選ぶ形にした。
     variables: {
       distance: { type: "int", min: 500, max: 3000, step: 100 },
-      speedGo: { type: "choice", options: [60, 70, 80, 100] },
-      speedBack: { type: "choice", options: [40, 50, 60, 80] }
+      pair: { type: "int", min: 0, max: 10, step: 1 }
     },
     answerType: "number",
+    resolve: function(v) {
+      var PAIRS = [
+        [60, 40], [75, 50], [90, 45], [90, 60], [100, 60],
+        [105, 45], [105, 70], [110, 90], [120, 60], [120, 80], [120, 105]
+      ];
+      var p = PAIRS[v.pair % PAIRS.length];
+      v.speedGo = p[0];
+      v.speedBack = p[1];
+    },
     answerFormula: function(v) {
       var totalDist = v.distance * 2;
       var totalTime = v.distance / v.speedGo + v.distance / v.speedBack;
@@ -231,6 +246,8 @@ var TRAIN_SCENES = [
     explanationTemplate: "【考え方】\n往復の平均速度は「総距離÷総時間」で求めます。\n速度の単純平均（(行き+帰り)÷2）ではないので注意！\n\n【解法】\n① 往復の総距離:\n  {{distance}} × 2 = {{totalDist}}m\n\n② 各区間の時間:\n  行き: {{distance}} / {{speedGo}} = {{timeGo}}分\n  帰り: {{distance}} / {{speedBack}} = {{timeBack}}分\n  合計: {{timeGo}} + {{timeBack}} = {{totalTime}}分\n\n③ 平均の速さ = 総距離 / 総時間:\n  {{totalDist}} ÷ {{totalTimeParen}} = {{answer}}m/分\n\n【ポイント】\n・平均速度 = 総距離÷総時間（速度の平均ではない！）\n・例: 行き60m/分、帰り40m/分 → 平均は50ではなく48m/分\n・公式: 2×v1×v2/(v1+v2) で一発計算も可能",
     timeLimitSec: 120,
     validate: function(v) {
+      // PAIRS は整数になる組だけを並べてあるが、ここでも実際に確かめる。
+      // 表を書き換えたときに、検算せずに通ってしまうのを防ぐ。
       var totalDist = v.distance * 2;
       var totalTime = v.distance / v.speedGo + v.distance / v.speedBack;
       var result = totalDist / totalTime;

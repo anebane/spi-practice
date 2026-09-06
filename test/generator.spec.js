@@ -2546,6 +2546,59 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 答えの種類が少なすぎないか（勘で当たる問題になっていないか）---
+//
+// ⚠️ 既存の多様性検査は「問題文の種類」を数えていて、「答えの種類」を見ていない。
+//    2026-09-06に sokudo_round_01 で **答えが2種類（48と75）しか出ない**のを実測で発見した。
+//    往復の平均速度は調和平均 2ab/(a+b) で距離に依存しないのに、距離を振っていたため
+//    問題文は毎回変わって見え、実際は2回解けば当たる状態だった。**例外は出ない。**
+//
+// ⚠️ 選択式（answerType: "choice"）は除く。3択で3種類なのは当たり前で、
+//    ここを混ぜると意味のない失敗が出る（実際に suiron_match_01 で誤検知した）。
+{
+  // ⚠️ 上限の決め方。最初 40% にしたら chart_line_01 が試行のたびに
+  //    39〜43% を行き来して、実装を変えていないのに落ちたり通ったりした。
+  //    **閾値のすぐ上で揺れる検査は、実装ではなく検査の欠陥**なので線を引き直した。
+  //    50% は「2回解けば当たる」水準で、ここを割るのは出題として成立していない。
+  //    30〜50% のものは落とさずに知らせる（型の性質上どうしても狭いものがある）。
+  const N = 600;             // 300だと最頻値が±3ポイント揺れたので増やした
+  const LIMIT = 50;
+  const rows = [];
+  for (const t of TEMPLATES) {
+    if (t.answerType === "choice") continue;
+    const counts = {};
+    let made = 0;
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      made++;
+      const a = q.correctAnswer;
+      const key = (a !== null && typeof a === "object") ? JSON.stringify(a) : String(a);
+      counts[key] = (counts[key] || 0) + 1;
+    }
+    if (made < 30) continue;   // 生成が通らないテンプレはここでは判定しない
+    const top = Math.max(...Object.values(counts));
+    const pct = top / made * 100;
+    rows.push({ id: t.id, kinds: Object.keys(counts).length, pct });
+  }
+  rows.sort((a, b) => b.pct - a.pct);
+  for (const r of rows) {
+    if (r.pct > LIMIT) {
+      fail("答えの種類が少なすぎる",
+        `${r.id}: 答えが${r.kinds}種類しかなく、最頻値を答え続けると${r.pct.toFixed(1)}%当たる（上限${LIMIT}%）`);
+    }
+  }
+  // 上限は超えていないが偏っているものは、落とさずに知らせる。
+  // ⚠️ 落とさないのは、型の性質上どうしても答えの幅が狭いものがあるため
+  //    （天秤の最少計量回数は 2〜4 しか取りえない）。黙っていると気づけないので出す。
+  const warn = rows.filter(r => r.pct > 30 && r.pct <= LIMIT);
+  if (warn.length) {
+    console.log(`   ℹ️ 答えの偏りが大きいテンプレ ${warn.length}件（30〜${LIMIT}%）: ` +
+      warn.slice(0, 5).map(r => `${r.id} ${r.pct.toFixed(0)}%`).join(" / "));
+  }
+  cov.covered("答えの偏りを調べたテンプレ", rows.length, 70);
+}
+
 // --- 試験セットに、全テンプレートが出る機会があるか ---
 // ⚠️ 2026-09-06に発覚: 分野内のテンプレートを catTemplates[i % length] で
 //    ファイル順の先頭から固定で採っていた。20問の試験は1分野あたり1〜2問なので、

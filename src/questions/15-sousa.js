@@ -241,11 +241,22 @@
     categoryId: 15,
     difficulty: 3,
     templateText: "{{n}}枚の{{item}}の中に、見た目は同じで本物より少しだけ軽い偽物が1枚だけまざっている。上皿天秤を1回使うと、左右の皿にのせたものの重さを比べられる。偽物を確実に見つけ出すには、最少で何回天秤を使えばよいか。",
+    // ⚠️ 答えは ⌈log₃n⌉ なので、枚数を一様に振ると帯の幅が3倍ずつ増えて
+    //    必ず偏る（5〜45枚だと答え3種で最頻43.9%、範囲を広げても悪化した）。
+    //    **先に答えの帯を選び、その中から枚数を決める**形にして散らす。
+    //    2026-09-06に「答えの偏り」の検査（上限40%）が捕まえたので直した。
     variables: {
-      n: { type: "int", min: 5, max: 45, step: 1 },
+      band: { type: "int", min: 2, max: 6, step: 1 },
+      offset: { type: "int", min: 0, max: 999, step: 1 },
       item: { type: "choice", options: ["金貨", "メダル", "硬貨", "おもり"] }
     },
     answerType: "number",
+    resolve: function (v) {
+      // 答えが band 回になる枚数の範囲は 3^(band-1)+1 〜 3^band
+      var lo = Math.pow(3, v.band - 1) + 1;
+      var hi = Math.pow(3, v.band);
+      v.n = lo + (v.offset % (hi - lo + 1));
+    },
     answerFormula: function (v) {
       var k = 0, p = 1;
       while (p < v.n) { p *= 3; k++; }
