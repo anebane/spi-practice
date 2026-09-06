@@ -2174,5 +2174,89 @@
     "find": "      { id: 15, name: \"操作と手順\",     slug: \"sousa\" }",
     "replace": "      { id: 15, name: \"操作と手順\",     slug: \"sousa\" },\n      { id: 16, name: \"宿題未登録の分野\", slug: null }",
     "expect": "profile"
+  },
+  {
+    "name": "プロファイルの表から spi のキーを変えて読めなくする",
+    "file": "src/questions/_profile.js",
+    "expect": "profile",
+    "find": "  spi: {",
+    "replace": "  spi_v2: {"
+  },
+  {
+    "name": "テンプレートだけにある分野を全プロファイルから消す",
+    "file": "src/questions/_profile.js",
+    "expect": "profile",
+    "find": "      { id: 14, name: \"整数の性質\",     slug: \"seisu\" },\n",
+    "replace": ""
+  },
+  {
+    "name": "宿題の台帳に消えた分野を残す",
+    "file": "test/category-pages-todo.json",
+    "expect": "profile",
+    "find": "\"pending\": []",
+    "replace": "\"pending\": [{ \"id\": 99, \"note\": \"消した分野の残骸\" }]"
+  },
+  {
+    "name": "済んだ宿題を台帳に残す",
+    "file": "test/category-pages-todo.json",
+    "expect": "profile",
+    "find": "\"pending\": []",
+    "replace": "\"pending\": [{ \"id\": 1, \"note\": \"推論はもう作ったのに消し忘れ\" }]"
+  },
+  {
+    "name": "画面の問題数選択のidを変える",
+    "file": "index.html",
+    "expect": "profile",
+    "find": "<div class=\"config-options\" id=\"question-count\">",
+    "replace": "<div class=\"config-options\" id=\"question-count-renamed\">"
+  },
+  {
+    "name": "解説ページの引き当てから追加分野を落とす",
+    "file": "src/questions/_profile.js",
+    "expect": "profile",
+    "find": "  p.examCategories.concat(p.extraCategories || []).forEach(function (c) {",
+    "replace": "  p.examCategories.forEach(function (c) {"
+  },
+  {
+    "name": "プロファイルの宣言を questions.js より前に上げる",
+    "file": "koumuin/index.html",
+    "expect": "profile",
+    "find": "  <script src=\"../questions.js\"></script>\n  <script>var ACTIVE_PROFILE = \"koumuin\";</script>",
+    "replace": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>\n  <script src=\"../questions.js\"></script>"
+  },
+  {
+    "name": "プロファイルの宣言を app.js より後に下げる",
+    "file": "koumuin/index.html",
+    "expect": "profile",
+    "find": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>\n  <script src=\"../generator.js\"></script>\n  <script src=\"../affiliate.js\"></script>\n  <script src=\"../app.js\"></script>",
+    "replace": "  <script src=\"../generator.js\"></script>\n  <script src=\"../affiliate.js\"></script>\n  <script src=\"../app.js\"></script>\n  <script>var ACTIVE_PROFILE = \"koumuin\";</script>"
+  },
+  {
+    "name": "プロファイルの id をキーと食い違わせる",
+    "file": "src/questions/_profile.js",
+    "expect": "profile",
+    "find": "    id: \"koumuin\",",
+    "replace": "    id: \"koumuinn\","
+  },
+  {
+    "name": "試験セットの端数配分を忘れる",
+    "file": "generator.js",
+    "expect": "profile",
+    "find": "    var remainder = totalQuestions % categoryIds.length;",
+    "replace": "    var remainder = 0;"
+  },
+  {
+    "name": "分野→ページの引き当て関数の名前を変えて読めなくする",
+    "file": "src/questions/_profile.js",
+    "expect": "html",
+    "find": "function profileCategoryPages(profileId) {",
+    "replace": "function profileCategoryPagesTable(profileId) {"
+  },
+  {
+    "name": "公務員分野の slug を実在ページと食い違わせる",
+    "file": "src/questions/_profile.js",
+    "expect": "html",
+    "find": "slug: \"seisu\"",
+    "replace": "slug: \"seisu-neo\""
   }
 ]
