@@ -14,8 +14,17 @@
     });
   }
 
+  // ⚠️ app.js とは別ファイルなので、profile を自分で乗せる必要がある。
+  //    app.js の trackEvent に一括で足したとき、ここが漏れて
+  //    pwa_install_shown だけ profile 無しで飛んでいた（2026-09-06に実測で発覚）。
+  //    ページ側の ACTIVE_PROFILE 宣言を直接読む（app.js のスコープには入れない）。
   function track(name, params) {
-    if (typeof window.gtag === "function") window.gtag("event", name, params || {});
+    if (typeof window.gtag !== "function") return;
+    var p = params || {};
+    if (p.profile === undefined) {
+      p.profile = (typeof ACTIVE_PROFILE !== "undefined" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : "spi";
+    }
+    window.gtag("event", name, p);
   }
 
   // インストール済みアプリからの起動。start_url にクエリを足すと

@@ -611,8 +611,8 @@
     "name": "CATEGORY_PAGES と実在ページを食い違わせる",
     "why": "分野名からページを引く表が実物とずれると、404へ誘導するか、あるページへ導線が出なくなる（2026-09-06にプロファイル由来へ移したので、ずれはプロファイル側で起きる）",
     "file": "src/questions/_profile.js",
-    "find": "      { id: 2,  name: \"場合の数・確率\",   slug: \"kakuritsu\" },\n      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n      { id: 4,  name: \"損益算\",         slug: \"soneki\" },\n      { id: 5,  name: \"速度算\",         slug: \"sokudo\" },\n      { id: 6,  name: \"仕事算\",         slug: \"shigoto\" },\n      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
-    "replace": "      { id: 2,  name: \"場合の数・確率\",   slug: \"sokudo\" },\n      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n      { id: 4,  name: \"損益算\",         slug: \"soneki\" },\n      { id: 5,  name: \"速度算\",         slug: \"sokudo\" },\n      { id: 6,  name: \"仕事算\",         slug: \"shigoto\" },\n      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
+    "find": "      { id: 11, name: \"四則逆算\",     slug: \"shisoku\" },",
+    "replace": "      { id: 11, name: \"四則逆算\",     slug: \"sokudo\" },",
     "expect": "profile"
   },
   {
@@ -2258,5 +2258,13 @@
     "expect": "html",
     "find": "slug: \"seisu\"",
     "replace": "slug: \"seisu-neo\""
+  },
+  {
+    "name": "pwa.js のイベントから profile を落とす",
+    "why": "送信元がファイルごとに分かれているので、1箇所直しても他が漏れる。2026-09-06に app.js だけ直して pwa.js・analytics.js・affiliate.js・玉手箱が漏れ、公務員側が使われているかを測れない状態だった",
+    "file": "pwa.js",
+    "find": "      p.profile = (typeof ACTIVE_PROFILE !== \"undefined\" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : \"spi\";",
+    "replace": "      p.noprofile = (typeof ACTIVE_PROFILE !== \"undefined\" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : \"spi\";",
+    "expect": "analytics"
   }
 ]

@@ -176,6 +176,43 @@ function run(opts) {
   console.log(`analytics.js が依存する要素: ${uniq.map(s => "." + s).join(" / ")}（全${pages.length}ページで照合）`);
 }
 
+// --- すべての送信箇所が profile を乗せているか ---
+//
+// ⚠️ どの試験の面で起きたイベントかを区別できないと、
+//    公務員側（/koumuin/）が使われているかを測れない。
+//    2026-09-06に app.js だけ直して pwa.js・analytics.js・affiliate.js・
+//    tamatebako-shisoku/app.js が漏れ、実機で測って発覚した。
+//    ファイルが分かれている以上、1箇所直しても他が漏れる。
+{
+  const SENDERS = ["analytics.js", "pwa.js", "affiliate.js", "app.js", "tamatebako-shisoku/app.js"];
+  let checked = 0;
+  for (const f of SENDERS) {
+    const src = fs.readFileSync(path.join(ROOT, f), "utf8");
+    // gtag("event", ...) を呼んでいる行を数える
+    const calls = (src.match(/gtag\(\s*["']event["']/g) || []).length;
+    if (calls === 0) {
+      fail(f, "イベントの送信箇所が見つからない", "この検査が空回りしている");
+      continue;
+    }
+    checked++;
+    // ⚠️ 判定の書き方を3回外した（2026-09-06）。
+    //    ① indexOf("p.profile") → `p.noprofile` に一致して落ちない
+    //    ② 正規表現 /p\.profile\s*=/ → `if (p.profile === undefined)` の比較に一致
+    //    ③ サンドボックスで実際に呼ぶ → pwa.js は IIFE なので track を取り出せず、
+    //       例外のフォールバックで素通りした
+    //    結局いちばん確実なのは「**代入**が1つ以上あるか」を、比較と区別して数えること。
+    //    `p.profile =` にはマッチし、`p.profile ===` にはマッチさせない。
+    const assigns = (src.match(/\bprofile\s*=(?!=)/g) || []).length;
+    if (assigns === 0) {
+      fail(f, "イベントに profile を乗せていない",
+        `gtag("event", ...) が${calls}箇所あるが、profile への代入が1つも無い。`
+        + `どの試験の面で起きたか区別できない`);
+    }
+  }
+  // 0件だと「漏れが無い」ではなく「1ファイルも見ていない」。
+  cov.covered("profile を調べた送信元", checked, 5);
+}
+
 // --- 出力 ---
 cov.print();
 for (const p of cov.failures) failures.push({ rule: "検査対象", detail: p });

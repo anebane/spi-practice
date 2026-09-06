@@ -18,7 +18,17 @@
       $("screen-" + s).classList.toggle("active", s === name);
     });
   }
-  function track(name, params) { if (typeof gtag === "function") gtag("event", name, params || {}); }
+  // ⚠️ すべてのイベントに profile を乗せる。どの試験の面で起きたかを
+  //    区別できないと、公務員側が使われているかを測れない
+  //    （2026-09-06に app.js だけ直して他が漏れ、実測で発覚した）。
+  //    test/analytics.spec.js が全ファイルの送信箇所を数えて見張る。
+  // 玉手箱モードは専用の面なので profile を "tamatebako" と名乗る。
+  function track(name, params) {
+    if (typeof gtag !== "function") return;
+    var p = params || {};
+    if (p.profile === undefined) p.profile = "tamatebako";
+    gtag("event", name, p);
+  }
   function pad2(n) { return (n < 10 ? "0" : "") + n; }
   function mmss(sec) { return pad2(Math.floor(sec / 60)) + ":" + pad2(sec % 60); }
 

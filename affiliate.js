@@ -115,7 +115,12 @@ var Affiliate = (function () {
   }
 
   function track(name, params) {
-    if (typeof gtag === "function") gtag("event", name, params || {});
+    if (typeof gtag !== "function") return;
+    var p = params || {};
+    if (p.profile === undefined) {
+      p.profile = (typeof ACTIVE_PROFILE !== "undefined" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : "spi";
+    }
+    gtag("event", name, p);
   }
 
   /**

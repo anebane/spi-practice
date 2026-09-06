@@ -6,9 +6,22 @@
   "use strict";
 
   // --- アナリティクス ---
+  // ⚠️ すべてのイベントに profile を乗せる。
+  //    2026-09-06に /koumuin/ を作ったが、イベントに出題プロファイルが
+  //    乗っていなかった。exam_start も exam_finish も、SPIで解かれたのか
+  //    公務員で解かれたのか**区別できない**状態だった。
+  //    「公務員が使われているか」を測れないままリリースすると、
+  //    0だったときに「需要が無い」のか「測っていない」のか分からない。
+  //    ⚠️ 個別のイベントに書き足す形にしない。書き忘れる面が必ず出る。
+  //       ここで一括して乗せる（PROFILE_ID は下で定義される。
+  //       trackEvent が実際に呼ばれるのは初期化後なので参照できる）。
   function trackEvent(eventName, params) {
     if (typeof gtag === "function") {
-      gtag("event", eventName, params || {});
+      var p = params || {};
+      if (p.profile === undefined && typeof PROFILE_ID !== "undefined") {
+        p.profile = PROFILE_ID;
+      }
+      gtag("event", eventName, p);
     }
   }
 

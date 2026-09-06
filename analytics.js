@@ -19,7 +19,17 @@
   gtag("js", new Date());
   gtag("config", GA_ID);
 
-  function track(name, params) { gtag("event", name, params || {}); }
+  // ⚠️ すべてのイベントに profile を乗せる。どの試験の面で起きたかを
+  //    区別できないと、公務員側が使われているかを測れない
+  //    （2026-09-06に app.js だけ直して他が漏れ、実測で発覚した）。
+  //    test/analytics.spec.js が全ファイルの送信箇所を数えて見張る。
+  function track(name, params) {
+    var p = params || {};
+    if (p.profile === undefined) {
+      p.profile = (typeof ACTIVE_PROFILE !== "undefined" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : "spi";
+    }
+    gtag("event", name, p);
+  }
 
   document.addEventListener("DOMContentLoaded", function () {
     var slug = location.pathname.replace(/^\/|\.html$/g, "") || "index";
