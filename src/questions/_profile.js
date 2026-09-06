@@ -100,7 +100,11 @@ var QUESTION_PROFILES = {
       { id: 7,  name: "濃度算",         slug: "noudo" },
       { id: 8,  name: "割合・比",       slug: "wariai" },
       { id: 9,  name: "図表の読み取り",  slug: "zuhyo" },
-      { id: 10, name: "順列・組み合わせ", slug: "junretsu" }
+      { id: 10, name: "順列・組み合わせ", slug: "junretsu" },
+      // 公務員だけの分野。SPIには出ないので spi プロファイルには入れない。
+      // ⚠️ slug が null なのは解説ページをまだ作っていないから。
+      //    test/profile.spec.js は slug が無い分野の導線を出さない。
+      { id: 14, name: "整数の性質",     slug: null }
     ],
     extraCategories: [],
 

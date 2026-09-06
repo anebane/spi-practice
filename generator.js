@@ -504,6 +504,16 @@ var QuestionGenerator = (function() {
       var count = perCategory + (idx < remainder ? 1 : 0);
       var catTemplates = templates.filter(function(t) { return t.categoryId === catId; });
 
+      // ⚠️ 分野の中のテンプレートをシャッフルしてから採る。
+      //    以前は catTemplates[i % length] で**ファイル順の先頭から固定で**採っていた。
+      //    20問の試験だと1分野あたり1〜2問なので、**各分野の先頭1〜2本しか
+      //    出題されず、96本中76本（79%）が一度も出ない**状態だった
+      //    （2026-09-06に実測して発覚。200回の試験で使われたのは20本だけ）。
+      //    数値はランダムなので問題は毎回変わり、例外も出ないため気づけなかった。
+      //    難易度の偏り（宣言した帯のうち難易度3が5%）も、設計ではなく
+      //    ファイル順の結果だった。
+      catTemplates = shuffleArray(catTemplates.slice());
+
       for (var i = 0; i < count; i++) {
         var tmpl = catTemplates[i % catTemplates.length];
         var q = null;

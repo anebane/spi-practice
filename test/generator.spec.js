@@ -2434,6 +2434,31 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 試験セットに、全テンプレートが出る機会があるか ---
+// ⚠️ 2026-09-06に発覚: 分野内のテンプレートを catTemplates[i % length] で
+//    ファイル順の先頭から固定で採っていた。20問の試験は1分野あたり1〜2問なので、
+//    **96本中76本（79%）が一度も出題されない**状態だった。
+//    数値はランダムなので問題は毎回変わり、例外も出ないので気づけない。
+//    難易度の偏り（宣言した帯のうち難易度3が5%）もこれが原因だった。
+{
+  const set = new Set();
+  const N = 300;
+  for (let i = 0; i < N; i++) {
+    for (const q of GEN.generateExamSet({
+      totalQuestions: 20, selectedCategories: [], selectedDifficulties: [1, 2, 3]
+    })) set.add(q.templateId);
+  }
+  const total = TEMPLATES.length;
+  // 300回×20問=6,000問あれば、全テンプレートに十分な機会がある。
+  // 1本でも出ないなら、選び方が偏っている。
+  if (set.size < total) {
+    const missing = TEMPLATES.filter(t => !set.has(t.id)).map(t => t.id);
+    fail("試験に一度も出ないテンプレートがある",
+      `${N}回の試験で ${set.size}/${total}本。出ない: ${missing.slice(0, 6).join(", ")}${missing.length > 6 ? " ほか" + (missing.length - 6) + "本" : ""}`);
+  }
+  cov.covered("試験セットで機会を調べたテンプレ", total, 80);
+}
+
 // --- テンプレート定義にキーの重複が無いか ---
 // ⚠️ JSのオブジェクトリテラルは同じキーを2回書いてもエラーにならず、
 //    あとの定義が黙って勝つ。2026-09-06に derive を手とスクリプトの

@@ -2022,5 +2022,13 @@
     "find": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>",
     "replace": "  <script>/* var ACTIVE_PROFILE = \"koumuin\"; */</script>",
     "expect": "profile"
+  },
+  {
+    "name": "分野内のテンプレートのシャッフルをやめる",
+    "why": "ファイル順の先頭から固定で採ると、20問の試験では各分野の先頭1〜2本しか出ず、96本中76本が一度も出題されなくなる。数値はランダムなので問題は毎回変わり、例外も出ないため気づけない（2026-09-06に実測して発覚）",
+    "file": "generator.js",
+    "find": "      catTemplates = shuffleArray(catTemplates.slice());",
+    "replace": "      // catTemplates = shuffleArray(catTemplates.slice());",
+    "expect": "generator"
   }
 ]

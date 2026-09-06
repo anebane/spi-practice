@@ -62,12 +62,18 @@ const allProfiles = Object.keys(profiles).map(k => profiles[k]);
 // 逆向きも見る。分野を足したのにプロファイルに書き忘れると、
 // 出題も解説ページの導線も出ないまま静かに埋もれる。
 {
-  const declared = new Set(all.map(c => c.id));
+  // ⚠️ spi だけを見ると、公務員だけの分野（整数の性質）を「載っていない」と
+  //    誤判定する。2026-09-06に実際に踏んだ。どれか1つのプロファイルに
+  //    載っていればよい。
+  const declared = new Set();
+  for (const prof of allProfiles) {
+    for (const c of prof.examCategories.concat(prof.extraCategories || [])) declared.add(c.id);
+  }
   const inTemplates = new Set(ctx.QUESTION_TEMPLATES.map(q => q.categoryId));
   for (const id of inTemplates) {
     if (!declared.has(id)) {
       const name = ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
-      fail("プロファイルに載っていない分野がある", `${name}（id ${id}）。出題も導線も出ない`);
+      fail("どのプロファイルにも載っていない分野がある", `${name}（id ${id}）。出題も導線も出ない`);
     }
   }
   cov.covered("テンプレートの分野", inTemplates.size, 12);
