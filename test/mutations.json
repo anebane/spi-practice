@@ -2266,5 +2266,13 @@
     "find": "      p.profile = (typeof ACTIVE_PROFILE !== \"undefined\" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : \"spi\";",
     "replace": "      p.noprofile = (typeof ACTIVE_PROFILE !== \"undefined\" && ACTIVE_PROFILE) ? ACTIVE_PROFILE : \"spi\";",
     "expect": "analytics"
+  },
+  {
+    "name": "pwa.js の gtag 呼び出しを別名にする",
+    "why": "送信箇所が0件になると profile の検査が空回りする。「壊れている」ではなく「1つも見ていない」状態を、緑と区別できなければ検査の意味が無い",
+    "file": "pwa.js",
+    "find": "    window.gtag(\"event\", name, p);",
+    "replace": "    window.gtagDisabled(\"event\", name, p);",
+    "expect": "analytics"
   }
 ]
