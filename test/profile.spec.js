@@ -134,13 +134,56 @@ for (const prof of allProfiles.filter(x => x.page)) {
 // 404へのリンクを出さないための検査。app.js の CATEGORY_PAGES は
 // プロファイル由来になったので、ここがずれると全ページで導線が壊れる。
 {
+  // ⚠️ 以前はここが `if (!c.slug) continue;` で終わっていた。
+  //    「slug があるなら実在すること」しか見ておらず、
+  //    **slug: null と書けば検査を素通りできた**。
+  //    実際、整数の性質と操作と手順は「まだ作っていない」とコメントを書いたまま
+  //    解説ページが無い状態で放置された（2026-09-06）。
+  //    コメントは検査ではないので誰も催促しない。宿題は台帳に登録させる。
+  const TODO = new Set(
+    JSON.parse(fs.readFileSync(path.join(__dirname, "category-pages-todo.json"), "utf8"))
+      .pending.map(x => x.id)
+  );
+
+  // ⚠️ `all` は spi プロファイルの分野だけ。公務員専用の分野（整数の性質・操作と手順）
+  //    が漏れるので、全プロファイルの分野を id で重複排除して見る。
+  //    今朝も同じ取り違えをして誤検知した（2026-09-06）。
+  const everyCat = [];
+  const seenId = new Set();
+  for (const prof of allProfiles) {
+    for (const c of prof.examCategories.concat(prof.extraCategories || [])) {
+      if (seenId.has(c.id)) continue;
+      seenId.add(c.id);
+      everyCat.push(c);
+    }
+  }
+
   let checked = 0;
-  for (const c of all) {
-    if (!c.slug) continue;
+  for (const c of everyCat) {
     checked++;
+    if (!c.slug) {
+      if (!TODO.has(c.id)) {
+        fail("解説ページを作らないまま分野を足している",
+          `${c.name}（id ${c.id}）に slug が無い。作るなら categories/ にページを、`
+          + `後回しにするなら理由を添えて test/category-pages-todo.json に登録すること`);
+      }
+      continue;
+    }
     const p = path.join(ROOT, "categories", c.slug, "index.html");
     if (!fs.existsSync(p)) {
       fail("解説ページが無い分野に導線を出している", `${c.name} → categories/${c.slug}/ が存在しない`);
+    }
+  }
+
+  // 台帳に載っているのに slug が付いた（＝ページを作った）ものは、台帳から消す。
+  // 宿題台帳は縮む方向にのみ動かす。
+  for (const id of TODO) {
+    const c = everyCat.find(x => x.id === id);
+    if (!c) {
+      fail("宿題の台帳に存在しない分野が載っている", `id ${id}。分野を消したら台帳からも消すこと`);
+    } else if (c.slug) {
+      fail("宿題が済んでいるのに台帳に残っている",
+        `${c.name}: slug「${c.slug}」が付いている。test/category-pages-todo.json から消すこと`);
     }
   }
   cov.covered("slug を調べた分野", checked, 12);
