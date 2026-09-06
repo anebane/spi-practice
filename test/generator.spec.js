@@ -2434,6 +2434,39 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- テンプレート定義にキーの重複が無いか ---
+// ⚠️ JSのオブジェクトリテラルは同じキーを2回書いてもエラーにならず、
+//    あとの定義が黙って勝つ。2026-09-06に derive を手とスクリプトの
+//    両方から入れてしまい、3本が二重定義になった。生成結果は正しいので
+//    どの検査も緑のまま通った。「動くが意図と違う」を機械で捕まえる。
+{
+  const dupKeys = ["derive", "resolve", "answerFormula", "validate", "explanationTemplate",
+                   "templateText", "variables", "id", "unit", "timeLimitSec", "probPair"];
+  let checked = 0;
+  // ソースを読んで、テンプレ1本ぶんの範囲でキーの出現回数を数える。
+  // 実行後のオブジェクトでは重複が消えているので、テキストで見るしかない。
+  const srcDir = path.join(__dirname, "..", "src", "questions");
+  for (const f of fs.readdirSync(srcDir).filter(x => x.endsWith(".js") && x !== "_base.js")) {
+    const text = fs.readFileSync(path.join(srcDir, f), "utf8");
+    // 「id: "..."」から次の「id: "..."」までを1本ぶんとみなす
+    const marks = [...text.matchAll(/^    id: "([a-z0-9_]+)",$/gm)];
+    for (let i = 0; i < marks.length; i++) {
+      const from = marks[i].index;
+      const to = i + 1 < marks.length ? marks[i + 1].index : text.length;
+      const body = text.slice(from, to);
+      checked++;
+      for (const k of dupKeys) {
+        const n = (body.match(new RegExp("^    " + k + ":", "gm")) || []).length;
+        if (n > 1) {
+          fail("テンプレートのキーが重複している",
+            `${marks[i][1]}: ${k} が${n}回。あとの定義が黙って勝つので、意図しない側が動く`);
+        }
+      }
+    }
+  }
+  cov.covered("キーの重複を調べたテンプレ", checked, 80);
+}
+
 // --- 検査対象の内訳。合否より先に「何件見たか」を出す ---
 console.log("\n検査した対象の内訳");
 cov.print();

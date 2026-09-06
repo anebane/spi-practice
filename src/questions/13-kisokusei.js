@@ -71,6 +71,19 @@ var DIRECTION_TRIPLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 
   // 方角: 直角に2辺進んだときの直線距離（三平方の定理）
   QUESTION_TEMPLATES.push({
     id: "suiron_direction_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      return {
+        sqA: v.a * v.a,
+        sqB: v.b * v.b,
+        sqC: v.a * v.a + v.b * v.b,
+        wrongSum: v.a + v.b,
+        answer: answer
+      };
+      return d;
+    },
     formats: ["webtesting", "testcenter"],
     category: "規則性・方角",
     categoryId: 13,

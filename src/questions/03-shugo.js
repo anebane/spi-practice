@@ -3,6 +3,13 @@
 (function() {
   QUESTION_TEMPLATES.push({
     id: "shugo_2set_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.union = v.a + v.b - v.ab;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -29,6 +36,13 @@
 
   QUESTION_TEMPLATES.push({
     id: "shugo_2set_02",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.union = v.total - v.neither;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -56,6 +70,13 @@
 
   QUESTION_TEMPLATES.push({
     id: "shugo_3set_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.union = v.a + v.b + v.c - v.ab - v.bc - v.ac + v.abc;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -120,6 +141,13 @@
   // 集合: 最小値
   QUESTION_TEMPLATES.push({
     id: "shugo_min_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.sumAB = v.a + v.b;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -150,6 +178,14 @@
   // 集合: 割合から人数
   QUESTION_TEMPLATES.push({
     id: "shugo_percent_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.unionPct = v.pctA + v.pctB - v.pctAB;
+      d.neitherPct = 100 - d.unionPct;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,

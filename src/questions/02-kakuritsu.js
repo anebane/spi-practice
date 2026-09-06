@@ -108,6 +108,22 @@ var COND_SCENES_P = [
   // 玉の取り出し
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_ball_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var total = v.red + v.white;
+      d.total = total;
+      d.totalM1 = total - 1;
+      d.redM1 = v.red - 1;
+      d.den = total * (total - 1) / 2;
+      d.num = v.red * (v.red - 1) / 2;
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["num", "den"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -141,6 +157,10 @@ var COND_SCENES_P = [
   // サイコロ
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_dice_01",
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["count", 36],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -174,6 +194,18 @@ var COND_SCENES_P = [
   // コイン
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_coin_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.den = Math.pow(2, v.n);
+      d.num = combination(v.n, v.k);
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["num", "den"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -208,6 +240,10 @@ var COND_SCENES_P = [
   // カードの問題
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_card_01",
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["num", "den"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -249,6 +285,15 @@ var COND_SCENES_P = [
   // 当たりくじ
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_lottery_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.lose = v.total - v.win;
+      d.allPairs = v.total * (v.total - 1) / 2;
+      d.losePairs = d.lose * (d.lose - 1) / 2;
+      return d;
+    },
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -283,6 +328,20 @@ var COND_SCENES_P = [
   // 色違いの玉（3色）
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_ball3_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.total = v.red + v.white + v.blue;
+      d.allPairs = d.total * (d.total - 1) / 2;
+      d.samePairs = v.red*(v.red-1)/2 + v.white*(v.white-1)/2 + v.blue*(v.blue-1)/2;
+      d.diffPairs = d.allPairs - d.samePairs;
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["diffPairs", "allPairs"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -317,6 +376,10 @@ var COND_SCENES_P = [
   // 並べ替え確率
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_arrange_01",
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["adjacent", "allPerm"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -359,6 +422,18 @@ var COND_SCENES_P = [
   // 条件付き確率
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_cond_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.redM1 = v.red - 1;
+      d.denTotal = v.red + v.white - 1;
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["redM1", "denTotal"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,

@@ -1084,6 +1084,32 @@ function resolveCirclePuzzle(v) {
   v.half = n / 2;
 }
 
+// 分数を約分して文字列にする。割り切れるなら整数、割り切れないなら "n/d"。
+//
+// 仕事算は「全体を1とする」と書いた直後に小数へ落としていた（1 - 5/18 = 0.72）。
+// これでは分数で通す解法そのものが伝わらないうえ、途中の丸めで、利用者が
+// 電卓で追うと合わない式になる。割り切れない値は小数にせず分数のまま最後まで書く。
+//
+// ⚠️ 2026-09-06に generator.js の computeDerivedVars の内側からここへ移した。
+//    テンプレート側の derive() から使えないと、派生変数の計算をテンプレに
+//    移せないため。questions.js は generator.js より先に読まれるので、
+//    generator.js 側からもこの定義が見える。
+function fracStr(n, dd) {
+  if (dd < 0) { n = -n; dd = -dd; }
+  var a = Math.abs(n), b = Math.abs(dd);
+  while (b) { var t = a % b; a = b; b = t; }
+  var g = a || 1;
+  n /= g; dd /= g;
+  return dd === 1 ? String(n) : n + "/" + dd;
+}
+
+// 「5 / 18 = 5/18」のように、約分前と後が同じなら重ねて書かない。
+function stepStr(n, dd) {
+  var raw = n + " / " + dd;
+  var red = fracStr(n, dd);
+  return red.replace(/\s/g, "") === raw.replace(/\s/g, "") ? raw : raw + " = " + red;
+}
+
 function gcd(a, b) {
   a = Math.abs(Math.round(a));
   b = Math.abs(Math.round(b));
@@ -1943,6 +1969,13 @@ var CIRCLE_SCENES = [
   // 推論: 発言の真偽
   QUESTION_TEMPLATES.push({
     id: "suiron_statement_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      return { liar: v._liar };
+      return d;
+    },
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,
@@ -2216,6 +2249,22 @@ var COND_SCENES_P = [
   // 玉の取り出し
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_ball_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var total = v.red + v.white;
+      d.total = total;
+      d.totalM1 = total - 1;
+      d.redM1 = v.red - 1;
+      d.den = total * (total - 1) / 2;
+      d.num = v.red * (v.red - 1) / 2;
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["num", "den"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2249,6 +2298,10 @@ var COND_SCENES_P = [
   // サイコロ
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_dice_01",
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["count", 36],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2282,6 +2335,18 @@ var COND_SCENES_P = [
   // コイン
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_coin_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.den = Math.pow(2, v.n);
+      d.num = combination(v.n, v.k);
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["num", "den"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2316,6 +2381,10 @@ var COND_SCENES_P = [
   // カードの問題
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_card_01",
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["num", "den"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2357,6 +2426,15 @@ var COND_SCENES_P = [
   // 当たりくじ
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_lottery_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.lose = v.total - v.win;
+      d.allPairs = v.total * (v.total - 1) / 2;
+      d.losePairs = d.lose * (d.lose - 1) / 2;
+      return d;
+    },
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2391,6 +2469,20 @@ var COND_SCENES_P = [
   // 色違いの玉（3色）
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_ball3_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.total = v.red + v.white + v.blue;
+      d.allPairs = d.total * (d.total - 1) / 2;
+      d.samePairs = v.red*(v.red-1)/2 + v.white*(v.white-1)/2 + v.blue*(v.blue-1)/2;
+      d.diffPairs = d.allPairs - d.samePairs;
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["diffPairs", "allPairs"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2425,6 +2517,10 @@ var COND_SCENES_P = [
   // 並べ替え確率
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_arrange_01",
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["adjacent", "allPerm"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2467,6 +2563,18 @@ var COND_SCENES_P = [
   // 条件付き確率
   QUESTION_TEMPLATES.push({
     id: "kakuritsu_cond_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.redM1 = v.red - 1;
+      d.denTotal = v.red + v.white - 1;
+      return d;
+    },
+    // 解説の途中式「n / d = 約分」を作るための分子・分母。
+    // 以前は generator.js の PROB_PAIRS というID表で持っていたが、
+    // 出題範囲を足すたびに表が伸びるので、テンプレ側の宣言に移した。
+    probPair: ["redM1", "denTotal"],
     formats: ["webtesting"],
     category: "場合の数・確率",
     categoryId: 2,
@@ -2502,6 +2610,13 @@ var COND_SCENES_P = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "shugo_2set_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.union = v.a + v.b - v.ab;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -2528,6 +2643,13 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "shugo_2set_02",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.union = v.total - v.neither;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -2555,6 +2677,13 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "shugo_3set_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.union = v.a + v.b + v.c - v.ab - v.bc - v.ac + v.abc;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -2619,6 +2748,13 @@ var COND_SCENES_P = [
   // 集合: 最小値
   QUESTION_TEMPLATES.push({
     id: "shugo_min_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.sumAB = v.a + v.b;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -2649,6 +2785,14 @@ var COND_SCENES_P = [
   // 集合: 割合から人数
   QUESTION_TEMPLATES.push({
     id: "shugo_percent_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.unionPct = v.pctA + v.pctB - v.pctAB;
+      d.neitherPct = 100 - d.unionPct;
+      return d;
+    },
     formats: ["webtesting"],
     category: "集合",
     categoryId: 3,
@@ -2686,6 +2830,13 @@ var COND_SCENES_P = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "soneki_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.markupRate / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2706,6 +2857,14 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "soneki_discount_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.listPrice = Math.round(v.cost * (1 + v.markupRate / 100));
+      d.salePrice = Math.round(d.listPrice * (1 - v.discountRate / 100));
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2738,6 +2897,13 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "soneki_loss_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.markupRate / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2758,6 +2924,17 @@ var COND_SCENES_P = [
 
   QUESTION_TEMPLATES.push({
     id: "soneki_multiple_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.listPrice = Math.round(v.cost * (1 + v.markupRate / 100));
+      d.discountPrice = Math.round(d.listPrice * (1 - v.discountRate / 100));
+      d.sold2 = v.quantity - v.sold1;
+      d.revenue = Math.round(d.listPrice * v.sold1 + d.discountPrice * d.sold2);
+      d.totalCost = v.cost * v.quantity;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2793,6 +2970,13 @@ var COND_SCENES_P = [
   // 損益算: 売価から原価逆算
   QUESTION_TEMPLATES.push({
     id: "soneki_reverse_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.profitRate / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2814,6 +2998,15 @@ var COND_SCENES_P = [
   // 損益算: 割引後の利益率
   QUESTION_TEMPLATES.push({
     id: "soneki_profitrate_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.listPrice = Math.round(v.cost * (1 + v.markupRate / 100));
+      d.salePrice = Math.round(d.listPrice * (1 - v.discountRate / 100));
+      d.profit = d.salePrice - v.cost;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2846,6 +3039,22 @@ var COND_SCENES_P = [
   // 損益算: 2つの商品比較
   QUESTION_TEMPLATES.push({
     id: "soneki_compare_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.mA = 1 + v.markupA / 100;
+      d.dA = 1 - v.discountA / 100;
+      d.listA = Math.round(v.costA * d.mA);
+      d.saleA = Math.round(d.listA * d.dA);
+      d.profitA = d.saleA - v.costA;
+      d.mB = 1 + v.markupB / 100;
+      d.dB = 1 - v.discountB / 100;
+      d.listB = Math.round(v.costB * d.mB);
+      d.saleB = Math.round(d.listB * d.dB);
+      d.profitB = d.saleB - v.costB;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -2977,6 +3186,14 @@ var TRAIN_SCENES = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "sokudo_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.hours = fracStr(v.distance, v.speed);
+      d.hoursStep = stepStr(v.distance, v.speed);
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -3000,6 +3217,14 @@ var TRAIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "sokudo_encounter_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalSpeed = v.speedA + v.speedB;
+      d.hours = fracStr(v.distance, d.totalSpeed);
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -3024,6 +3249,14 @@ var TRAIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "sokudo_chase_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.gap = v.speedA * v.headStart;
+      d.diff = v.speedB - v.speedA;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -3055,6 +3288,22 @@ var TRAIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "sokudo_round_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalDist = v.distance * 2;
+      d.timeGo = fracStr(v.distance, v.speedGo);
+      d.timeBack = fracStr(v.distance, v.speedBack);
+      // 合計時間は、丸めた表示どうしを足すのではなく通分して1つの分数にする。
+      // 丸めた値を足すと、そこから先の計算が全部ずれる。
+      d.totalTime = fracStr(v.distance * (v.speedGo + v.speedBack),
+                            v.speedGo * v.speedBack);
+      // 分数のときだけ括弧を付ける。整数に (75) と書くと読みにくい。
+      // 括弧が要るのは、÷ のあとに分数が来ると左から評価されて別の値になるため。
+      d.totalTimeParen = d.totalTime.indexOf("/") >= 0 ? "(" + d.totalTime + ")" : d.totalTime;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -3116,6 +3365,15 @@ var TRAIN_SCENES = [
   // 速度算: 電車のすれ違い
   QUESTION_TEMPLATES.push({
     id: "sokudo_train_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalLen = v.lenA + v.lenB;
+      d.totalSpeedKmh = v.speedA + v.speedB;
+      d.totalSpeedMs = Math.round(d.totalSpeedKmh * 1000 / 3600 * 10) / 10;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -3155,6 +3413,13 @@ var TRAIN_SCENES = [
   // 速度算: 遅刻・早着
   QUESTION_TEMPLATES.push({
     id: "sokudo_late_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.timeDiff = v.late + v.early;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -3373,6 +3638,13 @@ var WORK_SCENES_3 = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "shigoto_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.combined = "(" + v.daysA + " + " + v.daysB + ") / (" + v.daysA + " × " + v.daysB + ")";
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -3402,6 +3674,15 @@ var WORK_SCENES_3 = [
 
   QUESTION_TEMPLATES.push({
     id: "shigoto_switch_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.aDone = fracStr(v.daysAlone, v.daysA);
+      d.aDoneStep = stepStr(v.daysAlone, v.daysA);
+      d.remaining = fracStr(v.daysA - v.daysAlone, v.daysA);
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -3429,6 +3710,14 @@ var WORK_SCENES_3 = [
 
   QUESTION_TEMPLATES.push({
     id: "shigoto_3people_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var p3 = v.daysB * v.daysC + v.daysA * v.daysC + v.daysA * v.daysB;
+      d.combined = fracStr(p3, v.daysA * v.daysB * v.daysC);
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -3524,6 +3813,17 @@ var WORK_SCENES_3 = [
   // 仕事算: 途中から合流
   QUESTION_TEMPLATES.push({
     id: "shigoto_join_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var jA = v.daysA, jAl = v.daysAlone, jTg = v.daysTogether;
+      d.aDone     = fracStr(jAl, jA);              // ② Aが進めた量
+      d.remaining = fracStr(jA - jAl, jA);         // ③ 残り
+      d.remPerDay = fracStr(jA - jAl, jA * jTg);   // ⑤ 残り ÷ 共同日数
+      d.bRate     = fracStr(jA - jAl - jTg, jA * jTg); // ⑤ 1/B
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -3649,6 +3949,13 @@ var WORK_JOIN_SCENES = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "noudo_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.total = v.water + v.salt;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -3675,6 +3982,16 @@ var WORK_JOIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "noudo_mix_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.saltA = v.weightA * v.concA / 100;
+      d.saltB = v.weightB * v.concB / 100;
+      d.totalSalt = d.saltA + d.saltB;
+      d.totalWeight = v.weightA + v.weightB;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -3704,6 +4021,14 @@ var WORK_JOIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "noudo_evaporate_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.salt = v.weight * v.conc / 100;
+      d.newWeight = v.weight - v.evap;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -3734,6 +4059,14 @@ var WORK_JOIN_SCENES = [
   // 濃度算: 水を追加
   QUESTION_TEMPLATES.push({
     id: "noudo_addwater_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.salt = v.weight * v.conc / 100;
+      d.newWeight = v.weight + v.addWater;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -3758,6 +4091,15 @@ var WORK_JOIN_SCENES = [
   // 濃度算: 食塩を追加
   QUESTION_TEMPLATES.push({
     id: "noudo_addsalt_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.origSalt = v.weight * v.conc / 100;
+      d.totalSalt = d.origSalt + v.addSalt;
+      d.newWeight = v.weight + v.addSalt;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -3814,6 +4156,15 @@ var WORK_JOIN_SCENES = [
   // 濃度算: 一部取り出して水を加える
   QUESTION_TEMPLATES.push({
     id: "noudo_replace_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.origSalt = v.weight * v.conc / 100;
+      d.removedSalt = v.remove * v.conc / 100;
+      d.newSalt = d.origSalt - d.removedSalt;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -3887,6 +4238,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_change_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.diff = v.changed - v.original;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -3907,6 +4265,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.ratioSum = v.ratioA + v.ratioB;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -3934,6 +4299,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_increase_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.percent / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -4000,6 +4372,15 @@ var CONSEC_SCENES = [
   // 割合: 3つの比
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio3_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.a = v.ab1 * v.bc1;
+      d.b = v.ab2 * v.bc1;
+      d.c = v.ab2 * v.bc2;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -4040,6 +4421,17 @@ var CONSEC_SCENES = [
   // 割合: 人口増減
   QUESTION_TEMPLATES.push({
     id: "wariai_population_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalRatio = v.maleRatio + v.femaleRatio;
+      d.male = Math.round(v.population * v.maleRatio / d.totalRatio);
+      d.female = v.population - d.male;
+      d.newMale = Math.round(d.male * (1 + v.maleChange/100));
+      d.newFemale = Math.round(d.female * (1 - v.femaleChange/100));
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -4713,6 +5105,15 @@ var PERM_EXCLUDE_SCENES = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "junretsu_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var calc = [];
+      for (var pi = 0; pi < v.r; pi++) calc.push(v.n - pi);
+      d.calculation = calc.join(" × ");
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -4740,6 +5141,17 @@ var PERM_EXCLUDE_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "kumiawase_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var kn = v.n, kr = v.r, topTerms = [];
+      for (var ki = 0; ki < kr; ki++) topTerms.push(kn - ki);
+      var kfact = 1;
+      for (var kj = 2; kj <= kr; kj++) kfact *= kj;
+      d.calculation = topTerms.join(" × ") + (kfact > 1 ? " / " + kfact : "");
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -4799,6 +5211,14 @@ var PERM_EXCLUDE_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "kumiawase_cond_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.boysComb = combination(v.boys, v.selectBoys);
+      d.girlsComb = combination(v.girls, v.selectGirls);
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -4825,6 +5245,13 @@ var PERM_EXCLUDE_SCENES = [
   // 順列: 円順列
   QUESTION_TEMPLATES.push({
     id: "junretsu_circle_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.nMinus1 = v.n - 1;
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -4837,7 +5264,6 @@ var PERM_EXCLUDE_SCENES = [
     answerType: "number",
     resolve: function(v) {
       v.q = PERM_CIRCLE_SCENES[v.scene % PERM_CIRCLE_SCENES.length](v.n);
-      v.nMinus1 = v.n - 1;
     },
     answerFormula: function(v) {
       return factorial(v.n - 1);
@@ -4850,6 +5276,14 @@ var PERM_EXCLUDE_SCENES = [
   // 組合せ: 役職の割り当て
   QUESTION_TEMPLATES.push({
     id: "kumiawase_committee_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.nM1 = v.n - 1;
+      d.nM2 = v.n - 2;
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -4874,6 +5308,13 @@ var PERM_EXCLUDE_SCENES = [
   // 組合せ: 最短経路
   QUESTION_TEMPLATES.push({
     id: "kumiawase_path_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.total = v.right + v.up;
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -4899,6 +5340,14 @@ var PERM_EXCLUDE_SCENES = [
   // 順列: 特定の1つを端から除外
   QUESTION_TEMPLATES.push({
     id: "junretsu_exclude_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.allPerm = factorial(v.n);
+      d.headPerm = factorial(v.n - 1);
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -5507,6 +5956,19 @@ var DIRECTION_TRIPLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 
   // 方角: 直角に2辺進んだときの直線距離（三平方の定理）
   QUESTION_TEMPLATES.push({
     id: "suiron_direction_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      return {
+        sqA: v.a * v.a,
+        sqB: v.b * v.b,
+        sqC: v.a * v.a + v.b * v.b,
+        wrongSum: v.a + v.b,
+        answer: answer
+      };
+      return d;
+    },
     formats: ["webtesting", "testcenter"],
     category: "規則性・方角",
     categoryId: 13,

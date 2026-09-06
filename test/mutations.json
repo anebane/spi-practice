@@ -426,25 +426,25 @@
   {
     "name": "仕事算の残りを小数に落とす",
     "why": "「全体を1とする」と書いた直後に小数にすると、分数で通す解法が伝わらない",
-    "file": "generator.js",
+    "file": "src/questions/06-shigoto.js",
     "find": "      d.remaining = fracStr(jA - jAl, jA);         // ③ 残り",
-    "replace": "      d.remaining = Math.round((1 - jAl / jA) * 100) / 100;",
+    "replace": "      d.remaining = String(Math.round((jA - jAl) / jA * 100) / 100);         // ③ 残り",
     "expect": "generator"
   },
   {
     "name": "速度算の時間を小数に丸める",
     "why": "書いてある式を電卓で追うと合わなくなる（70 / 12 = 5.83、真値 5.8333…）",
-    "file": "generator.js",
-    "find": "      d.hours = fracStr(vars.distance, vars.speed);",
-    "replace": "      d.hours = Math.round(vars.distance / vars.speed * 100) / 100;",
+    "file": "src/questions/05-sokudo.js",
+    "find": "      d.hours = fracStr(v.distance, v.speed);",
+    "replace": "      d.hours = String(Math.round(v.distance / v.speed * 100) / 100);",
     "expect": "generator"
   },
   {
     "name": "往復の合計時間を丸めた値どうしで足す",
     "why": "丸めた値を足すと、そこから先の計算が全部ずれる",
-    "file": "generator.js",
-    "find": "      d.timeGo = fracStr(vars.distance, vars.speedGo);",
-    "replace": "      d.timeGo = Math.round(vars.distance / vars.speedGo * 100) / 100;",
+    "file": "src/questions/05-sokudo.js",
+    "find": "      d.timeGo = fracStr(v.distance, v.speedGo);",
+    "replace": "      d.timeGo = String(Math.round(v.distance / v.speedGo * 100) / 100);",
     "expect": "generator"
   },
   {
@@ -458,17 +458,17 @@
   {
     "name": "確率の約分の行を約分できないときも出す",
     "why": "「5 / 32 = 5 / 32」という同語反復になり、計算が1歩も進まない",
-    "file": "generator.js",
-    "find": "      return red.replace(/\\s/g, \"\") === raw.replace(/\\s/g, \"\") ? raw : raw + \" = \" + red;",
-    "replace": "      return raw + \" = \" + red;",
+    "file": "src/questions/_base.js",
+    "find": "  return red.replace(/\\s/g, \"\") === raw.replace(/\\s/g, \"\") ? raw : raw + \" = \" + red;",
+    "replace": "  return raw + \" = \" + red;",
     "expect": "generator"
   },
   {
     "name": "組み合わせの計算を展開せず C(n, r) のまま書く",
     "why": "「C(10, 5) = C(10, 5) = 252」となり、計算方法が1文字も示されない",
-    "file": "generator.js",
+    "file": "src/questions/10-junretsu.js",
     "find": "      d.calculation = topTerms.join(\" × \") + (kfact > 1 ? \" / \" + kfact : \"\");",
-    "replace": "      d.calculation = \"C(\" + kn + \", \" + kr + \")\";",
+    "replace": "      d.calculation = \"C(\" + v.n + \", \" + v.r + \")\";",
     "expect": "generator"
   },
   {
@@ -931,8 +931,8 @@
     "name": "formats に未知の形式を書く",
     "why": "タイポした形式名はどの出題形式にもマッチせず、そのテンプレが静かに出題から消える",
     "file": "src/questions/07-noudo.js",
-    "find": "    id: \"noudo_basic_01\",\n    formats: [\"webtesting\"],",
-    "replace": "    id: \"noudo_basic_01\",\n    formats: [\"webtest\"],",
+    "find": "      d.total = v.water + v.salt;\n      return d;\n    },\n    formats: [\"webtesting\"],",
+    "replace": "      d.total = v.water + v.salt;\n      return d;\n    },\n    formats: [\"unknown_format\"],",
     "expect": "generator"
   },
   {
@@ -1347,8 +1347,8 @@
     "name": "テンプレの formats を空にする",
     "why": "宣言を空にすると、そのテンプレはどの形式でも出題されず黙って消える",
     "file": "src/questions/07-noudo.js",
-    "find": "    id: \"noudo_evaporate_01\",\n    formats: [\"webtesting\"],",
-    "replace": "    id: \"noudo_evaporate_01\",\n    formats: [],",
+    "find": "      d.newWeight = v.weight - v.evap;\n      return d;\n    },\n    formats: [\"webtesting\"],",
+    "replace": "      d.newWeight = v.weight - v.evap;\n      return d;\n    },\n    formats: [],",
     "expect": "generator"
   },
   {
@@ -1966,5 +1966,13 @@
     "find": "        program: p.program,\n        creative: id,\n        score_band: opt.band || \"unknown\",\n        placement: opt.placement || \"unknown\",\n        audience: p.audience\n      });\n\n      // 計測用の1x1",
     "replace": "        program: p.program,\n        score_band: opt.band || \"unknown\",\n        placement: opt.placement || \"unknown\",\n        audience: p.audience\n      });\n\n      // 計測用の1x1",
     "expect": "affiliate"
+  },
+  {
+    "name": "テンプレートのキーを二重定義する",
+    "why": "JSは同じキーを2回書いてもエラーにならず、あとの定義が黙って勝つ。2026-09-06にderiveを手とスクリプトの両方から入れて3本が二重定義になり、全検査が緑のまま通った",
+    "file": "src/questions/07-noudo.js",
+    "find": "      d.total = v.water + v.salt;\n      return d;\n    },",
+    "replace": "      d.total = v.water + v.salt;\n      return d;\n    },\n    derive: function(v) { return {}; },",
+    "expect": "generator"
   }
 ]

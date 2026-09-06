@@ -374,6 +374,13 @@ var CIRCLE_SCENES = [
   // 推論: 発言の真偽
   QUESTION_TEMPLATES.push({
     id: "suiron_statement_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      return { liar: v._liar };
+      return d;
+    },
     formats: ["webtesting", "testcenter"],
     category: "推論",
     categoryId: 1,

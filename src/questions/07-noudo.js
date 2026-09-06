@@ -3,6 +3,13 @@
 (function() {
   QUESTION_TEMPLATES.push({
     id: "noudo_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.total = v.water + v.salt;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -29,6 +36,16 @@
 
   QUESTION_TEMPLATES.push({
     id: "noudo_mix_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.saltA = v.weightA * v.concA / 100;
+      d.saltB = v.weightB * v.concB / 100;
+      d.totalSalt = d.saltA + d.saltB;
+      d.totalWeight = v.weightA + v.weightB;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -58,6 +75,14 @@
 
   QUESTION_TEMPLATES.push({
     id: "noudo_evaporate_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.salt = v.weight * v.conc / 100;
+      d.newWeight = v.weight - v.evap;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -88,6 +113,14 @@
   // 濃度算: 水を追加
   QUESTION_TEMPLATES.push({
     id: "noudo_addwater_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.salt = v.weight * v.conc / 100;
+      d.newWeight = v.weight + v.addWater;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -112,6 +145,15 @@
   // 濃度算: 食塩を追加
   QUESTION_TEMPLATES.push({
     id: "noudo_addsalt_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.origSalt = v.weight * v.conc / 100;
+      d.totalSalt = d.origSalt + v.addSalt;
+      d.newWeight = v.weight + v.addSalt;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,
@@ -168,6 +210,15 @@
   // 濃度算: 一部取り出して水を加える
   QUESTION_TEMPLATES.push({
     id: "noudo_replace_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.origSalt = v.weight * v.conc / 100;
+      d.removedSalt = v.remove * v.conc / 100;
+      d.newSalt = d.origSalt - d.removedSalt;
+      return d;
+    },
     formats: ["webtesting"],
     category: "濃度算",
     categoryId: 7,

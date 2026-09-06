@@ -185,6 +185,13 @@ var WORK_SCENES_3 = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "shigoto_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.combined = "(" + v.daysA + " + " + v.daysB + ") / (" + v.daysA + " × " + v.daysB + ")";
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -214,6 +221,15 @@ var WORK_SCENES_3 = [
 
   QUESTION_TEMPLATES.push({
     id: "shigoto_switch_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.aDone = fracStr(v.daysAlone, v.daysA);
+      d.aDoneStep = stepStr(v.daysAlone, v.daysA);
+      d.remaining = fracStr(v.daysA - v.daysAlone, v.daysA);
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -241,6 +257,14 @@ var WORK_SCENES_3 = [
 
   QUESTION_TEMPLATES.push({
     id: "shigoto_3people_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var p3 = v.daysB * v.daysC + v.daysA * v.daysC + v.daysA * v.daysB;
+      d.combined = fracStr(p3, v.daysA * v.daysB * v.daysC);
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,
@@ -336,6 +360,17 @@ var WORK_SCENES_3 = [
   // 仕事算: 途中から合流
   QUESTION_TEMPLATES.push({
     id: "shigoto_join_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var jA = v.daysA, jAl = v.daysAlone, jTg = v.daysTogether;
+      d.aDone     = fracStr(jAl, jA);              // ② Aが進めた量
+      d.remaining = fracStr(jA - jAl, jA);         // ③ 残り
+      d.remPerDay = fracStr(jA - jAl, jA * jTg);   // ⑤ 残り ÷ 共同日数
+      d.bRate     = fracStr(jA - jAl - jTg, jA * jTg); // ⑤ 1/B
+      return d;
+    },
     formats: ["webtesting"],
     category: "仕事算",
     categoryId: 6,

@@ -1081,6 +1081,32 @@ function resolveCirclePuzzle(v) {
   v.half = n / 2;
 }
 
+// 分数を約分して文字列にする。割り切れるなら整数、割り切れないなら "n/d"。
+//
+// 仕事算は「全体を1とする」と書いた直後に小数へ落としていた（1 - 5/18 = 0.72）。
+// これでは分数で通す解法そのものが伝わらないうえ、途中の丸めで、利用者が
+// 電卓で追うと合わない式になる。割り切れない値は小数にせず分数のまま最後まで書く。
+//
+// ⚠️ 2026-09-06に generator.js の computeDerivedVars の内側からここへ移した。
+//    テンプレート側の derive() から使えないと、派生変数の計算をテンプレに
+//    移せないため。questions.js は generator.js より先に読まれるので、
+//    generator.js 側からもこの定義が見える。
+function fracStr(n, dd) {
+  if (dd < 0) { n = -n; dd = -dd; }
+  var a = Math.abs(n), b = Math.abs(dd);
+  while (b) { var t = a % b; a = b; b = t; }
+  var g = a || 1;
+  n /= g; dd /= g;
+  return dd === 1 ? String(n) : n + "/" + dd;
+}
+
+// 「5 / 18 = 5/18」のように、約分前と後が同じなら重ねて書かない。
+function stepStr(n, dd) {
+  var raw = n + " / " + dd;
+  var red = fracStr(n, dd);
+  return red.replace(/\s/g, "") === raw.replace(/\s/g, "") ? raw : raw + " = " + red;
+}
+
 function gcd(a, b) {
   a = Math.abs(Math.round(a));
   b = Math.abs(Math.round(b));

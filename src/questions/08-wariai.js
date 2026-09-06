@@ -45,6 +45,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_change_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.diff = v.changed - v.original;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -65,6 +72,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.ratioSum = v.ratioA + v.ratioB;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -92,6 +106,13 @@ var CONSEC_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "wariai_increase_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.percent / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -158,6 +179,15 @@ var CONSEC_SCENES = [
   // 割合: 3つの比
   QUESTION_TEMPLATES.push({
     id: "wariai_ratio3_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.a = v.ab1 * v.bc1;
+      d.b = v.ab2 * v.bc1;
+      d.c = v.ab2 * v.bc2;
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,
@@ -198,6 +228,17 @@ var CONSEC_SCENES = [
   // 割合: 人口増減
   QUESTION_TEMPLATES.push({
     id: "wariai_population_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalRatio = v.maleRatio + v.femaleRatio;
+      d.male = Math.round(v.population * v.maleRatio / d.totalRatio);
+      d.female = v.population - d.male;
+      d.newMale = Math.round(d.male * (1 + v.maleChange/100));
+      d.newFemale = Math.round(d.female * (1 - v.femaleChange/100));
+      return d;
+    },
     formats: ["webtesting"],
     category: "割合・比",
     categoryId: 8,

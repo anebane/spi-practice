@@ -282,7 +282,20 @@ var QuestionGenerator = (function() {
       var text = renderTemplate(template.templateText, vars);
 
       // 解説の展開（派生変数も計算）
-      var derivedVars = computeDerivedVars(template, vars, answer);
+      // テンプレートが derive を持っていればそれを使う。
+      // ⚠️ 以前は派生変数の計算が全部 computeDerivedVars の中にあり、
+      //    template.id === "..." の分岐が55個・495行に膨らんでいた。
+      //    89本中52本がこの関数を触らないと動かず、出題範囲を足すたびに
+      //    ここが伸び続ける構造だった（2026-09-06に計測して判明）。
+      //    テンプレ側に derive(vars, answer) を置けば計算がそのファイルで完結し、
+      //    新しい展開先を足すときにエンジンを触らずに済む。
+      //    derive が無いテンプレは従来どおり computeDerivedVars を通る（移行は1分野ずつ）。
+      var derivedVars = commonDerived(answer);
+      var extraVars = (typeof template.derive === "function")
+        ? template.derive(vars, answer)
+        : computeDerivedVars(template, vars, answer);
+      for (var dk in extraVars) derivedVars[dk] = extraVars[dk];
+      applyProbStep(template, vars, derivedVars);
       var allVars = {};
       for (var k in vars) allVars[k] = vars[k];
       for (var k2 in derivedVars) allVars[k2] = derivedVars[k2];
@@ -383,6 +396,44 @@ var QuestionGenerator = (function() {
   }
 
   // --- 派生変数の計算 ---
+
+  // どのテンプレートでも使える共通の派生変数。
+  // ⚠️ ここはエンジンが必ず供給する「契約」。テンプレ側の derive はこれを
+  //    上書きするのではなく、自分の分だけを足す。
+  //    （2026-09-06: derive を入れた際、テンプレの戻り値で丸ごと置き換えて
+  //     しまい、解説の {{answer}} が全問未展開になった。分岐を移すときは
+  //     共通部分がどこにあるかを先に確かめること）
+  function commonDerived(answer) {
+    var d = {};
+    if (answer !== null && answer !== undefined) {
+      if (typeof answer === "object" && answer.numerator !== undefined) {
+        d.ansNum = answer.numerator;
+        d.ansDen = answer.denominator;
+        d.answer = answer.numerator + "/" + answer.denominator;
+      } else {
+        d.answer = answer;
+      }
+    }
+    return d;
+  }
+
+  // 確率の途中式「n / d = 約分後」を作る。
+  // ⚠️ テンプレートが probPair: ["分子キー", "分母キー"] を宣言していれば効く。
+  //    数値を直接書いてもよい（例: ["count", 36]）。
+  //    以前は generator.js に PROB_PAIRS というテンプレIDの表を持っていたが、
+  //    出題範囲を足すたびに表が伸びる形だったのでテンプレ側の宣言に移した。
+  //    派生変数(d)が出そろった後に呼ぶ必要がある（dの値を参照するため）。
+  function applyProbStep(template, vars, d) {
+    var pr = template.probPair;
+    if (!pr) return;
+    function pick(k) {
+      if (typeof k === "number") return k;
+      return d[k] !== undefined ? d[k] : vars[k];
+    }
+    var pn = pick(pr[0]), pd = pick(pr[1]);
+    if (typeof pn === "number" && typeof pd === "number") d.probStep = stepStr(pn, pd);
+  }
+
   function computeDerivedVars(template, vars, answer) {
     // 推論(順序): 解説で使う並びと答え
     if (/^suiron_order_/.test(template.id)) {
@@ -393,9 +444,6 @@ var QuestionGenerator = (function() {
     }
 
     // 推論(嘘つき): 解説で使う答え
-    if (template.id === "suiron_statement_01") {
-      return { liar: vars._liar };
-    }
 
     // 推論(対応関係): 解説で使う確定表
     if (/^suiron_match_/.test(template.id)) {
@@ -403,15 +451,6 @@ var QuestionGenerator = (function() {
     }
 
     // 推論(直線距離): 解説で使う平方
-    if (template.id === "suiron_direction_01") {
-      return {
-        sqA: vars.a * vars.a,
-        sqB: vars.b * vars.b,
-        sqC: vars.a * vars.a + vars.b * vars.b,
-        wrongSum: vars.a + vars.b,
-        answer: answer
-      };
-    }
 
     // 四則逆算: 解説で使う右辺の値と答え
     if (template.categoryId === 11) {
@@ -426,49 +465,19 @@ var QuestionGenerator = (function() {
 
     var d = {};
 
-    // 分数を約分して文字列にする。
-    //
-    // 仕事算は「全体を1とする」と書いた直後に小数へ落としていた
-    // （1 - 5/18 = 0.72）。これでは分数で通す解法そのものが伝わらないうえ、
-    // 途中の丸めで、利用者が電卓で追うと合わない式になる。
-    // 割り切れない値は小数にせず、分数のまま最後まで書く。
-    function fracStr(n, dd) {
-      if (dd < 0) { n = -n; dd = -dd; }
-      var a = Math.abs(n), b = Math.abs(dd);
-      while (b) { var t = a % b; a = b; b = t; }
-      var g = a || 1;
-      n /= g; dd /= g;
-      return dd === 1 ? String(n) : n + "/" + dd;
-    }
+    // fracStr / stepStr は src/questions/_base.js の共有版を使う。
+    // テンプレ側の derive() からも同じ関数を呼べるようにするため移した。
 
     // 「元の分数 = 約分後」の1行。約分できないときは同じ式が2度並んでしまい
     // （5 / 32 = 5 / 32）、そこで計算が1歩も進まない。
     // 約分できるときだけ2段で書く。
-    function stepStr(n, dd) {
-      var raw = n + " / " + dd;
-      var red = fracStr(n, dd);
-      return red.replace(/\s/g, "") === raw.replace(/\s/g, "") ? raw : raw + " = " + red;
-    }
 
     // 集合: 「A+B = A+B ですが全体は…」と書いていて、和が計算されていなかった。
-    if (template.id === "shugo_min_01") {
-      d.sumAB = vars.a + vars.b;
-    }
 
     // 確率の解説にある「元の分数 = 約分後」の行。
     // 約分できないと同じ式が2度並び（5 / 32 = 5 / 32）、計算が1歩も進まない。
     // テンプレートごとに「約分前の分子・分母」がどの変数かだけを持ち、
     // 2段で書くか1段で書くかは stepStr に任せる。
-    var PROB_PAIRS = {
-      kakuritsu_ball_01:  ["num", "den"],
-      kakuritsu_coin_01:  ["num", "den"],
-      kakuritsu_card_01:  ["num", "den"],
-      kakuritsu_dice_01:  ["count", 36],
-      kakuritsu_ball3_01: ["diffPairs", "allPairs"],
-      kakuritsu_cond_01:  ["redM1", "denTotal"],
-      kakuritsu_arrange_01: ["adjacent", "allPerm"]
-    };
-
     // 共通
     if (answer !== null && answer !== undefined) {
       if (typeof answer === "object" && answer.numerator !== undefined) {
@@ -481,307 +490,92 @@ var QuestionGenerator = (function() {
     }
 
     // 確率: 玉問題
-    if (template.id === "kakuritsu_ball_01") {
-      var total = vars.red + vars.white;
-      d.total = total;
-      d.totalM1 = total - 1;
-      d.redM1 = vars.red - 1;
-      d.den = total * (total - 1) / 2;
-      d.num = vars.red * (vars.red - 1) / 2;
-    }
 
     // 確率: サイコロ・カードの派生変数はテンプレート側の resolve が作る。
     // 問われ方（合計/差、奇数/偶数/3の倍数）を可変にしたので、
     // 「合計」「奇数」を前提にした式がここに残っていると解説だけ誤る。
 
     // 確率: コイン
-    if (template.id === "kakuritsu_coin_01") {
-      d.den = Math.pow(2, vars.n);
-      d.num = combination(vars.n, vars.k);
-    }
 
     // 確率: くじ
-    if (template.id === "kakuritsu_lottery_01") {
-      d.lose = vars.total - vars.win;
-      d.allPairs = vars.total * (vars.total - 1) / 2;
-      d.losePairs = d.lose * (d.lose - 1) / 2;
-    }
 
     // 集合
-    if (template.id === "shugo_2set_01") {
-      d.union = vars.a + vars.b - vars.ab;
-    }
-    if (template.id === "shugo_2set_02") {
-      d.union = vars.total - vars.neither;
-    }
-    if (template.id === "shugo_3set_01") {
-      d.union = vars.a + vars.b + vars.c - vars.ab - vars.bc - vars.ac + vars.abc;
-    }
 
     // 損益算
-    if (template.id === "soneki_basic_01") {
-      d.multiplier = 1 + vars.markupRate / 100;
-    }
-    if (template.id === "soneki_discount_01") {
-      d.listPrice = Math.round(vars.cost * (1 + vars.markupRate / 100));
-      d.salePrice = Math.round(d.listPrice * (1 - vars.discountRate / 100));
-    }
-    if (template.id === "soneki_loss_01") {
-      d.multiplier = 1 + vars.markupRate / 100;
-    }
-    if (template.id === "soneki_multiple_01") {
-      d.listPrice = Math.round(vars.cost * (1 + vars.markupRate / 100));
-      d.discountPrice = Math.round(d.listPrice * (1 - vars.discountRate / 100));
-      d.sold2 = vars.quantity - vars.sold1;
-      d.revenue = Math.round(d.listPrice * vars.sold1 + d.discountPrice * d.sold2);
-      d.totalCost = vars.cost * vars.quantity;
-    }
 
     // 速度算
     // 速度算。割り切れない時間は小数に丸めず分数で書く。
     // 「70 / 12 = 5.83」「5.83 × 60 = 350」は、利用者が電卓で追うと合わない
     // （真値は 5.8333… と 349.8）。分数なら最後まで正確に追える。
-    if (template.id === "sokudo_basic_01") {
-      d.hours = fracStr(vars.distance, vars.speed);
-      d.hoursStep = stepStr(vars.distance, vars.speed);
-    }
-    if (template.id === "sokudo_encounter_01") {
-      d.totalSpeed = vars.speedA + vars.speedB;
-      d.hours = fracStr(vars.distance, d.totalSpeed);
-    }
-    if (template.id === "sokudo_chase_01") {
-      d.gap = vars.speedA * vars.headStart;
-      d.diff = vars.speedB - vars.speedA;
-    }
-    if (template.id === "sokudo_round_01") {
-      d.totalDist = vars.distance * 2;
-      d.timeGo = fracStr(vars.distance, vars.speedGo);
-      d.timeBack = fracStr(vars.distance, vars.speedBack);
-      // 合計時間は、丸めた表示どうしを足すのではなく通分して1つの分数にする。
-      // 丸めた値を足すと、そこから先の計算が全部ずれる。
-      d.totalTime = fracStr(vars.distance * (vars.speedGo + vars.speedBack),
-                            vars.speedGo * vars.speedBack);
-      // 分数のときだけ括弧を付ける。整数に (75) と書くと読みにくい。
-      // 括弧が要るのは、÷ のあとに分数が来ると左から評価されて別の値になるため。
-      d.totalTimeParen = d.totalTime.indexOf("/") >= 0 ? "(" + d.totalTime + ")" : d.totalTime;
-    }
 
     // 仕事算
-    if (template.id === "shigoto_basic_01") {
-      d.combined = "(" + vars.daysA + " + " + vars.daysB + ") / (" + vars.daysA + " × " + vars.daysB + ")";
-    }
     // 途中交代。ここも分数のまま通す。
     // aDone/remaining に式の文字列を入れていたため、解説が
     // 「5/10 = 5/10」「1 - 5/10 = 1 - 5/10」という同語反復になっていた。
-    if (template.id === "shigoto_switch_01") {
-      d.aDone = fracStr(vars.daysAlone, vars.daysA);
-      d.aDoneStep = stepStr(vars.daysAlone, vars.daysA);
-      d.remaining = fracStr(vars.daysA - vars.daysAlone, vars.daysA);
-    }
     // 3人。combined に式の文字列を入れていたため
     // 「1/9 + 1/12 + 1/18 = 1/9 + 1/12 + 1/18」という同語反復になっていた。
     // 合計は通分した1つの分数で書く。
-    if (template.id === "shigoto_3people_01") {
-      var p3 = vars.daysB * vars.daysC + vars.daysA * vars.daysC + vars.daysA * vars.daysB;
-      d.combined = fracStr(p3, vars.daysA * vars.daysB * vars.daysC);
-    }
 
     // 濃度算
-    if (template.id === "noudo_basic_01") {
-      d.total = vars.water + vars.salt;
-    }
-    if (template.id === "noudo_mix_01") {
-      d.saltA = vars.weightA * vars.concA / 100;
-      d.saltB = vars.weightB * vars.concB / 100;
-      d.totalSalt = d.saltA + d.saltB;
-      d.totalWeight = vars.weightA + vars.weightB;
-    }
-    if (template.id === "noudo_evaporate_01") {
-      d.salt = vars.weight * vars.conc / 100;
-      d.newWeight = vars.weight - vars.evap;
-    }
 
     // 割合
-    if (template.id === "wariai_change_01") {
-      d.diff = vars.changed - vars.original;
-    }
-    if (template.id === "wariai_ratio_01") {
-      d.ratioSum = vars.ratioA + vars.ratioB;
-    }
-    if (template.id === "wariai_increase_01") {
-      d.multiplier = 1 + vars.percent / 100;
-    }
 
     // 順列・組み合わせ
-    if (template.id === "junretsu_basic_01") {
-      var calc = [];
-      for (var pi = 0; pi < vars.r; pi++) calc.push(vars.n - pi);
-      d.calculation = calc.join(" × ");
-    }
     // C(n, r) を「実際の計算」に展開する。
     // ここが "C(n, r)" のままだと解説が「C(10, 5) = C(10, 5) = 252」となり、
     // 組み合わせの計算方法が1文字も示されない。
-    if (template.id === "kumiawase_basic_01") {
-      var kn = vars.n, kr = vars.r, topTerms = [];
-      for (var ki = 0; ki < kr; ki++) topTerms.push(kn - ki);
-      var kfact = 1;
-      for (var kj = 2; kj <= kr; kj++) kfact *= kj;
-      d.calculation = topTerms.join(" × ") + (kfact > 1 ? " / " + kfact : "");
-    }
     // junretsu_cond_01 の派生変数はテンプレート側の resolve が作る。
     // 隣り合う人数 k を可変にしたので、2人固定を前提にした (n-1)! では合わない。
-    if (template.id === "kumiawase_cond_01") {
-      d.boysComb = combination(vars.boys, vars.selectBoys);
-      d.girlsComb = combination(vars.girls, vars.selectGirls);
-    }
 
     // --- 追加テンプレート用の派生変数 ---
 
     // 確率: 3色玉
-    if (template.id === "kakuritsu_ball3_01") {
-      d.total = vars.red + vars.white + vars.blue;
-      d.allPairs = d.total * (d.total - 1) / 2;
-      d.samePairs = vars.red*(vars.red-1)/2 + vars.white*(vars.white-1)/2 + vars.blue*(vars.blue-1)/2;
-      d.diffPairs = d.allPairs - d.samePairs;
-    }
 
     // 確率: 条件付き
-    if (template.id === "kakuritsu_cond_01") {
-      d.redM1 = vars.red - 1;
-      d.denTotal = vars.red + vars.white - 1;
-    }
 
     // 損益算: 2商品比較
-    if (template.id === "soneki_compare_01") {
-      d.mA = 1 + vars.markupA / 100;
-      d.dA = 1 - vars.discountA / 100;
-      d.listA = Math.round(vars.costA * d.mA);
-      d.saleA = Math.round(d.listA * d.dA);
-      d.profitA = d.saleA - vars.costA;
-      d.mB = 1 + vars.markupB / 100;
-      d.dB = 1 - vars.discountB / 100;
-      d.listB = Math.round(vars.costB * d.mB);
-      d.saleB = Math.round(d.listB * d.dB);
-      d.profitB = d.saleB - vars.costB;
-    }
 
     // 集合: 割合
-    if (template.id === "shugo_percent_01") {
-      d.unionPct = vars.pctA + vars.pctB - vars.pctAB;
-      d.neitherPct = 100 - d.unionPct;
-    }
 
     // 損益算: 売価逆算
-    if (template.id === "soneki_reverse_01") {
-      d.multiplier = 1 + vars.profitRate / 100;
-    }
 
     // 損益算: 利益率
-    if (template.id === "soneki_profitrate_01") {
-      d.listPrice = Math.round(vars.cost * (1 + vars.markupRate / 100));
-      d.salePrice = Math.round(d.listPrice * (1 - vars.discountRate / 100));
-      d.profit = d.salePrice - vars.cost;
-    }
 
     // 速度算: 電車すれ違い
-    if (template.id === "sokudo_train_01") {
-      d.totalLen = vars.lenA + vars.lenB;
-      d.totalSpeedKmh = vars.speedA + vars.speedB;
-      d.totalSpeedMs = Math.round(d.totalSpeedKmh * 1000 / 3600 * 10) / 10;
-    }
 
     // 速度算: 遅刻早着
-    if (template.id === "sokudo_late_01") {
-      d.timeDiff = vars.late + vars.early;
-    }
 
     // 仕事算: 途中合流。すべて分数で書く（小数に落とさない）。
     //   1/B = 残り÷共同日数 - 1/A
     //       = (A-alone)/(A×tog) - 1/A
     //       = (A - alone - tog) / (A×tog)
-    if (template.id === "shigoto_join_01") {
-      var jA = vars.daysA, jAl = vars.daysAlone, jTg = vars.daysTogether;
-      d.aDone     = fracStr(jAl, jA);              // ② Aが進めた量
-      d.remaining = fracStr(jA - jAl, jA);         // ③ 残り
-      d.remPerDay = fracStr(jA - jAl, jA * jTg);   // ⑤ 残り ÷ 共同日数
-      d.bRate     = fracStr(jA - jAl - jTg, jA * jTg); // ⑤ 1/B
-    }
 
     // 濃度算: 水追加
-    if (template.id === "noudo_addwater_01") {
-      d.salt = vars.weight * vars.conc / 100;
-      d.newWeight = vars.weight + vars.addWater;
-    }
 
     // 濃度算: 食塩追加
-    if (template.id === "noudo_addsalt_01") {
-      d.origSalt = vars.weight * vars.conc / 100;
-      d.totalSalt = d.origSalt + vars.addSalt;
-      d.newWeight = vars.weight + vars.addSalt;
-    }
 
     // 濃度算: 取り出し
-    if (template.id === "noudo_replace_01") {
-      d.origSalt = vars.weight * vars.conc / 100;
-      d.removedSalt = vars.remove * vars.conc / 100;
-      d.newSalt = d.origSalt - d.removedSalt;
-    }
 
     // 割合: 連続増減の after1 はテンプレート側の resolve が作る。
     // 増減の向きを可変にしたので、常に増加とみなす式をここに残すと
     // 「減少」の問題で解説の途中経過だけが誤る。
 
     // 割合: 3つの比
-    if (template.id === "wariai_ratio3_01") {
-      d.a = vars.ab1 * vars.bc1;
-      d.b = vars.ab2 * vars.bc1;
-      d.c = vars.ab2 * vars.bc2;
-    }
 
     // 割合: 人口
-    if (template.id === "wariai_population_01") {
-      d.totalRatio = vars.maleRatio + vars.femaleRatio;
-      d.male = Math.round(vars.population * vars.maleRatio / d.totalRatio);
-      d.female = vars.population - d.male;
-      d.newMale = Math.round(d.male * (1 + vars.maleChange/100));
-      d.newFemale = Math.round(d.female * (1 - vars.femaleChange/100));
-    }
 
     // 順列: 円順列
-    if (template.id === "junretsu_circle_01") {
-      d.nMinus1 = vars.n - 1;
-    }
 
     // 組合せ: 委員
-    if (template.id === "kumiawase_committee_01") {
-      d.nM1 = vars.n - 1;
-      d.nM2 = vars.n - 2;
-    }
 
     // 組合せ: 最短経路
-    if (template.id === "kumiawase_path_01") {
-      d.total = vars.right + vars.up;
-    }
 
     // 順列: 先頭除外
-    if (template.id === "junretsu_exclude_01") {
-      d.allPerm = factorial(vars.n);
-      d.headPerm = factorial(vars.n - 1);
-    }
 
     // kakuritsu_arrange_01 の派生変数もテンプレート側の resolve が作る
     // （隣り合う個数 k を可変にしたため）。
 
     // 派生変数がすべて出そろってから組み立てる（分岐の順序に依存させない）
-    if (PROB_PAIRS[template.id]) {
-      var pr = PROB_PAIRS[template.id];
-      var pick = function (k) {
-        if (typeof k === "number") return k;
-        return d[k] !== undefined ? d[k] : vars[k];
-      };
-      var pn = pick(pr[0]), pd = pick(pr[1]);
-      if (typeof pn === "number" && typeof pd === "number") d.probStep = stepStr(pn, pd);
-    }
 
 
     return d;

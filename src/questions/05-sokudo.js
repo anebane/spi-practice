@@ -93,6 +93,14 @@ var TRAIN_SCENES = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "sokudo_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.hours = fracStr(v.distance, v.speed);
+      d.hoursStep = stepStr(v.distance, v.speed);
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -116,6 +124,14 @@ var TRAIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "sokudo_encounter_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalSpeed = v.speedA + v.speedB;
+      d.hours = fracStr(v.distance, d.totalSpeed);
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -140,6 +156,14 @@ var TRAIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "sokudo_chase_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.gap = v.speedA * v.headStart;
+      d.diff = v.speedB - v.speedA;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -171,6 +195,22 @@ var TRAIN_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "sokudo_round_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalDist = v.distance * 2;
+      d.timeGo = fracStr(v.distance, v.speedGo);
+      d.timeBack = fracStr(v.distance, v.speedBack);
+      // 合計時間は、丸めた表示どうしを足すのではなく通分して1つの分数にする。
+      // 丸めた値を足すと、そこから先の計算が全部ずれる。
+      d.totalTime = fracStr(v.distance * (v.speedGo + v.speedBack),
+                            v.speedGo * v.speedBack);
+      // 分数のときだけ括弧を付ける。整数に (75) と書くと読みにくい。
+      // 括弧が要るのは、÷ のあとに分数が来ると左から評価されて別の値になるため。
+      d.totalTimeParen = d.totalTime.indexOf("/") >= 0 ? "(" + d.totalTime + ")" : d.totalTime;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -232,6 +272,15 @@ var TRAIN_SCENES = [
   // 速度算: 電車のすれ違い
   QUESTION_TEMPLATES.push({
     id: "sokudo_train_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.totalLen = v.lenA + v.lenB;
+      d.totalSpeedKmh = v.speedA + v.speedB;
+      d.totalSpeedMs = Math.round(d.totalSpeedKmh * 1000 / 3600 * 10) / 10;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,
@@ -271,6 +320,13 @@ var TRAIN_SCENES = [
   // 速度算: 遅刻・早着
   QUESTION_TEMPLATES.push({
     id: "sokudo_late_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.timeDiff = v.late + v.early;
+      return d;
+    },
     formats: ["webtesting"],
     category: "速度算",
     categoryId: 5,

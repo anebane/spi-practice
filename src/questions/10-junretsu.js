@@ -90,6 +90,15 @@ var PERM_EXCLUDE_SCENES = [
 (function() {
   QUESTION_TEMPLATES.push({
     id: "junretsu_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var calc = [];
+      for (var pi = 0; pi < v.r; pi++) calc.push(v.n - pi);
+      d.calculation = calc.join(" × ");
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -117,6 +126,17 @@ var PERM_EXCLUDE_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "kumiawase_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      var kn = v.n, kr = v.r, topTerms = [];
+      for (var ki = 0; ki < kr; ki++) topTerms.push(kn - ki);
+      var kfact = 1;
+      for (var kj = 2; kj <= kr; kj++) kfact *= kj;
+      d.calculation = topTerms.join(" × ") + (kfact > 1 ? " / " + kfact : "");
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -176,6 +196,14 @@ var PERM_EXCLUDE_SCENES = [
 
   QUESTION_TEMPLATES.push({
     id: "kumiawase_cond_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.boysComb = combination(v.boys, v.selectBoys);
+      d.girlsComb = combination(v.girls, v.selectGirls);
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -202,6 +230,13 @@ var PERM_EXCLUDE_SCENES = [
   // 順列: 円順列
   QUESTION_TEMPLATES.push({
     id: "junretsu_circle_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.nMinus1 = v.n - 1;
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -214,7 +249,6 @@ var PERM_EXCLUDE_SCENES = [
     answerType: "number",
     resolve: function(v) {
       v.q = PERM_CIRCLE_SCENES[v.scene % PERM_CIRCLE_SCENES.length](v.n);
-      v.nMinus1 = v.n - 1;
     },
     answerFormula: function(v) {
       return factorial(v.n - 1);
@@ -227,6 +261,14 @@ var PERM_EXCLUDE_SCENES = [
   // 組合せ: 役職の割り当て
   QUESTION_TEMPLATES.push({
     id: "kumiawase_committee_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.nM1 = v.n - 1;
+      d.nM2 = v.n - 2;
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -251,6 +293,13 @@ var PERM_EXCLUDE_SCENES = [
   // 組合せ: 最短経路
   QUESTION_TEMPLATES.push({
     id: "kumiawase_path_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.total = v.right + v.up;
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,
@@ -276,6 +325,14 @@ var PERM_EXCLUDE_SCENES = [
   // 順列: 特定の1つを端から除外
   QUESTION_TEMPLATES.push({
     id: "junretsu_exclude_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.allPerm = factorial(v.n);
+      d.headPerm = factorial(v.n - 1);
+      return d;
+    },
     formats: ["webtesting"],
     category: "順列・組み合わせ",
     categoryId: 10,

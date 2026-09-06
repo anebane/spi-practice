@@ -8,6 +8,13 @@
 (function() {
   QUESTION_TEMPLATES.push({
     id: "soneki_basic_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.markupRate / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -28,6 +35,14 @@
 
   QUESTION_TEMPLATES.push({
     id: "soneki_discount_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.listPrice = Math.round(v.cost * (1 + v.markupRate / 100));
+      d.salePrice = Math.round(d.listPrice * (1 - v.discountRate / 100));
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -60,6 +75,13 @@
 
   QUESTION_TEMPLATES.push({
     id: "soneki_loss_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.markupRate / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -80,6 +102,17 @@
 
   QUESTION_TEMPLATES.push({
     id: "soneki_multiple_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.listPrice = Math.round(v.cost * (1 + v.markupRate / 100));
+      d.discountPrice = Math.round(d.listPrice * (1 - v.discountRate / 100));
+      d.sold2 = v.quantity - v.sold1;
+      d.revenue = Math.round(d.listPrice * v.sold1 + d.discountPrice * d.sold2);
+      d.totalCost = v.cost * v.quantity;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -115,6 +148,13 @@
   // 損益算: 売価から原価逆算
   QUESTION_TEMPLATES.push({
     id: "soneki_reverse_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.multiplier = 1 + v.profitRate / 100;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -136,6 +176,15 @@
   // 損益算: 割引後の利益率
   QUESTION_TEMPLATES.push({
     id: "soneki_profitrate_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.listPrice = Math.round(v.cost * (1 + v.markupRate / 100));
+      d.salePrice = Math.round(d.listPrice * (1 - v.discountRate / 100));
+      d.profit = d.salePrice - v.cost;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
@@ -168,6 +217,22 @@
   // 損益算: 2つの商品比較
   QUESTION_TEMPLATES.push({
     id: "soneki_compare_01",
+    // 解説で使う派生変数。以前は generator.js の computeDerivedVars に
+    // template.id で分岐して書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      var d = {};
+      d.mA = 1 + v.markupA / 100;
+      d.dA = 1 - v.discountA / 100;
+      d.listA = Math.round(v.costA * d.mA);
+      d.saleA = Math.round(d.listA * d.dA);
+      d.profitA = d.saleA - v.costA;
+      d.mB = 1 + v.markupB / 100;
+      d.dB = 1 - v.discountB / 100;
+      d.listB = Math.round(v.costB * d.mB);
+      d.saleB = Math.round(d.listB * d.dB);
+      d.profitB = d.saleB - v.costB;
+      return d;
+    },
     formats: ["webtesting"],
     category: "損益算",
     categoryId: 4,
