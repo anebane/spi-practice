@@ -2582,10 +2582,19 @@ if (failures.length) process.exitCode = 1;
     rows.push({ id: t.id, kinds: Object.keys(counts).length, pct });
   }
   rows.sort((a, b) => b.pct - a.pct);
+  // ⚠️ 判定は2本立てにする。割合だけで見ると閾値の上げ下げで抜けが出る。
+  //    実際、chart_line_01 の揺れを止めるために上限を40→50%に上げたら、
+  //    「天秤の枚数を一様に振る」変異（3種・最頻46%）が発火しなくなった。
+  //    種類の下限は実データから引いた: 2026-09-06時点の最少は5種（天秤）で、
+  //    それを下回るのは出題として成立していない。
+  const MIN_KINDS = 5;
   for (const r of rows) {
     if (r.pct > LIMIT) {
+      fail("答えの偏りが大きすぎる",
+        `${r.id}: 答えが${r.kinds}種類で、最頻値を答え続けると${r.pct.toFixed(1)}%当たる（上限${LIMIT}%）`);
+    } else if (r.kinds < MIN_KINDS) {
       fail("答えの種類が少なすぎる",
-        `${r.id}: 答えが${r.kinds}種類しかなく、最頻値を答え続けると${r.pct.toFixed(1)}%当たる（上限${LIMIT}%）`);
+        `${r.id}: 答えが${r.kinds}種類しかない（下限${MIN_KINDS}種）。最頻値でも${r.pct.toFixed(1)}%当たる`);
     }
   }
   // 上限は超えていないが偏っているものは、落とさずに知らせる。
