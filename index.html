@@ -208,6 +208,20 @@
       <button class="btn-primary btn-large" id="btn-start">試験を開始する</button>
       <p id="pwa-install" class="legal-lead" hidden></p>
 
+      <!-- 公務員試験の受験者への導線。開始ボタンの直後に置く。
+           ⚠️ 以前は「受検前に知っておきたいこと」の一覧に1行だけ置いていたが、
+              実測でモバイル2.9画面ぶん下（開始ボタンより下）で、
+              到達する人がほとんどいなかった。「需要が無い」のか
+              「見えていない」のか区別できない位置に置かない。 -->
+      <a class="exam-switch" href="koumuin/">
+        <span class="exam-switch-icon" aria-hidden="true">🏛</span>
+        <span class="exam-switch-body">
+          <span class="exam-switch-title">公務員試験の対策で来た方はこちら</span>
+          <span class="exam-switch-desc">数的処理・判断推理・資料解釈を、公務員試験の難易度で出題します。分野はSPIとほぼ同じで、1問あたりの時間が長めです。</span>
+        </span>
+        <span class="exam-switch-arrow" aria-hidden="true">›</span>
+      </a>
+
       <div class="faq-section">
         <h2 class="faq-heading">よくある質問</h2>
         <details class="faq-item">
@@ -234,9 +248,7 @@
           <li><a href="categories/">分野別の解き方（推論・損益算ほか）</a><span>解法を確認して、その分野だけ練習できます</span></li>
           <li><a href="tamatebako-shisoku/">四則逆算（玉手箱形式）の模擬試験</a><span>9分50問。こちらも登録不要・無限に出題</span></li>
           <li><a href="language/">語句の関係（SPI言語）の解き方と練習</a><span>包含・部分・用途など6つの型で解く</span></li>
-          <!-- ⚠️ 公務員試験はSPIとは別の試験。トップの主役はSPIのままにする（2026-09-06）。
-               同じ数的処理を使う人向けの導線として、既存の一覧に1行だけ足す。 -->
-          <li><a href="koumuin/">公務員試験の数的処理・判断推理</a><span>教養択一で出る計算・推理。SPIと同じ分野を難しめに出題</span></li>
+          <li><a href="articles/koumuin-suuteki-shori.html">公務員試験の数的処理とは｜SPIとの違い</a><span>数的推理・判断推理・資料解釈は何が違うか。SPI対策はどこまで使えるか</span></li>
           <li><a href="articles/webtesting-toha.html">WEBテスティングとテストセンターの違い</a><span>電卓は使える？答えは選ぶ？入力する？</span></li>
           <li><a href="articles/testcenter.html">テストセンターの服装・持ち物・当日の流れ</a><span>初めてでも迷わないための実務まとめ</span></li>
           <li><a href="articles/spi-seikaku-kensa.html">性格検査は対策できる？落ちる理由</a><span>正解はないが、準備できることはある</span></li>

@@ -1436,3 +1436,51 @@ button.cta-btn { border: none; font-size: 16px; cursor: pointer; font-family: in
   cursor: pointer;
 }
 .pwa-ios-close:hover { color: #333; }
+
+/* 別の試験へ渡す案内。開始ボタンの直後に置く。
+   ⚠️ callout（オレンジの警告色）は使わない。警告ではなく案内なので、
+      注意を引きすぎるとSPIを解きに来た人の邪魔になる。
+   ⚠️ 「受検前に知っておきたいこと」の一覧に1行だけ置いていたが、
+      実測でページ上端から2,450px（モバイルで2.9画面ぶん下・開始ボタンより下）で、
+      到達する人がほとんどいない位置だった（2026-09-06）。 */
+.exam-switch {
+  display: flex;
+  border-left: 4px solid #1a237e;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #c5cae9;
+  background: #f5f6fc;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 18px 0 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.exam-switch:hover { background: #eef0fa; border-color: #9fa8da; }
+.exam-switch-icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+  line-height: 1;
+}
+/* ⚠️ 親が text-align:center なので、明示しないと中央寄せを継承する。 */
+.exam-switch-body { display: block; flex: 1 1 auto; min-width: 0; text-align: left; }
+.exam-switch-title {
+  /* ⚠️ span は既定でインラインなので、block にしないと説明文と同じ行に流れる。 */
+  display: block;
+  font-weight: 700;
+  color: #1a237e;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+.exam-switch-desc {
+  display: block;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+}
+.exam-switch-arrow { flex: 0 0 auto; color: #1a237e; font-size: 18px; }
+@media (max-width: 480px) {
+  .exam-switch { padding: 12px 13px; gap: 10px; }
+  .exam-switch-title { font-size: 14px; }
+  .exam-switch-desc { font-size: 12px; }
+}
