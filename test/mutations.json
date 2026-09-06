@@ -2070,5 +2070,85 @@
     "find": "      var lo = Math.pow(3, v.band - 1) + 1;\n      var hi = Math.pow(3, v.band);\n      v.n = lo + (v.offset % (hi - lo + 1));",
     "replace": "      v.n = 5 + (v.offset % 41);",
     "expect": "generator"
+  },
+  {
+    "name": "存在しない分野IDをプロファイルに書く",
+    "why": "テンプレートが1本も無い分野を宣言すると、出題も導線も成立しない",
+    "file": "src/questions/_profile.js",
+    "find": "      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
+    "replace": "      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" },\n      { id: 99, name: \"存在しない分野\", slug: null }",
+    "expect": "profile"
+  },
+  {
+    "name": "画面の分野選択のidを変える",
+    "why": "id が変わると検査が分野を読み取れず、宣言と画面の突き合わせが空回りする",
+    "file": "index.html",
+    "find": "<div class=\"category-grid\" id=\"category-select\">",
+    "replace": "<div class=\"category-grid\" id=\"category-select-renamed\">",
+    "expect": "profile"
+  },
+  {
+    "name": "画面だけに存在しない分野を足す",
+    "why": "画面で選べるのにプロファイルに無い分野は、選んでも1問も出ない",
+    "file": "index.html",
+    "find": "            <label class=\"category-item\"><input type=\"checkbox\" value=\"13\" checked><span>規則性・方角</span></label>",
+    "replace": "            <label class=\"category-item\"><input type=\"checkbox\" value=\"13\" checked><span>規則性・方角</span></label>\n            <label class=\"category-item\"><input type=\"checkbox\" value=\"98\" checked><span>幻の分野</span></label>",
+    "expect": "profile"
+  },
+  {
+    "name": "画面の難易度選択のidを変える",
+    "why": "idが変わると難易度の突き合わせができず、宣言が上書きされていても気づけない",
+    "file": "index.html",
+    "find": "<div class=\"difficulty-grid\" id=\"difficulty-select\">",
+    "replace": "<div class=\"difficulty-grid\" id=\"difficulty-select-renamed\">",
+    "expect": "profile"
+  },
+  {
+    "name": "画面の問題数の選択肢を宣言とずらす",
+    "why": "画面で選べる問題数と宣言が食い違うと、既定値が選べない状態になりうる",
+    "file": "index.html",
+    "find": "<button class=\"config-btn\" data-value=\"30\">30問</button>",
+    "replace": "<button class=\"config-btn\" data-value=\"40\">40問</button>",
+    "expect": "profile"
+  },
+  {
+    "name": "プロファイルの既定問題数を選択肢の外にする",
+    "why": "既定値が選択肢に無いと、画面の初期状態と宣言がずれる",
+    "file": "src/questions/_profile.js",
+    "find": "    questionCounts: [10, 20, 30],\n    defaultQuestionCount: 20,\n\n    // 「10問だけもう一度」で使う問題数。",
+    "replace": "    questionCounts: [10, 20, 30],\n    defaultQuestionCount: 25,\n\n    // 「10問だけもう一度」で使う問題数。",
+    "expect": "profile"
+  },
+  {
+    "name": "CATEGORY_PAGES の変数を消す",
+    "why": "解説ページへの導線を引く先が読めなくなる。読めないまま緑になると検査が空回りする",
+    "file": "app.js",
+    "find": "  var CATEGORY_PAGES = profileCategoryPages(PROFILE_ID);",
+    "replace": "  var CATEGORY_PAGES_GONE = profileCategoryPages(PROFILE_ID);",
+    "expect": "profile"
+  },
+  {
+    "name": "トップページに別のプロファイルを宣言する",
+    "why": "トップがSPI以外を宣言すると、見た目はSPIのまま出題だけ入れ替わる",
+    "file": "index.html",
+    "find": "  <script src=\"questions.js\"></script>",
+    "replace": "  <script src=\"questions.js\"></script>\n  <script>var ACTIVE_PROFILE = \"koumuin\";</script>",
+    "expect": "profile"
+  },
+  {
+    "name": "公務員ページが宣言するプロファイルを取り違える",
+    "why": "見た目は公務員ページのまま、出題だけSPIになる",
+    "file": "koumuin/index.html",
+    "find": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>",
+    "replace": "  <script>var ACTIVE_PROFILE = \"spi\";</script>",
+    "expect": "profile"
+  },
+  {
+    "name": "プロファイルの難易度を空にする",
+    "why": "難易度の宣言が空だと1問も生成できず、試験が成立しない",
+    "file": "src/questions/_profile.js",
+    "find": "    difficulties: [2, 3],",
+    "replace": "    difficulties: [],",
+    "expect": "profile"
   }
 ]
