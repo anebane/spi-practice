@@ -452,17 +452,6 @@ var QuestionGenerator = (function() {
 
     // 推論(直線距離): 解説で使う平方
 
-    // 四則逆算: 解説で使う右辺の値と答え
-    if (template.categoryId === 11) {
-      var d11 = {};
-      d11.answer = answer;
-      if (template.id === "shisoku_mul_01")   d11.rhs = vars.b * vars.c;
-      if (template.id === "shisoku_add_01")   d11.rhs = vars.b + vars.c;
-      if (template.id === "shisoku_sub_01")   d11.rhs = vars.b * vars.c;
-      if (template.id === "shisoku_ratio_01") d11.rhs = vars.b / vars.c;
-      return d11;
-    }
-
     var d = {};
 
     // fracStr / stepStr は src/questions/_base.js の共有版を使う。

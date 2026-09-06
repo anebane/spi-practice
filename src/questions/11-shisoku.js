@@ -12,6 +12,11 @@
   // □ × a = b × c
   QUESTION_TEMPLATES.push({
     id: "shisoku_mul_01",
+    // 解説で使う右辺の値。以前は generator.js の computeDerivedVars に
+    // categoryId === 11 でまとめて書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      return { rhs: v.b * v.c };
+    },
     formats: ["webtesting", "testcenter"],
     category: "四則逆算",
     categoryId: 11,
@@ -59,6 +64,11 @@
   // a × □ = b + c
   QUESTION_TEMPLATES.push({
     id: "shisoku_add_01",
+    // 解説で使う右辺の値。以前は generator.js の computeDerivedVars に
+    // categoryId === 11 でまとめて書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      return { rhs: v.b + v.c };
+    },
     formats: ["webtesting", "testcenter"],
     category: "四則逆算",
     categoryId: 11,
@@ -83,6 +93,11 @@
   // □ - a = b × c
   QUESTION_TEMPLATES.push({
     id: "shisoku_sub_01",
+    // 解説で使う右辺の値。以前は generator.js の computeDerivedVars に
+    // categoryId === 11 でまとめて書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      return { rhs: v.b * v.c };
+    },
     formats: ["webtesting", "testcenter"],
     category: "四則逆算",
     categoryId: 11,
@@ -107,6 +122,11 @@
   // □ ÷ a = b ÷ c
   QUESTION_TEMPLATES.push({
     id: "shisoku_ratio_01",
+    // 解説で使う右辺の値。以前は generator.js の computeDerivedVars に
+    // categoryId === 11 でまとめて書かれていた（2026-09-06に移設）。
+    derive: function(v, answer) {
+      return { rhs: v.b / v.c };
+    },
     formats: ["webtesting", "testcenter"],
     category: "四則逆算",
     categoryId: 11,
