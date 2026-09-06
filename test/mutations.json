@@ -611,8 +611,8 @@
     "name": "CATEGORY_PAGES と実在ページを食い違わせる",
     "why": "分野名からページを引く表が実物とずれると、404へ誘導するか、あるページへ導線が出なくなる（2026-09-06にプロファイル由来へ移したので、ずれはプロファイル側で起きる）",
     "file": "src/questions/_profile.js",
-    "find": "      { id: 2,  name: \"場合の数・確率\",   slug: \"kakuritsu\" },",
-    "replace": "      { id: 2,  name: \"場合の数・確率\",   slug: \"sokudo\" },",
+    "find": "      { id: 2,  name: \"場合の数・確率\",   slug: \"kakuritsu\" },\n      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n      { id: 4,  name: \"損益算\",         slug: \"soneki\" },\n      { id: 5,  name: \"速度算\",         slug: \"sokudo\" },\n      { id: 6,  name: \"仕事算\",         slug: \"shigoto\" },\n      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
+    "replace": "      { id: 2,  name: \"場合の数・確率\",   slug: \"sokudo\" },\n      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n      { id: 4,  name: \"損益算\",         slug: \"soneki\" },\n      { id: 5,  name: \"速度算\",         slug: \"sokudo\" },\n      { id: 6,  name: \"仕事算\",         slug: \"shigoto\" },\n      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
     "expect": "profile"
   },
   {
@@ -707,7 +707,7 @@
     "name": "CATEGORY_PAGES の名前を変えて読めなくする",
     "why": "解説ページの一覧を引けなくなる。読めないまま緑になると検査が空回りする（引き当てはプロファイル由来になった）",
     "file": "app.js",
-    "find": "  var CATEGORY_PAGES = profileCategoryPages(\"spi\");",
+    "find": "  var CATEGORY_PAGES = profileCategoryPages(PROFILE_ID);",
     "replace": "  var CATEGORY_PAGES = {};",
     "expect": "profile"
   },
@@ -1211,7 +1211,7 @@
     "name": "プリキャッシュをごっそり減らす",
     "why": "リスト整理のつもりで大半を消す。オフラインで開けないページだらけになる",
     "file": "sw.js",
-    "find": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/generator.js\",\n  \"/app.js\",\n  \"/favicon.svg\",\n  \"/manifest.json\",\n  OFFLINE_URL,\n  \"/tamatebako-shisoku/\",\n  \"/tamatebako-shisoku/app.js\",\n  \"/icons/icon-192.png\",\n  \"/icons/icon-512.png\",\n  \"/icons/icon-maskable-512.png\",\n  \"/icons/apple-touch-icon-180.png\",",
+    "find": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/generator.js\",\n  \"/app.js\",\n  \"/favicon.svg\",\n  \"/manifest.json\",\n  OFFLINE_URL,\n  \"/koumuin/\",\n  \"/tamatebako-shisoku/\",\n  \"/tamatebako-shisoku/app.js\",\n  \"/icons/icon-192.png\",\n  \"/icons/icon-512.png\",\n  \"/icons/icon-maskable-512.png\",\n  \"/icons/apple-touch-icon-180.png\",",
     "replace": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/app.js\",",
     "expect": "pwa"
   },
@@ -1979,16 +1979,16 @@
     "name": "プロファイルから分野を1つ落とす",
     "why": "分野の一覧が index.html と二重に書かれていた頃は、片方だけ直しても何も落ちず静かにずれた",
     "file": "src/questions/_profile.js",
-    "find": "      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n",
-    "replace": "",
+    "find": "      { id: 3,  name: \"集合\",           slug: \"shugo\" },\n      { id: 4,  name: \"損益算\",         slug: \"soneki\" },\n      { id: 5,  name: \"速度算\",         slug: \"sokudo\" },\n      { id: 6,  name: \"仕事算\",         slug: \"shigoto\" },\n      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
+    "replace": "      { id: 4,  name: \"損益算\",         slug: \"soneki\" },\n      { id: 5,  name: \"速度算\",         slug: \"sokudo\" },\n      { id: 6,  name: \"仕事算\",         slug: \"shigoto\" },\n      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
     "expect": "profile"
   },
   {
     "name": "プロファイルの分野名をテンプレートとずらす",
     "why": "分野名がずれると CATEGORY_PAGES の引き当てが静かに外れ、解説ページへの導線が消える",
     "file": "src/questions/_profile.js",
-    "find": "      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },",
-    "replace": "      { id: 7,  name: \"濃度算 \",         slug: \"noudo\" },",
+    "find": "      { id: 7,  name: \"濃度算\",         slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
+    "replace": "      { id: 7,  name: \"濃度算 \",        slug: \"noudo\" },\n      { id: 8,  name: \"割合・比\",       slug: \"wariai\" },\n      { id: 9,  name: \"図表の読み取り\",  slug: \"zuhyo\" },\n      { id: 10, name: \"順列・組み合わせ\", slug: \"junretsu\" },\n      { id: 13, name: \"規則性・方角\",    slug: \"kisokusei\" }",
     "expect": "profile"
   },
   {
