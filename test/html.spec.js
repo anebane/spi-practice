@@ -307,6 +307,33 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   }
 }
 
+// --- 商標の注記があるか ---
+//
+// ⚠️ 「SPI」「SPI3」は株式会社リクルートマネジメントソリューションズの登録商標。
+//    CLAUDE.md の鉄則6（法規・商標に配慮）に対して、これまで**機械の検査が無かった**。
+//    2026-09-06に数えたら、SPIに3回以上言及しているのに注記が無いページが8枚あった。
+//    人の目で守る決まりは、ページが増えるたびに漏れる。
+{
+  const NEED = 2;   // 本文でSPIに何回以上触れたら注記を要るとみなすか
+  let checked = 0, missing = 0;
+  for (const p of pages) {
+    const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+    // script とコメントは本文ではないので除く（AdSenseのURLにも SPI は出ない
+    // が、将来の埋め込みで誤検知しないように揃えて外す）。
+    let body = html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    const text = body.replace(/<[^>]+>/g, " ");
+    const n = (text.match(/SPI/g) || []).length;
+    if (n < NEED) continue;
+    checked++;
+    if (html.indexOf("登録商標") === -1) {
+      missing++;
+      fail(p, "商標の注記が無い", `本文でSPIに${n}回触れているのに「登録商標」の注記が無い`);
+    }
+  }
+  // 0件だと「漏れが無い」ではなく「1ページも見ていない」。
+  cov.covered("商標の注記を調べたページ", checked, 8);
+}
+
 // --- 記事面に広告枠が入っているか ---
 //
 // 結果画面だけに枠があり、記事10ページはゼロだった。検索から来た人が

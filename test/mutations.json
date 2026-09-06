@@ -2150,5 +2150,13 @@
     "find": "    difficulties: [2, 3],",
     "replace": "    difficulties: [],",
     "expect": "profile"
+  },
+  {
+    "name": "商標の注記を1ページから消す",
+    "why": "「SPI」「SPI3」は登録商標。人の目で守る決まりはページが増えるたびに漏れる。実際2026-09-06に、3回以上言及しているのに注記が無いページが8枚あった",
+    "file": "articles/testcenter.html",
+    "find": "「SPI」「SPI3」は株式会社リクルートマネジメントソリューションズの登録商標です。",
+    "replace": "",
+    "expect": "html"
   }
 ]
