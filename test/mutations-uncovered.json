@@ -40,20 +40,6 @@
     },
     {
       "file": "generator.spec.js",
-      "line": 140,
-      "nth": 0,
-      "text": "if (!Array.isArray(q.choices)) fail(t.id, \"選択式なのにchoicesが無い\", String(q.choices));",
-      "why": "2026-08-29 A(借金/変異は書ける): answerType:choice のテンプレ（例: 13-kisokusei）の distractors をリネームする変異で発火する。distractors が無いと choices は null のまま返る（generator.js で確認済み）"
-    },
-    {
-      "file": "generator.spec.js",
-      "line": 142,
-      "nth": 0,
-      "text": "if (n < 2) fail(t.id, \"選択肢が不足\", `${n}個`);",
-      "why": "2026-08-29 A(借金/変異は書ける): distractor の生成数を1個に絞る変異で発火する"
-    },
-    {
-      "file": "generator.spec.js",
       "line": 151,
       "nth": 0,
       "text": "fail(t.id, \"分母が0\", JSON.stringify(q.correctAnswer));",

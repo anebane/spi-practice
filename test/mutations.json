@@ -2353,7 +2353,7 @@
     "name": "英語の語彙表を日本語に戻す",
     "why": "語彙を言語で引く形にしないと、英語プロファイルでも部署名や設問文が日本語で出る",
     "file": "src/questions/09-zuhyo.js",
-    "find": "    departments: [\"Sales\", \"Development\", \"Administration\", \"Planning\"],",
+    "find": "    departments: [\"Retail\", \"Wholesale\", \"Online\", \"Export\"],",
     "replace": "    departments: [\"営業部\", \"開発部\", \"総務部\", \"企画部\"],",
     "expect": "english"
   },
@@ -2804,5 +2804,53 @@
     "find": "  <meta property=\"og:image\" content=\"https://tekisei-drill.com/en/ogp.png\">",
     "replace": "  <meta property=\"og:image\" content=\"https://tekisei-drill.com/en/ogp-image.png\">",
     "expect": "html"
+  },
+  {
+    "name": "伸び率の引っかけを成立させない",
+    "expect": "generator",
+    "file": "src/questions/09-zuhyo.js",
+    "why": "table_growth_rate_01 の値打ちは「伸び率1位と増加額1位が違う」ことにある。同じになっても問題としては正しく、答えも一意なので再計算では捕まらない。**答えが合っていても目的を果たさない**壊れ方",
+    "find": "        if (bestPct === bestInc) continue;",
+    "replace": "        if (false) continue;"
+  },
+  {
+    "name": "指数に端数を出す",
+    "expect": "generator",
+    "file": "src/questions/09-zuhyo.js",
+    "why": "基準値を100の倍数にしているから指数が割り切れる。50の倍数にすると端数が出て、四捨五入するとどちらとも取れる答えになる",
+    "find": "        var base = (Math.floor(Math.random() * 18) + 3) * 100;      // 300〜2,000\n        var idx = Math.floor(Math.random() * 121) + 60;             // 60〜180",
+    "replace": "        var base = (Math.floor(Math.random() * 36) + 6) * 50;       // 300〜2,000\n        var idx = Math.floor(Math.random() * 121) + 60;             // 60〜180"
+  },
+  {
+    "name": "予測の増加率に割り切れない値を混ぜる",
+    "expect": "generator",
+    "file": "src/questions/09-zuhyo.js",
+    "why": "(1+r/100)^2 が割り切れる率だけを使っている。15%を混ぜると翌年の値に端数が出る（1.3225）",
+    "find": "      var rates = [10, 20, 30, 40, 50];",
+    "replace": "      var rates = [10, 15, 20, 30, 40, 50];"
+  },
+  {
+    "name": "割合を金額から計算する",
+    "expect": "generator",
+    "file": "src/questions/09-zuhyo.js",
+    "why": "割合を先に決めて金額を作っているから端数が出ない。総額を100の倍数でなくすと割合に端数が出る",
+    "find": "      var total = (Math.floor(Math.random() * 16) + 10) * 100;   // 1,000〜2,500（100の倍数）",
+    "replace": "      var total = (Math.floor(Math.random() * 160) + 100) * 10;  // 1,000〜2,590"
+  },
+  {
+    "name": "単価を割り切れない値にする",
+    "expect": "generator",
+    "file": "src/questions/09-zuhyo.js",
+    "why": "単価×販売数で売上を作っているから単価が割り切れる。売上を先に決めると1個あたりが端数になる",
+    "find": "        data[r][cols[1]] = price * units;",
+    "replace": "        data[r][cols[1]] = price * units + 7;"
+  },
+  {
+    "name": "選択式なのに選択肢を出さない",
+    "why": "当てやすさの検査は「実行時に choices を出すか」と「宣言が answerType!=choice か」で分担している。基準が違うので、answerType が choice なのに choices を出さないテンプレートはどちらの網にも掛からない。答えの当てやすさを誰も見ないまま出題される",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "        choices: tableData.rows.slice(),\n        explanation: L.growthExp(",
+    "replace": "        explanation: L.growthExp(",
+    "expect": "generator"
   }
 ]

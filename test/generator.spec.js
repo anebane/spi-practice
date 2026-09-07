@@ -816,6 +816,69 @@ if (failures.length) process.exitCode = 1;
       if (!pm) return null;
       return { x: total * (+pm[1]) / 100, tol: 0.5 };
     },
+    (q) => { // 全体に占める割合（table_share_01）
+      // ⚠️ 分母は「全行の合計」。1行の値と取り違えると必ず違う答えになる。
+      const m = String(q.text).match(/([^\s、。]+)の売上は、全体の何%を占めるか/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      let total = 0;
+      for (const k of Object.keys(tb.body)) total += tb.body[k][0];
+      if (!total) return null;
+      return { x: tb.body[m[1]][0] / total * 100, tol: 0.5 };
+    },
+    (q) => { // 何倍か（table_ratio_01）
+      // ⚠️ 「AはBの何倍か」は A ÷ B。割る順番を逆にすると別の答えになる。
+      const m = String(q.text).match(/([^\s、。]+)の売上は、([^\s、。]+)の売上の何倍か/);
+      if (!m) return null;
+      const tb = parseTable(q.text);
+      if (!tb || !tb.body[m[1]] || !tb.body[m[2]] || !tb.body[m[2]][0]) return null;
+      return { x: tb.body[m[1]][0] / tb.body[m[2]][0], tol: 0.01 };
+    },
+    (q) => { // 1個あたりの単価（table_per_unit_01）
+      const m = String(q.text).match(/([^\s、。]+)の1個あたりの平均販売価格はいくらか/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      const iu = tb.header.indexOf("販売数（個）"), ir = tb.header.indexOf("売上高（円）");
+      if (iu < 0 || ir < 0) return null;
+      const units = tb.body[m[1]][iu];
+      if (!units) return null;
+      return { x: tb.body[m[1]][ir] / units, tol: 0.5 };
+    },
+    (q) => { // 基準年を100とした指数（table_index_01）
+      const m = String(q.text).match(/([^\s、。]+)について、(\d{4}年)を100としたときの(\d{4}年)の指数はいくつか/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      const i0 = tb.header.indexOf(m[2]), i1 = tb.header.indexOf(m[3]);
+      if (i0 < 0 || i1 < 0 || !tb.body[m[1]][i0]) return null;
+      return { x: tb.body[m[1]][i1] / tb.body[m[1]][i0] * 100, tol: 0.5 };
+    },
+    (q) => { // 同じ増加率で伸びたら（table_forecast_01）
+      // ⚠️ 増加「額」を足すのではなく増加「率」を掛ける。
+      //    v3 = v2 * (v2 / v1) になる。足し算で検算すると必ずずれる。
+      const m = String(q.text).match(/([^\s、。]+)が(\d{4}年)から(\d{4}年)と同じ増加率で(\d{4}年)も伸びるとすると/);
+      if (!m) return null;
+      const tb = parseTable(q.text); if (!tb || !tb.body[m[1]]) return null;
+      const i1 = tb.header.indexOf(m[2]), i2 = tb.header.indexOf(m[3]);
+      if (i1 < 0 || i2 < 0 || !tb.body[m[1]][i1]) return null;
+      const v1 = tb.body[m[1]][i1], v2 = tb.body[m[1]][i2];
+      return { x: v2 * v2 / v1, tol: 0.5 };
+    },
+    (q) => { // 伸び率が最も高い商品（table_growth_rate_01）
+      // ⚠️ 答えは商品名（選択式）。**増加額ではなく伸び率**で比べる。
+      //    この2つが一致しないように作ってあるので、取り違えると必ず外れる。
+      const m = String(q.text).match(/(\d{4})年から(\d{4})年にかけて、売上の伸び率が最も高い商品はどれか/);
+      if (!m || !Array.isArray(q.choices)) return null;
+      const tb = parseTable(q.text); if (!tb) return null;
+      const i1 = tb.header.indexOf(m[1] + "年"), i2 = tb.header.indexOf(m[2] + "年");
+      if (i1 < 0 || i2 < 0) return null;
+      const rates = Object.keys(tb.body).map(name => {
+        const a = tb.body[name][i1], b = tb.body[name][i2];
+        return { name, r: a ? (b - a) / a : -Infinity };
+      });
+      const best = Math.max(...rates.map(x => x.r));
+      return { names: rates.filter(x => Math.abs(x.r - best) < 1e-9).map(x => x.name),
+               pick: String(q.choices[q.correctAnswer]) };
+    },
     (q) => { // 最大変動（table_diff_01）。絶対値最大が複数ある場合は、その候補の
              // どれかに一致していれば正解とする（候補が割れる問いの一意性は別問題）。
       const m = String(q.text).match(/([^\s、。]+)で前月比の売上変動額（絶対値）が最も大きかった/);
@@ -2369,6 +2432,162 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 2026-09-07に足した6本の、その型でしか成り立たない不変条件 ---
+//
+// ⚠️ 「解き直して一致する」だけでは足りない型がある。
+//    table_growth_rate_01 の値打ちは**引っかけが成立していること**にあり、
+//    伸び率1位と増加額1位が同じ商品になってしまうと、
+//    問題としては正しいまま、教えたかったことが消える。
+//    答えが合っていても目的を果たさない、という壊れ方は再計算では捕まらない。
+//
+// ⚠️ 端数も見る。割り切れない値になると「四捨五入してどちらとも取れる」答えになり、
+//    正しく解いた人が不正解にされる。既存の table_diff_01 で実際に起きた型。
+{
+  const SAMPLES = 400;
+  const problems = [];
+  let checkedTrap = 0, checkedInt = 0;
+
+  // 端数が出てはいけない型（答えが割り切れる設計になっているもの）
+  const INTEGER_ANSWER = ["table_share_01", "table_per_unit_01",
+                          "table_index_01", "table_forecast_01"];
+  // 0.5刻みまで許す型（「1.5倍」は設計どおり）
+  const HALF_ANSWER = ["table_ratio_01"];
+
+  for (const t of TEMPLATES) {
+    const isInt = INTEGER_ANSWER.indexOf(t.id) >= 0;
+    const isHalf = HALF_ANSWER.indexOf(t.id) >= 0;
+    const isTrap = t.id === "table_growth_rate_01";
+    if (!isInt && !isHalf && !isTrap) continue;
+
+    for (let i = 0; i < SAMPLES; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+
+      if (isInt || isHalf) {
+        checkedInt++;
+        const a = Number(q.correctAnswer);
+        const step = isHalf ? 0.5 : 1;
+        if (Math.abs(a / step - Math.round(a / step)) > 1e-9) {
+          if (problems.length < 4) problems.push(`${t.id}: 答えが ${a}（${step}刻みで割り切れない）`);
+        }
+      }
+
+      if (isTrap) {
+        // 解説の各行から「伸び率」と「増加」を取り出し、1位が違うことを確かめる。
+        const rows = [];
+        for (const line of String(q.explanation || "").split("\n")) {
+          const m = line.match(/^\s*(.+?)\s*:\s*(-?\d+)%（[\d,]+ → [\d,]+・増加 ([\d,]+)）/);
+          if (m) rows.push({ name: m[1], pct: +m[2], inc: Number(m[3].replace(/,/g, "")) });
+        }
+        if (rows.length < 2) continue;
+        checkedTrap++;
+        const bestPct = rows.reduce((a, b) => (b.pct > a.pct ? b : a));
+        const bestInc = rows.reduce((a, b) => (b.inc > a.inc ? b : a));
+        if (bestPct.name === bestInc.name) {
+          if (problems.length < 4) {
+            problems.push(`${t.id}: 伸び率1位と増加額1位が同じ（${bestPct.name}）。引っかけが成立していない`);
+          }
+        }
+        // 1位が2つ以上あると正解が複数になる
+        if (rows.filter(r => r.pct === bestPct.pct).length > 1) {
+          if (problems.length < 4) problems.push(`${t.id}: 伸び率の1位が複数（${bestPct.pct}%）`);
+        }
+      }
+    }
+  }
+
+  // ⚠️ 答えが整数でも、**表のセル**に端数が出ることがある。
+  //    実際、指数の基準値を50の倍数にすると表に「213.5万円」が出るが、
+  //    答え（指数）は整数のままなので上の検査は通ってしまう。
+  //    利用者が見るのは表なので、表の数字そのものを見る。
+  //    ⚠️ 対象は表型テンプレート全部。新しい型だけを見ると、
+  //       既存の型が同じ壊れ方をしたときに気づけない。
+  let checkedCell = 0;
+  for (const t of TEMPLATES) {
+    if (t.type !== "table") continue;
+    for (let i = 0; i < 60; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      for (const line of String(q.text).split("\n")) {
+        if (!line.startsWith("|") || /^\|---/.test(line)) continue;
+        for (const cell of line.split("|").slice(1, -1)) {
+          const v = cell.trim();
+          if (!/^-?[\d.]+$/.test(v)) continue;
+          checkedCell++;
+          if (v.indexOf(".") >= 0) {
+            if (problems.length < 4) problems.push(`${t.id}: 表のセルに端数「${v}」が出ている`);
+          }
+        }
+      }
+    }
+  }
+  cov.covered("端数を調べた表のセル", checkedCell, 1000);
+
+  cov.covered("端数を調べた生成", checkedInt, 400);
+  cov.covered("引っかけの成立を調べた生成", checkedTrap, 100);
+
+  console.log(`\n2026-09-07に足した型の不変条件: 端数${checkedInt.toLocaleString()}問 / 引っかけ${checkedTrap.toLocaleString()}問`);
+  if (!problems.length) {
+    console.log("   ✅ 答えは割り切れ、伸び率1位と増加額1位は必ず別の商品になっている");
+  } else {
+    console.log(`   ❌ ${problems.length}件`);
+    problems.forEach(m => console.log(`   - ${m}`));
+    process.exitCode = 1;
+  }
+}
+
+
+// --- 「答えの当てやすさ」を、どの検査も見ていないテンプレートが無いか ---
+//
+// ⚠️ 当てやすさは2つの検査で分担している。**分担の基準が違う**のが問題だった。
+//     ・「正解の中身の偏り」  … 実行時に q.choices を出すか（実行時の性質）
+//     ・「答えの偏りが大きすぎる」… t.answerType !== "choice" か（宣言の性質）
+//    この2つは同じ線を引いていない。answerType が "choice" なのに choices を
+//    出さないテンプレートは、**どちらの網にも掛からない**。
+//
+// 2026-09-08に独立検証で発覚した。指摘は「84本が黙って素通りしている」だったが、
+// 数えて出すだけでは足りない。**分担に隙間が空いていないこと自体**を見る。
+// 分担する検査を足すたびに、人が両方を思い出せる前提に立たない。
+{
+  const N = 200;
+  const uncovered = [];
+  let byContent = 0, byDiversity = 0;
+
+  for (const t of TEMPLATES) {
+    let emitsChoices = false, made = 0;
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      made++;
+      if (Array.isArray(q.choices) && q.choices.length) emitsChoices = true;
+    }
+    // それぞれの検査が実際に対象にする条件をそのまま写す。
+    // ⚠️ 「答えの偏り」側の生成数の下限は本来600回中30回。ここは200回中30回で
+    //    見ているので、ここで「見ている」と判定できたものは本家でも必ず対象になる
+    //    （厳しいほうで判定しているので、見落としを「見ている」と誤判定しない）。
+    const seenByContent = emitsChoices;
+    const seenByDiversity = t.answerType !== "choice" && made >= 30;
+
+    if (seenByContent) byContent++;
+    if (seenByDiversity) byDiversity++;
+    if (!seenByContent && !seenByDiversity) {
+      uncovered.push(`${t.id}（answerType=${t.answerType} / 選択肢を出す=${emitsChoices} / 生成 ${made}/${N}）`);
+    }
+  }
+
+  cov.covered("当てやすさの分担を調べたテンプレート", TEMPLATES.length, 80);
+
+  console.log(`\n当てやすさの検査の分担: ${TEMPLATES.length}本（中身 ${byContent}本 / 多様性 ${byDiversity}本）`);
+  if (!uncovered.length) {
+    console.log("   ✅ どのテンプレートも、少なくとも一方の検査が見ている");
+  } else {
+    console.log(`   ❌ どちらの検査も見ていないテンプレート ${uncovered.length}件`);
+    uncovered.forEach(m => console.log(`   - ${m}`));
+    process.exitCode = 1;
+  }
+}
+
+
 //
 // 「常に同じ**中身**を選ぶ」で当たらないか。
 //
@@ -2394,7 +2613,7 @@ if (failures.length) process.exitCode = 1;
   const MIN_Q = 200;     // これ未満しか生成できないテンプレートは判定しない
 
   const guessable = [];
-  let checked = 0, skipped = 0;
+  let checked = 0, skipped = 0, notChoice = 0;
 
   for (const t of TEMPLATES) {
     const wins = new Map();
@@ -2408,7 +2627,13 @@ if (failures.length) process.exitCode = 1;
       const key = String(q.choices[q.correctAnswer]);
       wins.set(key, (wins.get(key) || 0) + 1);
     }
-    if (total < MIN_Q) { if (total) skipped++; continue; }
+    // ⚠️ 選択式でないテンプレートは total が0のまま来る。
+    //    以前は `if (total) skipped++` としていたため、**84本が skipped にも
+    //    載らずに黙って消えていた**（2026-09-08に独立検証で指摘された）。
+    //    「25テンプレートを調べた」という表示だけが残り、残りを見ていないことが
+    //    読み手に分からない。この検査自身が「0件で緑」の罠を作っていた。
+    if (total === 0) { notChoice++; continue; }
+    if (total < MIN_Q) { skipped++; continue; }
     checked++;
     const chance = chanceSum / total;            // 当てずっぽうの的中率
     let bestKey = null, bestWins = 0;
@@ -2424,6 +2649,8 @@ if (failures.length) process.exitCode = 1;
 
   cov.covered("中身の偏りを調べたテンプレート", checked, 10);
   cov.skipped("標本が足りず判定しなかったテンプレート", skipped, `${MIN_Q}問未満`);
+  cov.skipped("選択式でないテンプレート", notChoice,
+    "答えが数値なので「中身」が無い。下の『答えの偏りが大きすぎる』検査が見ている");
 
   console.log(`\n正解の中身の偏り: ${checked}テンプレート`);
   if (!guessable.length) {

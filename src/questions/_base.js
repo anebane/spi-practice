@@ -119,6 +119,8 @@ var UNIT_LABELS = {
   // 「個」は答えの単位ではなく表の注記（table_sales_02）で使う。
   // ⚠️ en を "units" にすると表の下が「(unit: units)」という同語反復になる。
   //    英語の資料解釈では「何を数えた単位か」を書くのが普通なので "units sold"。
+  // table_ratio_01 の答えの単位。「AはBの何倍か」
+  "倍":   { ja: "倍", en: "times" },
   "個":   { ja: "個", en: "units sold" },
   "円":   { ja: "円", en: "£" },
   "分":   { ja: "分" },

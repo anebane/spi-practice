@@ -122,6 +122,8 @@ var UNIT_LABELS = {
   // 「個」は答えの単位ではなく表の注記（table_sales_02）で使う。
   // ⚠️ en を "units" にすると表の下が「(unit: units)」という同語反復になる。
   //    英語の資料解釈では「何を数えた単位か」を書くのが普通なので "units sold"。
+  // table_ratio_01 の答えの単位。「AはBの何倍か」
+  "倍":   { ja: "倍", en: "times" },
   "個":   { ja: "個", en: "units sold" },
   "円":   { ja: "円", en: "£" },
   "分":   { ja: "分" },
@@ -4712,6 +4714,9 @@ var ZUHYO_WORDS = {
     //    英語版（英国）は £2,000〜£3,900 なので100刻みにする。
     //    ここを言語ごとに持たないと、英語版が「月間支出 £390,000」になる。
     expenseScale: 10000,
+    // ⚠️ 単価の桁も言語で違う。日本は300〜1500円、英国は £3〜£15。
+    //    ここを共通にすると「£1,500 の日用品」になる。
+    priceScale: 100,
     expenseCats: ["食費", "住居費", "交通費", "教育費", "その他"],
     comp1Header: function (total) { return "【月間支出の内訳】 総額: " + total.toLocaleString() + "円\n\n"; },
     amountAsk: function (cat) { return cat + "の金額はいくらか。"; },
@@ -4802,12 +4807,62 @@ var ZUHYO_WORDS = {
     //    従来どおり組み立てる（ja の chartConfig を1バイトも変えないため）。
     pieCmpIntro: function (n0, t0, n1, t1) { return "次の2つの円グラフは" + n0 + "（計 " + t0.toLocaleString() + "万円）と" + n1 + "（計 " + t1.toLocaleString() + "万円）の経費内訳を示している。"; },
     pieCmpAsk: function (cat) { return cat + "の金額の差はいくらか。"; },
+    // --- table_share_01（金額 → 全体に占める割合）---
+    // ⚠️ 既存の table_composition_01 は「割合 → 金額」。向きが逆で、
+    //    実際の資料解釈では両方向が出る。
+    shareRows: ["国内事業", "海外事業", "法人向け", "個人向け"],
+    shareCol: "年間売上",
+    shareIntro: "次の表は各事業の年間売上を示している。",
+    shareAsk: function (r) { return r + "の売上は、全体の何%を占めるか。"; },
+    shareExp: function (r, v, total, pct) {
+      return "【考え方】\nその事業の売上を全体の合計で割ります。\n\n【解法】\n① " + r + "の売上: " + v.toLocaleString() + "万円\n② 全体の合計: " + total.toLocaleString() + "万円\n③ 割合 = " + v.toLocaleString() + " ÷ " + total.toLocaleString() + " × 100 = " + pct + "%\n\n【ポイント】\n・分母は「全体の合計」。1つの行ではない\n・合計は表の全行を足して求める";
+    },
+    // --- table_ratio_01（何倍か）---
+    ratioIntro: "次の表は各店舗の年間売上を示している。",
+    ratioAsk: function (a, b) { return a + "の売上は、" + b + "の売上の何倍か。"; },
+    ratioExp: function (a, va, b, vb, k) {
+      return "【考え方】\n比べられる側（" + b + "）で割ります。\n\n【解法】\n① " + a + ": " + va.toLocaleString() + "万円\n② " + b + ": " + vb.toLocaleString() + "万円\n③ " + va.toLocaleString() + " ÷ " + vb.toLocaleString() + " = " + k + "倍\n\n【ポイント】\n・「AはBの何倍か」は A ÷ B。割る順番を逆にしない\n・差ではなく比を聞かれていることに注意";
+    },
+    // --- table_per_unit_01（1個あたりの単価）---
+    unitPriceCols: ["販売数（個）", "売上高（円）"],
+    unitPriceIntro: "次の表は各商品の販売数と売上高を示している。",
+    unitPriceAsk: function (p) { return p + "の1個あたりの平均販売価格はいくらか。"; },
+    unitPriceExp: function (p, units, rev, price) {
+      return "【考え方】\n売上高を販売数で割ります。\n\n【解法】\n① " + p + "の売上高: " + rev.toLocaleString() + "円\n② " + p + "の販売数: " + units.toLocaleString() + "個\n③ 単価 = " + rev.toLocaleString() + " ÷ " + units.toLocaleString() + " = " + price.toLocaleString() + "円\n\n【ポイント】\n・「1つあたり」は必ず割り算。何で割るかを取り違えない\n・売上高が大きくても、販売数が多ければ単価は低い";
+    },
+    // --- table_index_01（基準年を100とした指数）---
+    indexIntro: "次の表は各商品の売上の推移を示している。",
+    indexAsk: function (p, y0, y1) { return p + "について、" + y0 + "を100としたときの" + y1 + "の指数はいくつか。"; },
+    indexExp: function (p, y0, v0, y1, v1, idx) {
+      return "【考え方】\n指数は「基準年を100としたときの比」です。基準年で割って100を掛けます。\n\n【解法】\n① " + p + "の" + y0 + ": " + v0.toLocaleString() + "（これが100）\n② " + p + "の" + y1 + ": " + v1.toLocaleString() + "\n③ 指数 = " + v1.toLocaleString() + " ÷ " + v0.toLocaleString() + " × 100 = " + idx + "\n\n【ポイント】\n・指数100は基準年と同じ。100を超えていれば増加、下回っていれば減少\n・指数から実額は分からない（基準年の値が分かって初めて計算できる）";
+    },
+    // --- table_forecast_01（同じ率で伸びたら）---
+    forecastIntro: "次の表は各商品の売上を示している。",
+    forecastAsk: function (p, y1, y2, y3) { return p + "が" + y1 + "から" + y2 + "と同じ増加率で" + y3 + "も伸びるとすると、" + y3 + "の売上はいくらになるか。"; },
+    forecastExp: function (p, y1, v1, y2, v2, rate, y3, v3) {
+      return "【考え方】\nまず増加率を出し、それを直近の値に掛けます。差を足すのではありません。\n\n【解法】\n① 増加率 = (" + v2.toLocaleString() + " - " + v1.toLocaleString() + ") ÷ " + v1.toLocaleString() + " × 100 = " + rate + "%\n② " + y3 + " = " + v2.toLocaleString() + " × (1 + " + rate + "/100) = " + v3.toLocaleString() + "万円\n\n【ポイント】\n・⚠️ 増加「額」を足すのではなく、増加「率」を掛ける\n  （額を足すと " + (v2 + (v2 - v1)).toLocaleString() + " になり、これは誤り）\n・もとの値が増えているので、同じ率でも増加額は大きくなる";
+    },
+    // --- table_growth_rate_01（伸び率が最も高いのはどれか）---
+    growthIntro: "次の表は各商品の売上の推移を示している。",
+    growthAsk: function (y1, y2) { return y1 + "から" + y2 + "にかけて、売上の伸び率が最も高い商品はどれか。"; },
+    // ⚠️ **比べる量（伸び率）をラベルの直後に置く。**
+    //    元の値を先に書くと、解説から答えを導き直す検査が
+    //    「ラベル: 最初の数値」を拾って元の値の最大を答えだと判断する。
+    //    検査に合わせて書式を変えたのではなく、比べている量を先に出すのが
+    //    解説としても正しい（読み手も最初に見るべき数字がそれ）。
+    growthLine: function (p, v1, v2, inc, pct) {
+      return p + ": " + pct + "%（" + v1.toLocaleString() + " → " + v2.toLocaleString() + "・増加 " + inc.toLocaleString() + "）";
+    },
+    growthExp: function (lines, best, bestPct, absName, absInc) {
+      return "【考え方】\n伸び率は「増加分 ÷ もとの値」です。増加額の大小とは一致しません。\n\n【解法】\n各商品の伸び率:\n" + lines + "\n\n伸び率が最も高いのは " + best + "（" + bestPct + "%）です。\n\n【ポイント】\n・⚠️ 増加額が最も大きいのは " + absName + "（" + absInc.toLocaleString() + "）で、伸び率の1位とは違う\n・もとの値が小さいほど、同じ増加額でも伸び率は高くなる";
+    },
     pieCmpExp: function (p) {
       return "【考え方】\n各円グラフの割合からそれぞれの金額を算出し、差を求めます。\n\n【解法】\n① " + p.n0 + "の" + p.cat + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "万円\n② " + p.n1 + "の" + p.cat + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "万円\n③ 差額 = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "万円\n  （" + p.larger + "の方が大きい）\n\n【ポイント】\n・2つの円グラフの比較は割合ではなく金額で比較\n・総額が異なるため、同じ割合でも金額は異なる";
     }
   },
   en: {
-    departments: ["Sales", "Development", "Administration", "Planning"],
+    // ⚠️ ここも「Administration の売上」になっていた。売上を持ちうる単位にする。
+    departments: ["Retail", "Wholesale", "Online", "Export"],
     quarters: ["Q1", "Q2", "Q3", "Q4"],
     salesIntro: "The table below shows quarterly revenue by department.",
     salesAsk: function (d) { return "What is the total annual revenue of the " + d + " department?"; },
@@ -4826,6 +4881,7 @@ var ZUHYO_WORDS = {
     // ⚠️ 英国の家計に「教育費」の費目は普通は立たない（公立が原則無償）。
     //    Education を Utilities（光熱・通信費）に替える。
     expenseScale: 100,
+    priceScale: 1,
     expenseCats: ["Food", "Housing", "Transport", "Utilities", "Other"],
     comp1Header: function (total) { return "[Monthly Expenses] Total: £" + total.toLocaleString() + "\n\n"; },
     amountAsk: function (cat) { return "How much is spent on " + cat.toLowerCase() + " each month?"; },
@@ -4915,6 +4971,53 @@ var ZUHYO_WORDS = {
     // ⚠️ 比較の相手は「上半期/下半期」とは限らず、Division A/B や North/South のこともある。
     //    "between the two halves" と固定すると、3組中2組で設問が図と食い違う。
     pieCmpAsk: function (cat, n0, n1) { return "What is the difference in spending on " + cat.toLowerCase() + " between " + n0 + " and " + n1 + "?"; },
+    // --- table_share_01 ---
+    shareRows: ["Domestic", "International", "Corporate", "Consumer"],
+    shareCol: "Annual revenue",
+    shareIntro: "The table below shows the annual revenue of each business area.",
+    shareAsk: function (r) { return "What percentage of total revenue comes from " + r + "?"; },
+    shareExp: function (r, v, total, pct) {
+      return "**How to approach it**\nDivide the figure for that area by the total for all areas.\n\n**Working**\n1. Revenue from " + r + ": " + v.toLocaleString() + "\n2. Total revenue: " + total.toLocaleString() + "\n3. Share = " + v.toLocaleString() + " / " + total.toLocaleString() + " × 100 = " + pct + "%\n\n**Tip**\n- The denominator is the total of every row, not one of them\n- Add the column up before you divide";
+    },
+    // --- table_ratio_01 ---
+    ratioIntro: "The table below shows the annual revenue of each store.",
+    // ⚠️ 最初 "...is how many times the revenue of B?" と書いていたが、
+    //    独立に解かせた検証で「日本語の直訳調で、英国の試験では見ない語順」と指摘された。
+    //    2つ目の "the revenue of" を "that of" に受けるのが英語の普通の書き方。
+    //    ⚠️ "how many times greater" は使わない。2倍を「2 times greater」と読むか
+    //       「3倍」と読むかで割れる、英語圏でも有名な曖昧表現。
+    ratioAsk: function (a, b) { return "The revenue of " + a + " is how many times that of " + b + "?"; },
+    ratioExp: function (a, va, b, vb, k) {
+      return "**How to approach it**\nDivide by the store you are comparing against (" + b + ").\n\n**Working**\n1. " + a + ": " + va.toLocaleString() + "\n2. " + b + ": " + vb.toLocaleString() + "\n3. " + va.toLocaleString() + " / " + vb.toLocaleString() + " = " + k + "\n\n**Tip**\n- Divide the figure named first in the question by the figure named second, in that order\n- The question asks for a ratio, not a difference";
+    },
+    // --- table_per_unit_01 ---
+    unitPriceCols: ["Units sold", "Revenue (£)"],
+    unitPriceIntro: "The table below shows the number of units sold and the revenue for each product.",
+    unitPriceAsk: function (p) { return "What is the average price per unit for " + p + "?"; },
+    unitPriceExp: function (p, units, rev, price) {
+      return "**How to approach it**\nDivide the revenue by the number of units sold.\n\n**Working**\n1. Revenue for " + p + ": £" + rev.toLocaleString() + "\n2. Units sold for " + p + ": " + units.toLocaleString() + "\n3. Price per unit = " + rev.toLocaleString() + " / " + units.toLocaleString() + " = £" + price.toLocaleString() + "\n\n**Tip**\n- \u201cPer unit\u201d always means a division. Check which figure goes on top\n- A large revenue does not mean a high price if many units were sold";
+    },
+    // --- table_index_01 ---
+    indexIntro: "The table below shows how revenue changed for each product.",
+    indexAsk: function (p, y0, y1) { return "Taking " + y0 + " as 100, what is the index for " + p + " in " + y1 + "?"; },
+    indexExp: function (p, y0, v0, y1, v1, idx) {
+      return "**How to approach it**\nAn index sets the base year to 100. Divide by the base year and multiply by 100.\n\n**Working**\n1. " + p + " in " + y0 + ": " + v0.toLocaleString() + " (this is 100)\n2. " + p + " in " + y1 + ": " + v1.toLocaleString() + "\n3. Index = " + v1.toLocaleString() + " / " + v0.toLocaleString() + " × 100 = " + idx + "\n\n**Tip**\n- An index of 100 means no change from the base year\n- An index on its own tells you nothing about the actual amount";
+    },
+    // --- table_forecast_01 ---
+    forecastIntro: "The table below shows the revenue of each product.",
+    forecastAsk: function (p, y1, y2, y3) { return "If " + p + " grows from " + y2 + " to " + y3 + " at the same percentage rate as from " + y1 + " to " + y2 + ", what will its revenue be in " + y3 + "?"; },
+    forecastExp: function (p, y1, v1, y2, v2, rate, y3, v3) {
+      return "**How to approach it**\nFind the growth rate first, then apply it to the latest figure. Do not add the increase again.\n\n**Working**\n1. Growth rate = (" + v2.toLocaleString() + " - " + v1.toLocaleString() + ") / " + v1.toLocaleString() + " × 100 = " + rate + "%\n2. " + y3 + " = " + v2.toLocaleString() + " × (1 + " + rate + "/100) = " + v3.toLocaleString() + "\n\n**Tip**\n- Apply the rate, do not add the same increase again\n  (adding it would give " + (v2 + (v2 - v1)).toLocaleString() + ", which is wrong)\n- The starting figure is larger, so the same rate gives a larger increase";
+    },
+    // --- table_growth_rate_01 ---
+    growthIntro: "The table below shows how revenue changed for each product.",
+    growthAsk: function (y1, y2) { return "Which product had the highest percentage growth in revenue from " + y1 + " to " + y2 + "?"; },
+    growthLine: function (p, v1, v2, inc, pct) {
+      return p + ": " + pct + "% (" + v1.toLocaleString() + " to " + v2.toLocaleString() + ", an increase of " + inc.toLocaleString() + ")";
+    },
+    growthExp: function (lines, best, bestPct, absName, absInc) {
+      return "**How to approach it**\nGrowth is the increase divided by the starting value. It is not the same as the size of the increase.\n\n**Working**\nGrowth for each product:\n" + lines + "\n\nThe highest growth is " + best + " at " + bestPct + "%.\n\n**Tip**\n- The largest increase in absolute terms is " + absName + " (" + absInc.toLocaleString() + "), which is a different product\n- The smaller the starting value, the higher the growth for the same increase";
+    },
     pieCmpExp: function (p) {
       return "**How to approach it**\nCompute each amount from its share and total, then find the difference.\n\n**Working**\n1. " + p.cat + " for " + p.n0 + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "\n2. " + p.cat + " for " + p.n1 + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "\n3. Difference = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "\n  (" + p.larger + " is larger)\n\n**Tip**\n- Compare amounts, not shares\n- The totals differ, so the same share means a different amount";
     }
@@ -4924,6 +5027,47 @@ var ZUHYO_WORDS = {
 // カテゴリ9: 図表の読み取り・資料解釈
 // ============================================================
 (function() {
+  // 行の並びを毎回変える。
+  //
+  // ⚠️ これは**偏り対策ではない**（最初そう書いたが誤りだった）。
+  //    この下の6本は値の割り当て自体が行ごとにランダムなので、
+  //    並びを固定しても正解の位置は一様なまま。実際、並びを固定する変異を
+  //    当ててもどの検査も落ちなかった（2026-09-07）。
+  //    効いているのは見た目だけ——同じ順に並んだ表を繰り返し見せないこと。
+  //    ⚠️ 偏りが問題になるのは、値が行（＝ラベル）に固定されている型。
+  //       table_max_01 は都市ごとに気候差が固定されているのでそちら側で対処してある
+  //       （都市プールから毎回5つ選ぶ）。並べ替えだけでは足りなかった。
+  function shuffleRows(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  // 合計100になる整数の割合を n 個作る（各要素は lo〜hi）。
+  // ⚠️ 端数を出さないため、割合を先に決めて金額をあとから作る。
+  function pickShares(n, lo, hi) {
+    for (var t = 0; t < 200; t++) {
+      var out = [], rest = 100, ok = true;
+      for (var i = 0; i < n - 1; i++) {
+        var cap = Math.min(hi, rest - lo * (n - 1 - i));
+        if (cap < lo) { ok = false; break; }
+        var v = lo + Math.floor(Math.random() * (cap - lo + 1));
+        out.push(v); rest -= v;
+      }
+      if (!ok) continue;
+      if (rest < lo || rest > hi) continue;
+      out.push(rest);
+      return out;
+    }
+    // 作れなかったときは均等割り（n が 100 を割り切らない場合は端数を先頭へ）
+    var base = Math.floor(100 / n), even = [];
+    for (var k = 0; k < n; k++) even.push(base);
+    even[0] += 100 - base * n;
+    return even;
+  }
+
   QUESTION_TEMPLATES.push({
     id: "table_sales_01",
     // ⚠️ 英語化が済んだ印。test/english.spec.js はこの宣言があるものだけを
@@ -5500,6 +5644,318 @@ var ZUHYO_WORDS = {
   });
 
   // chart_pie_compare_01: 2つの円グラフ比較
+  // ============================================================
+  // 追加の4本（2026-09-07）
+  // ============================================================
+  // ⚠️ なぜ足したか: 英語版 /en/ は図表10本だけで組んでいるので、
+  //    15問の試験を作ると**100%のセットで同じテンプレートが2回出る**
+  //    （実測2,000セット）。日本語は103本あるので20問でも0%。
+  //    「同じ問題が再び出ない」がこのサービスの中核価値なので、
+  //    英語側でそれが崩れているのは看過できない。
+  //
+  // ⚠️ 既存10本の「推論の型」は 合計 / 変化率 / 割合→金額 / 最大 /
+  //    最大変化 / 差 の6種類しかない。見た目を変えただけの水増しはしない。
+  //    実際の numerical reasoning で頻出なのに無かった4型を足す。
+
+  // 金額 → 全体に占める割合。既存 table_composition_01 の逆向き。
+  QUESTION_TEMPLATES.push({
+    id: "table_share_01",
+    i18n: true,
+    // ⚠️ テストセンターは選択式なので、数値入力の型は webtesting だけに出す。
+    formats: ["webtesting"],
+    category: "図表の読み取り",
+    categoryId: 9,
+    difficulty: 2,
+    type: "table",
+    tableGenerator: function (lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var rows = shuffleRows(L.shareRows.slice());
+      // ⚠️ 割合を先に決めてから金額を作る。金額から割合を出すと端数が出て、
+      //    「四捨五入するとどちらとも取れる」答えになる。
+      var pcts = pickShares(rows.length, 12, 40);
+      var total = (Math.floor(Math.random() * 16) + 10) * 100;   // 1,000〜2,500（100の倍数）
+      var data = {};
+      rows.forEach(function (r, i) {
+        data[r] = {};
+        data[r][L.shareCol] = total * pcts[i] / 100;
+      });
+      return { rows: rows, cols: [L.shareCol], data: data, unit: "万円", _pcts: pcts, _total: total };
+    },
+    questionGenerator: function (tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var i = Math.floor(Math.random() * tableData.rows.length);
+      var row = tableData.rows[i];
+      var pct = tableData._pcts[i];
+      var val = tableData.data[row][tableData.cols[0]];
+      return {
+        text: L.shareIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.shareAsk(row),
+        answer: pct,
+        unit: "%",
+        explanation: L.shareExp(row, val, tableData._total, pct)
+      };
+    },
+    answerType: "number",
+    timeLimitSec: 120
+  });
+
+  // 何倍か。差ではなく比を問う型は既存に無かった。
+  QUESTION_TEMPLATES.push({
+    id: "table_ratio_01",
+    i18n: true,
+    // ⚠️ テストセンターは選択式なので、数値入力の型は webtesting だけに出す。
+    formats: ["webtesting"],
+    category: "図表の読み取り",
+    categoryId: 9,
+    difficulty: 1,
+    type: "table",
+    tableGenerator: function (lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var rows = shuffleRows(L.stores.slice());
+      // ⚠️ 倍率を先に決め、割り切れる値を作る。値から倍率を出すと
+      //    2.3333... のような答えになり、四捨五入の指示が要る問題になる。
+      var ks = [1.5, 2, 2.5, 3, 3.5, 4];
+      var k = ks[Math.floor(Math.random() * ks.length)];
+      var base = (Math.floor(Math.random() * 29) + 12) * 10;      // 120〜400（10の倍数）
+      var ai = Math.floor(Math.random() * rows.length);
+      var bi = (ai + 1 + Math.floor(Math.random() * (rows.length - 1))) % rows.length;
+      // ⚠️ 埋め草の行は値が重複しうる（同じ売上の店が2つ並ぶことがある）。
+      //    この設問は2店を名指しで比べるので答えは一意で、問題は起きない。
+      //    **ただしこの表生成器に「最も大きいのはどこか」型を足すと同点問題になる。**
+      //    独立検証で指摘された潜在的な危険なので、ここに残しておく
+      //    （足すときは値の重複を禁止すること）。
+      var data = {};
+      rows.forEach(function (r) {
+        data[r] = {};
+        data[r][L.shareCol] = (Math.floor(Math.random() * 60) + 15) * 10;
+      });
+      data[rows[bi]][L.shareCol] = base;
+      data[rows[ai]][L.shareCol] = base * k;
+      return { rows: rows, cols: [L.shareCol], data: data, unit: "万円", _a: rows[ai], _b: rows[bi], _k: k };
+    },
+    questionGenerator: function (tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var col = tableData.cols[0];
+      var va = tableData.data[tableData._a][col];
+      var vb = tableData.data[tableData._b][col];
+      return {
+        text: L.ratioIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.ratioAsk(tableData._a, tableData._b),
+        answer: tableData._k,
+        unit: "倍",
+        explanation: L.ratioExp(tableData._a, va, tableData._b, vb, tableData._k)
+      };
+    },
+    answerType: "number",
+    timeLimitSec: 90
+  });
+
+  // 1個あたりの単価。「〜あたり」の割り算は既存に無かった。
+  QUESTION_TEMPLATES.push({
+    id: "table_per_unit_01",
+    i18n: true,
+    // ⚠️ テストセンターは選択式なので、数値入力の型は webtesting だけに出す。
+    formats: ["webtesting"],
+    category: "図表の読み取り",
+    categoryId: 9,
+    difficulty: 2,
+    type: "table",
+    tableGenerator: function (lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var rows = shuffleRows(L.products.slice());
+      var cols = L.unitPriceCols;
+      var data = {};
+      var priceOf = {};
+      rows.forEach(function (r) {
+        // ⚠️ 単価は言語ごとの桁で作る（日本は円、英国は£で100倍違う）
+        var price = (Math.floor(Math.random() * 13) + 3) * L.priceScale;
+        var units = (Math.floor(Math.random() * 27) + 4) * 50;    // 200〜1,500
+        priceOf[r] = price;
+        data[r] = {};
+        data[r][cols[0]] = units;
+        data[r][cols[1]] = price * units;
+      });
+      // ⚠️ 単位の注記は出さない。列ごとに単位が違うので、
+      //    表の下に1つだけ出すと必ずどちらかが嘘になる（見出しに入れてある）。
+      return { rows: rows, cols: cols, data: data, unit: "", _price: priceOf };
+    },
+    questionGenerator: function (tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var row = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
+      var units = tableData.data[row][tableData.cols[0]];
+      var rev = tableData.data[row][tableData.cols[1]];
+      var price = tableData._price[row];
+      return {
+        text: L.unitPriceIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.unitPriceAsk(row),
+        answer: price,
+        unit: "円",
+        explanation: L.unitPriceExp(row, units, rev, price)
+      };
+    },
+    answerType: "number",
+    timeLimitSec: 120
+  });
+
+  // 基準年を100とした指数。実額と指数を混同させる型で、実際の試験に頻出。
+  QUESTION_TEMPLATES.push({
+    id: "table_index_01",
+    i18n: true,
+    formats: ["webtesting"],
+    category: "図表の読み取り",
+    categoryId: 9,
+    difficulty: 2,
+    type: "table",
+    tableGenerator: function (lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var rows = shuffleRows(L.products.slice());
+      var years = [L.years[0], L.years[L.years.length - 1]];
+      var data = {}, idxOf = {};
+      rows.forEach(function (r) {
+        // ⚠️ 指数を先に決め、そこから後年の値を作る。値から指数を出すと
+        //    端数が出て「四捨五入するとどちらとも取れる」答えになる。
+        //    基準値を100の倍数にしてあるので、整数の指数なら必ず割り切れる。
+        var base = (Math.floor(Math.random() * 18) + 3) * 100;      // 300〜2,000
+        var idx = Math.floor(Math.random() * 121) + 60;             // 60〜180
+        if (idx === 100) idx = 101;                                  // 変化なしは問いにならない
+        idxOf[r] = idx;
+        data[r] = {};
+        data[r][years[0]] = base;
+        data[r][years[1]] = base * idx / 100;
+      });
+      return { rows: rows, cols: years, data: data, unit: "万円", _idx: idxOf };
+    },
+    questionGenerator: function (tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var row = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
+      var y0 = tableData.cols[0], y1 = tableData.cols[1];
+      return {
+        text: L.indexIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.indexAsk(row, y0, y1),
+        answer: tableData._idx[row],
+        unit: "",
+        explanation: L.indexExp(row, y0, tableData.data[row][y0], y1, tableData.data[row][y1], tableData._idx[row])
+      };
+    },
+    answerType: "number",
+    timeLimitSec: 120
+  });
+
+  // 同じ増加率で伸びたら。
+  // ⚠️ この型の値打ちは「増加額を足す」誤りを誘うところにある。
+  //    解説で誤答（額を足した値）を名指しで否定している。
+  QUESTION_TEMPLATES.push({
+    id: "table_forecast_01",
+    i18n: true,
+    formats: ["webtesting"],
+    category: "図表の読み取り",
+    categoryId: 9,
+    difficulty: 3,
+    type: "table",
+    tableGenerator: function (lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var rows = shuffleRows(L.products.slice());
+      // ⚠️ 増加率は 10/20/30/40/50 に限る。基準値が100の倍数なら
+      //    (1+r/100)^2 を掛けても必ず整数になる（1.21 / 1.44 / 1.69 / 1.96 / 2.25）。
+      //    ここを広げると翌年の値に端数が出て、答えが割り切れない問題になる。
+      var rates = [10, 20, 30, 40, 50];
+      // ⚠️ 年の表記は言語で違う（ja は "2023年"）。数値に直して +1 すると NaN になる。
+      //    実際 ja で「NaNも伸びるとすると」という問題文を出した。
+      //    語彙が持っている3年目をそのまま使う。
+      var years = [L.years[0], L.years[1], L.years[2]];
+      var data = {}, rateOf = {};
+      rows.forEach(function (r) {
+        var base = (Math.floor(Math.random() * 16) + 5) * 100;       // 500〜2,000
+        var rate = rates[Math.floor(Math.random() * rates.length)];
+        rateOf[r] = rate;
+        data[r] = {};
+        data[r][years[0]] = base;
+        data[r][years[1]] = base * (100 + rate) / 100;
+      });
+      return { rows: rows, cols: [years[0], years[1]], data: data, unit: "万円",
+               _rate: rateOf, _next: years[2] };
+    },
+    questionGenerator: function (tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var row = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
+      var y1 = tableData.cols[0], y2 = tableData.cols[1], y3 = tableData._next;
+      var v1 = tableData.data[row][y1], v2 = tableData.data[row][y2];
+      var rate = tableData._rate[row];
+      var v3 = v2 * (100 + rate) / 100;
+      return {
+        text: L.forecastIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.forecastAsk(row, y1, y2, y3),
+        answer: v3,
+        unit: "万円",
+        explanation: L.forecastExp(row, y1, v1, y2, v2, rate, y3, v3)
+      };
+    },
+    answerType: "number",
+    timeLimitSec: 150
+  });
+
+  // 伸び率が最も高いのはどれか。
+  // ⚠️ この型の値打ちは「増加額の1位と伸び率の1位が違う」ことにある。
+  //    実際の試験でいちばん狙われる引っかけなので、**必ず違うように作る**。
+  QUESTION_TEMPLATES.push({
+    id: "table_growth_rate_01",
+    i18n: true,
+    formats: ["webtesting", "testcenter"],
+    category: "図表の読み取り",
+    categoryId: 9,
+    difficulty: 3,
+    type: "table",
+    tableGenerator: function (lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var rows = shuffleRows(L.products.slice());
+      var years = [L.years[0], L.years[L.years.length - 1]];
+      var data = null, info = null;
+      // ⚠️ 条件（伸び率1位 ≠ 増加額1位・どちらも同点なし）を満たすまで作り直す。
+      //    「作ってからずらして直す」は table_diff_01 で失敗した手なので取らない。
+      for (var t = 0; t < 200 && !info; t++) {
+        var bases = [], pcts = [], used = {}, usedP = {};
+        var okDraw = true;
+        for (var i = 0; i < rows.length; i++) {
+          var b = (Math.floor(Math.random() * 18) + 3) * 100;      // 300〜2,000（100の倍数）
+          var pc = Math.floor(Math.random() * 56) + 5;              // 5〜60%
+          if (used[b] || usedP[pc]) { okDraw = false; break; }
+          used[b] = 1; usedP[pc] = 1;
+          bases.push(b); pcts.push(pc);
+        }
+        if (!okDraw) continue;
+        var incs = bases.map(function (b, i2) { return b * pcts[i2] / 100; });
+        if (incs.some(function (v) { return v !== Math.round(v); })) continue;
+        var uniqInc = {}, dupInc = false;
+        incs.forEach(function (v) { if (uniqInc[v]) dupInc = true; uniqInc[v] = 1; });
+        if (dupInc) continue;
+        var bestPct = pcts.indexOf(Math.max.apply(null, pcts));
+        var bestInc = incs.indexOf(Math.max.apply(null, incs));
+        if (bestPct === bestInc) continue;
+        data = {};
+        rows.forEach(function (r, i3) {
+          data[r] = {};
+          data[r][years[0]] = bases[i3];
+          data[r][years[1]] = bases[i3] + incs[i3];
+        });
+        info = { bases: bases, pcts: pcts, incs: incs, bestPct: bestPct, bestInc: bestInc };
+      }
+      if (!info) return null;
+      return { rows: rows, cols: years, data: data, unit: "万円", _info: info };
+    },
+    questionGenerator: function (tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var f = tableData._info;
+      var y1 = tableData.cols[0], y2 = tableData.cols[1];
+      var lines = tableData.rows.map(function (r, i) {
+        return L.growthLine(r, f.bases[i], f.bases[i] + f.incs[i], f.incs[i], f.pcts[i]);
+      }).join("\n");
+      return {
+        text: L.growthIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.growthAsk(y1, y2),
+        answer: tableData.rows[f.bestPct],
+        choices: tableData.rows.slice(),
+        explanation: L.growthExp(lines, tableData.rows[f.bestPct], f.pcts[f.bestPct],
+                                 tableData.rows[f.bestInc], f.incs[f.bestInc])
+      };
+    },
+    answerType: "choice",
+    timeLimitSec: 180
+  });
+
   QUESTION_TEMPLATES.push({
     id: "chart_pie_compare_01",
     i18n: true,
