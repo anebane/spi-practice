@@ -1835,8 +1835,8 @@
     "name": "表の合計の答えをオフバイワンにする",
     "why": "表の集計の誤りは解説にも同じ値が出て内部整合する。表そのもの（利用者が見るデータ）からの再計算でしか捕まらない",
     "file": "src/questions/09-zuhyo.js",
-    "find": "の年間売上の合計はいくらか。\",\n        answer: total,",
-    "replace": "の年間売上の合計はいくらか。\",\n        answer: total + 1,",
+    "find": "text: L.salesIntro + \"\\n\\n\" + formatTable(tableData, lang) + \"\\n\\n\" + L.salesAsk(dept),\n        answer: total,",
+    "replace": "text: L.salesIntro + \"\\n\\n\" + formatTable(tableData, lang) + \"\\n\\n\" + L.salesAsk(dept),\n        answer: total + 1,",
     "expect": "generator"
   },
   {
@@ -2338,5 +2338,21 @@
     "find": "    lang: \"ja\",\n    page: \"/koumuin/\",",
     "replace": "    page: \"/koumuin/\",",
     "expect": "profile"
+  },
+  {
+    "name": "表の単位の注記を日本語に固定する",
+    "why": "英語で生成しても表の下だけ「（単位: 万円）」と日本語で出る。画面上は単位が出ているので目視では気づけない（2026-09-07に実測で発覚）",
+    "file": "src/questions/_base.js",
+    "find": "  var note = (lang === \"en\")\n    ? \"(unit: \" + unitLabelFor(unit, \"en\") + \")\"\n    : \"（単位: \" + unit + \"）\";",
+    "replace": "  var note = \"（単位: \" + unit + \"）\";",
+    "expect": "english"
+  },
+  {
+    "name": "英語の語彙表を日本語に戻す",
+    "why": "語彙を言語で引く形にしないと、英語プロファイルでも部署名や設問文が日本語で出る",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    departments: [\"Sales\", \"Development\", \"Administration\", \"Planning\"],",
+    "replace": "    departments: [\"営業部\", \"開発部\", \"総務部\", \"企画部\"],",
+    "expect": "english"
   }
 ]

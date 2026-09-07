@@ -58,7 +58,23 @@ const GEN = ctx.QuestionGenerator;
 
 // lang: "en" を宣言しているテンプレートだけを見る。
 // ⚠️ 宣言が無いものは日本語とみなす。英語を足すときは lang を必ず書く。
+// ⚠️ 2種類ある。
+//   ① テンプレート自身が lang: "en" を宣言しているもの（英語専用の型）
+//   ② 日本語のテンプレートを lang: "en" で生成したもの（語彙を言語で引く型）
+//      図表（table/chart）はこちら。テンプレートは1つで、生成時に言語を渡す。
+//      **②を見ないと、英語の面に日本語が混ざっても気づけない。**
 const EN = TEMPLATES.filter(t => t.lang === "en");
+// ⚠️ 「lang を受け取れる」と「英語化が済んでいる」は別。
+//    引数を足しただけで中身が日本語のままのものが必ず出る（1本ずつ進めるため）。
+//    **済んだものだけが i18n: true を宣言する。**宣言していないものは
+//    「未着手」として扱い、この検査の対象にしない。
+//    ⚠️ 黙って除外しない。何本が未着手かを必ず表示する（宿題を見えなくしない）。
+const BILINGUAL = TEMPLATES.filter(t => t.lang !== "en" && t.i18n === true);
+const NOT_YET = TEMPLATES.filter(t =>
+  t.lang !== "en" && t.i18n !== true && (
+    (typeof t.tableGenerator === "function" && t.tableGenerator.length > 0) ||
+    (typeof t.chartGenerator === "function" && t.chartGenerator.length > 0) ||
+    (typeof t.questionGenerator === "function" && t.questionGenerator.length > 1)));
 
 // --- 判定ルール ---
 
@@ -106,7 +122,7 @@ function startsLowercase(line) {
 }
 
 // --- 検査 ---
-if (EN.length === 0) {
+if (EN.length === 0 && BILINGUAL.length === 0) {
   // ⚠️ 0件は「問題なし」ではない。英語テンプレートがまだ無いというだけ。
   //    緑にするが、何も見ていないことを必ず表示する。
   console.log("英語の問題文を検査");
@@ -130,12 +146,19 @@ if (EN.length === 0) {
 } else {
   let checked = 0;
   const seen = new Set();
-  for (const t of EN) {
+  const targets = EN.map(t => ({ t, lang: undefined }))
+    .concat(BILINGUAL.map(t => ({ t, lang: "en" })));
+  for (const { t, lang } of targets) {
     for (let i = 0; i < ITER; i++) {
-      const q = GEN.generateQuestion(t);
+      const q = lang ? GEN.generateQuestion(t, lang) : GEN.generateQuestion(t);
       if (!q) continue;
       checked++;
       const texts = [q.text, String(q.explanation || "")].concat(q.choices || []).filter(Boolean);
+      // ⚠️ 単位は「文」ではないので、文頭の大文字チェックにかけない
+      //    （km を「文頭が小文字」と誤検知した）。
+      //    ただし日本語混入だけは必ず見る。unitLabelFor は未翻訳のとき
+      //    キー（日本語）をそのまま返すので、ここが最後の砦になる。
+      const unitText = String(q.unit || "");
       for (const text of texts) {
         const key = t.id + "|" + text.slice(0, 40);
 
@@ -194,6 +217,18 @@ if (EN.length === 0) {
           }
         }
 
+        // G. 日本語が混ざっていないか
+        // ⚠️ unitLabelFor は未翻訳のときキー（日本語）をそのまま返す。
+        //    英語ページに日本語が混ざっても、画面上は「単位が出ている」ので
+        //    誰も気づけない。**英語の面に日本語が1文字でもあれば落とす。**
+        //    実際 table_sales_01 を英語化したとき、単位だけ「万円」で出た。
+        const JP = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/;
+        if (JP.test(text) && !seen.has("jp" + key)) {
+          seen.add("jp" + key);
+          fail("英語の面に日本語が混ざっている",
+            `${t.id}: 「${text.match(JP)[0]}」… ${text.slice(0, 60)}`);
+        }
+
         // F. 文頭の大文字
         for (const line of text.split("\n")) {
           if (!line.trim()) continue;
@@ -203,14 +238,26 @@ if (EN.length === 0) {
           }
         }
       }
+
+      const JP_UNIT = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/;
+      if (JP_UNIT.test(unitText) && !seen.has("ju" + t.id + unitText)) {
+        seen.add("ju" + t.id + unitText);
+        fail("単位が日本語のまま", `${t.id}: 「${unitText}」（UNIT_LABELS に en の表記が無い）`);
+      }
     }
   }
   cov.covered("英語のテンプレート", EN.length, 1);
+  cov.covered("英語化が済んだテンプレート", BILINGUAL.length, 1);
+  if (NOT_YET.length) {
+    console.log(`   ℹ️ 英語化が未着手のテンプレート ${NOT_YET.length}本: `
+      + NOT_YET.slice(0, 6).map(t => t.id).join(", ")
+      + (NOT_YET.length > 6 ? ` ほか${NOT_YET.length - 6}本` : ""));
+  }
   cov.covered("検査した生成結果", checked, 100);
 }
 
 // --- 出力 ---
-if (EN.length) console.log(`英語の問題文を検査（${EN.length}テンプレ × ${ITER}回）`);
+if (EN.length || BILINGUAL.length) console.log(`英語の問題文を検査（専用${EN.length}本 + 言語対応${BILINGUAL.length}本 × ${ITER}回）`);
 cov.print();
 for (const p of cov.failures) failures.push({ rule: "検査対象", detail: p });
 if (!failures.length) {

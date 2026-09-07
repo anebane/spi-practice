@@ -95,8 +95,12 @@ var QuestionGenerator = (function() {
   // --- 表問題の生成 ---
   function generateTableQuestion(template, lang) {
     lang = lang || "ja";
-    var tableData = template.tableGenerator();
-    var qData = template.questionGenerator(tableData);
+    // ⚠️ 言語を渡す。表のラベルと設問文は tableGenerator / questionGenerator の
+    //    中に直書きされているので、ここで渡さないと英語化できない
+    //    （templateText を持たない型なので、他の分野と同じ方式が使えない）。
+    //    受け取らない既存の実装は、引数を無視するだけで従来どおり動く。
+    var tableData = template.tableGenerator(lang);
+    var qData = template.questionGenerator(tableData, lang);
 
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
@@ -126,8 +130,8 @@ var QuestionGenerator = (function() {
   // --- チャート問題の生成 ---
   function generateChartQuestion(template, lang) {
     lang = lang || "ja";
-    var chartData = template.chartGenerator();
-    var qData = template.questionGenerator(chartData);
+    var chartData = template.chartGenerator(lang);
+    var qData = template.questionGenerator(chartData, lang);
 
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),

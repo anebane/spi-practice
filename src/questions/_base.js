@@ -43,6 +43,17 @@ var QUESTION_TEMPLATES = [];
 //   2. テンプレートの unit（関数が返す値・表/チャートの qData.unit も含む）は
 //      必ずこの表に登録されていること。未登録はキーがそのまま表示に出る
 //   3. en の列は翻訳フェーズで足す。いまは器だけ（en を書かない）
+// 単位キーから言語ごとの表記を引く。
+// ⚠️ generator.js にも同名の関数があるが、あちらは IIFE の中で外から見えない。
+//    formatTable など _base.js 側からも引きたいので、共有版をここに置く。
+//    ⚠️ 未翻訳のときはキー（日本語）をそのまま返す。英語の面に日本語が出るが、
+//       test/english.spec.js が「英語の面に日本語が混ざっている」で落とす。
+function unitLabelFor(key, lang) {
+  var e = UNIT_LABELS[key];
+  if (e && typeof e[lang] === "string") return e[lang];
+  return key;
+}
+
 var UNIT_LABELS = {
   "":     { ja: "" },
   "%":    { ja: "%" },
@@ -53,7 +64,10 @@ var UNIT_LABELS = {
   "m":    { ja: "m" },
   "m/分": { ja: "m/分" },
   "m/秒": { ja: "m/秒" },
-  "万円":  { ja: "万円" },
+  // ⚠️「万円」は日本固有の単位。英語圏には「万」の桁が無いので、
+  //    表記をそのまま訳せない。表の注記側で「in units of 10,000 yen」と
+  //    説明しているので、単位そのものは "×10,000 yen" と書く。
+  "万円":  { ja: "万円", en: "\u00d710,000 yen" },
   "人":   { ja: "人" },
   "個":   { ja: "個" },
   "円":   { ja: "円" },
@@ -1189,7 +1203,10 @@ function combination(n, r) {
   return Math.round(result);
 }
 
-function formatTable(tableData) {
+// ⚠️ 単位の注記は言語で変える。以前は「（単位: 万円）」を直書きしていて、
+//    英語で生成しても表の下だけ日本語で出た（2026-09-07に実測で発覚）。
+//    画面上は単位が出ているので、目視では気づけない類。
+function formatTable(tableData, lang) {
   var cols = tableData.cols;
   var rows = tableData.rows;
   var data = tableData.data;
@@ -1206,7 +1223,12 @@ function formatTable(tableData) {
     }).join("");
   });
 
-  return header + "\n" + separator + "\n" + dataRows.join("\n") + "\n（単位: " + unit + "）";
+  // 単位が空なら注記そのものを出さない。
+  if (!unit) return header + "\n" + separator + "\n" + dataRows.join("\n");
+  var note = (lang === "en")
+    ? "(unit: " + unitLabelFor(unit, "en") + ")"
+    : "（単位: " + unit + "）";
+  return header + "\n" + separator + "\n" + dataRows.join("\n") + "\n" + note;
 }
 
 // ============================================================

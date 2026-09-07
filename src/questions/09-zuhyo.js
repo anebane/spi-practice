@@ -1,16 +1,47 @@
+// 図表で使う語彙。⚠️ この型は templateText を持たないので、
+// 「テンプレート文字列を訳す」方式が使えない。語彙をここに出して lang で引く。
+// ⚠️ 日本語の側は既存の出力と1文字も変えないこと（test/generator.spec.js が検算する）。
+var ZUHYO_WORDS = {
+  ja: {
+    departments: ["営業部", "開発部", "総務部", "企画部"],
+    quarters: ["第1四半期", "第2四半期", "第3四半期", "第4四半期"],
+    salesIntro: "次の表は各部門の四半期ごとの売上を示している。",
+    salesAsk: function (d) { return d + "の年間売上の合計はいくらか。"; },
+    salesExpLead: function (d) { return d + "の各四半期の売上:"; },
+    money: function (n) { return n + "万円"; },
+    total: "合計"
+  },
+  en: {
+    departments: ["Sales", "Development", "Administration", "Planning"],
+    quarters: ["Q1", "Q2", "Q3", "Q4"],
+    salesIntro: "The table below shows quarterly revenue by department (in units of 10,000 yen).",
+    salesAsk: function (d) { return "What is the total annual revenue of the " + d + " department?"; },
+    salesExpLead: function (d) { return "Quarterly revenue of the " + d + " department:"; },
+    money: function (n) { return String(n); },
+    total: "Total"
+  }
+};
+
 // カテゴリ9: 図表の読み取り・資料解釈
 // ============================================================
 (function() {
   QUESTION_TEMPLATES.push({
     id: "table_sales_01",
+    // ⚠️ 英語化が済んだ印。test/english.spec.js はこの宣言があるものだけを
+    //    英語で生成して検査する。引数に lang を足しただけでは宣言しない。
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 1,
     type: "table",
-    tableGenerator: function() {
-      var departments = ["営業部", "開発部", "総務部", "企画部"];
-      var quarters = ["第1四半期", "第2四半期", "第3四半期", "第4四半期"];
+    tableGenerator: function(lang) {
+      // ⚠️ 表のラベルと設問文は言語で引く。この型は templateText を持たないので、
+      //    他の分野と同じ「テンプレート文字列を訳す」方式が使えない。
+      //    語彙を表に出し、lang で選ぶ形にした（2026-09-07）。
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var departments = L.departments;
+      var quarters = L.quarters;
       var data = {};
       departments.forEach(function(dept) {
         data[dept] = {};
@@ -20,19 +51,20 @@
       });
       return { rows: departments, cols: quarters, data: data, unit: "万円" };
     },
-    questionGenerator: function(tableData) {
+    questionGenerator: function(tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var dept = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var total = 0;
       tableData.cols.forEach(function(q) {
         total += tableData.data[dept][q];
       });
       return {
-        text: "次の表は各部門の四半期ごとの売上を示している。\n\n" + formatTable(tableData) + "\n\n" + dept + "の年間売上の合計はいくらか。",
+        text: L.salesIntro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.salesAsk(dept),
         answer: total,
         unit: "万円",
-        explanation: dept + "の各四半期の売上:\n" + tableData.cols.map(function(q) {
-          return q + ": " + tableData.data[dept][q] + "万円";
-        }).join("\n") + "\n\n合計 = " + total + "万円"
+        explanation: L.salesExpLead(dept) + "\n" + tableData.cols.map(function(q) {
+          return q + ": " + L.money(tableData.data[dept][q]);
+        }).join("\n") + "\n\n" + L.total + " = " + L.money(total)
       };
     },
     answerType: "number",
@@ -64,14 +96,14 @@
     //    2026-08-26 に利用者から報告があった（他の増減系では符号の指示があるのに
     //    この問題には無い、という指摘）。実測すると正解が負になるのは 33.7%（3000回中1012件）。
     //    符号の指示が無いと、減少のとき利用者が絶対値で答えて不正解になる。
-    questionGenerator: function(tableData) {
+    questionGenerator: function(tableData, lang) {
       var product = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
       var val1 = tableData.data[product][cols[0]];
       var val2 = tableData.data[product][cols[cols.length - 1]];
       var changeRate = Math.round((val2 - val1) / val1 * 100);
       return {
-        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）",
+        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData, lang) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）",
         answer: changeRate,
         unit: "%",
         explanation: product + "の販売数:\n" + cols[0] + ": " + val1 + "個\n" + cols[cols.length-1] + ": " + val2 + "個\n\n増減率 = (" + val2 + " - " + val1 + ") / " + val1 + " × 100 = " + changeRate + "%"
@@ -107,7 +139,7 @@
       var totalAmount = (Math.floor(Math.random() * 20) + 20) * 10000;
       return { categories: categories, percentages: data, totalAmount: totalAmount };
     },
-    questionGenerator: function(tableData) {
+    questionGenerator: function(tableData, lang) {
       var cat = tableData.categories[Math.floor(Math.random() * (tableData.categories.length - 1))];
       var pct = tableData.percentages[cat];
       var amount = Math.round(tableData.totalAmount * pct / 100);
@@ -146,7 +178,7 @@
       });
       return { rows: cities, cols: months, data: data, unit: "℃" };
     },
-    questionGenerator: function(tableData) {
+    questionGenerator: function(tableData, lang) {
       var month = tableData.cols[Math.floor(Math.random() * tableData.cols.length)];
 
       // ⚠️ 同点だと「最も高い都市」が2つ以上になり、正解が複数ある問題になる。
@@ -178,7 +210,7 @@
       });
       var choices = tableData.rows.slice();
       return {
-        text: "次の表は各都市の月別平均気温を示している。\n\n" + formatTable(tableData) + "\n\n" + month + "の平均気温が最も高い都市はどこか。",
+        text: "次の表は各都市の月別平均気温を示している。\n\n" + formatTable(tableData, lang) + "\n\n" + month + "の平均気温が最も高い都市はどこか。",
         answer: maxCity,
         choices: choices,
         explanation: month + "の各都市の気温:\n" + tableData.rows.map(function(city) {
@@ -211,7 +243,7 @@
       });
       return { rows: stores, cols: months, data: data, unit: "万円" };
     },
-    questionGenerator: function(tableData) {
+    questionGenerator: function(tableData, lang) {
       var store = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
       var maxDiff = 0;
@@ -224,7 +256,7 @@
         }
       }
       return {
-        text: "次の表は各店舗の月別売上を示している。\n\n" + formatTable(tableData) + "\n\n" + store + "で前月比の売上変動額（絶対値）が最も大きかった変動の変動額はいくらか。（増加はプラス、減少はマイナスで答えよ）",
+        text: "次の表は各店舗の月別売上を示している。\n\n" + formatTable(tableData, lang) + "\n\n" + store + "で前月比の売上変動額（絶対値）が最も大きかった変動の変動額はいくらか。（増加はプラス、減少はマイナスで答えよ）",
         answer: maxDiff,
         unit: "万円",
         explanation: store + "の月別売上変動:\n" + (function() {
@@ -270,7 +302,7 @@
         yAxisLabel: "売上高（万円）"
       };
     },
-    questionGenerator: function(chartData) {
+    questionGenerator: function(chartData, lang) {
       var data = chartData.datasets[0].data;
       var labels = chartData.labels;
       var maxVal = Math.max.apply(null, data);
@@ -326,7 +358,7 @@
         yAxisLabel: "売上高（万円）"
       };
     },
-    questionGenerator: function(chartData) {
+    questionGenerator: function(chartData, lang) {
       var labels = chartData.labels;
       var prevData = chartData.datasets[0].data;
       var currData = chartData.datasets[1].data;
@@ -384,7 +416,7 @@
         yAxisLabel: "売上高（万円）"
       };
     },
-    questionGenerator: function(chartData) {
+    questionGenerator: function(chartData, lang) {
       var data = chartData.datasets[0].data;
       var labels = chartData.labels;
 
@@ -452,7 +484,7 @@
         totalAmount: totalAmount
       };
     },
-    questionGenerator: function(chartData) {
+    questionGenerator: function(chartData, lang) {
       var categories = chartData.labels;
       var pcts = chartData.datasets[0].data;
       var totalAmount = chartData.totalAmount;
@@ -515,7 +547,7 @@
         unit: "万円"
       };
     },
-    questionGenerator: function(chartData) {
+    questionGenerator: function(chartData, lang) {
       var categories = chartData.labels;
       var ds0 = chartData.datasets[0];
       var ds1 = chartData.datasets[1];
