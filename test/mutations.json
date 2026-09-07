@@ -2298,5 +2298,45 @@
     "find": "    probe: true,",
     "replace": "    // probe: true,",
     "expect": "profile"
+  },
+  {
+    "name": "単位の表記表を消す",
+    "why": "UNIT_LABELS が無いと単位を言語で引けない。英語プロファイルでも日本語のまま出る",
+    "file": "src/questions/_base.js",
+    "find": "var UNIT_LABELS = {",
+    "replace": "var UNIT_LABELS_GONE = {",
+    "expect": "generator"
+  },
+  {
+    "name": "既存の日本語の単位表記を変える",
+    "why": "器を入れただけで既存の問題の表示が変わったら、改修ではなく事故。ベースラインで固定している",
+    "file": "src/questions/_base.js",
+    "find": "\"円\":   { ja: \"円\" }",
+    "replace": "\"円\":   { ja: \"エン\" }",
+    "expect": "generator"
+  },
+  {
+    "name": "単位のベースラインから1件消す",
+    "why": "ベースラインを消せば表記を自由に変えられてしまう。台帳は縮む方向にのみ動かす",
+    "file": "test/unit-labels-baseline.json",
+    "find": "    \"%\": \"%\",",
+    "replace": "",
+    "expect": "generator"
+  },
+  {
+    "name": "試験セットに lang を渡さない",
+    "why": "generateExamSet が言語を受け取らないと、単位の引き当てが既定の日本語に落ちる",
+    "file": "src/questions/_profile.js",
+    "find": "    lang: p.lang,",
+    "replace": "",
+    "expect": "profile"
+  },
+  {
+    "name": "公務員プロファイルから lang を落とす",
+    "why": "言語の宣言が無いと、英語プロファイルを足したとき単位だけ日本語で出る。エンジンに黙って ja 扱いさせない",
+    "file": "src/questions/_profile.js",
+    "find": "    lang: \"ja\",\n    page: \"/koumuin/\",",
+    "replace": "    page: \"/koumuin/\",",
+    "expect": "profile"
   }
 ]

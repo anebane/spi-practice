@@ -13,9 +13,11 @@
 // （前者は玉手箱モード・後者は言語モードで別ページのため意図的だが、
 //   コードからはその意図が読めなかった）。
 //
-// ⚠️ 英語版はまだ考慮していない。日本語の展開先（SPI・公務員）を先に通す方針。
-//    言語・単位・通貨をプロファイルが持つ形にするのは、英語に着手する時点で行う。
-//    その際ここの構造は変わる可能性がある。
+// 2026-09-07: 言語をプロファイルが持つ形にした（lang）。単位はテンプレートが
+//    持つ「単位キー」を UNIT_LABELS（src/questions/_base.js）で言語ごとの表記に
+//    引く。英語版を足すときは (1) lang: "en" のプロファイルと (2) UNIT_LABELS の
+//    en 列を足す。**テンプレート側は書き換えない**（それがこの器の判定基準）。
+//    翻訳（templateText / explanationTemplate / 関数内の文字列）は未着手。
 var QUESTION_PROFILES = {
 
   // 現行のSPI対策。いまの挙動をそのまま宣言に写したもの。
@@ -24,6 +26,12 @@ var QUESTION_PROFILES = {
   spi: {
     id: "spi",
     name: "SPI非言語 模擬試験",
+
+    // 出題の言語。単位の表記（UNIT_LABELS）をこの言語で引く。
+    // 英語版（SHL型）を足すときは "en" のプロファイルを足す。
+    // ⚠️ 無いと test/profile.spec.js が落とす。エンジンに黙って "ja" 扱い
+    //    させると、英語のプロファイルを足したとき単位だけ日本語で出る。
+    lang: "ja",
 
     // このプロファイルを出している画面。null は「まだ画面を作っていない」。
     // test/profile.spec.js は page が "/" のものだけ index.html と突き合わせる。
@@ -87,6 +95,7 @@ var QUESTION_PROFILES = {
   koumuin: {
     id: "koumuin",
     name: "公務員試験 数的処理・判断推理",
+    lang: "ja",
     page: "/koumuin/",
     difficulties: [2, 3],
 
@@ -125,6 +134,9 @@ function profileExamConfig(profileId, opt) {
   if (!p) return null;
   return {
     totalQuestions: opt.totalQuestions || p.defaultQuestionCount,
+    // 出題の言語。generateExamSet が単位の表記（UNIT_LABELS）を引くのに使う。
+    // ⚠️ ここで渡し忘れると、英語のプロファイルでも単位が日本語で出る。
+    lang: p.lang,
     // 利用者が画面で分野を選んだらそれを優先し、無ければプロファイルの全分野。
     selectedCategories: opt.selectedCategories && opt.selectedCategories.length
       ? opt.selectedCategories

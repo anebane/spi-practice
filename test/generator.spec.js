@@ -32,6 +32,10 @@ cov.covered("問題テンプレート", TEMPLATES.length, 50);
 
 const GEN = vm.runInContext("QuestionGenerator", ctx);
 
+// 単位の表記表（単位キー → 言語ごとの表記）。2026-09-07の英語圏展開の器。
+// 生成結果の q.unit はこの表を出題言語で引いた表記になる。
+const UNITS = vm.runInContext("typeof UNIT_LABELS !== 'undefined' ? UNIT_LABELS : null", ctx);
+
 const VALID_FORMATS = ["webtesting", "testcenter"];
 
 const failures = [];
@@ -207,6 +211,20 @@ for (const t of TEMPLATES) {
 
     // 7. 制限時間が妥当か
     if (!(q.timeLimitSec > 0)) fail(t.id, "制限時間が不正", String(q.timeLimitSec));
+
+    // 8. 単位が「単位キー → 表記」の器（UNIT_LABELS）に沿っているか
+    //    2026-09-07: 英語圏展開の器。q.unit は UNIT_LABELS をキーで引いた表記になった。
+    //    関数で単位を返すテンプレ（sokudo_convert_01）や表・チャートの qData.unit も、
+    //    静的には列挙できないのでここ（生成結果）で見る。
+    //    ⚠️ 既定の言語は "ja" なので、表示は表の ja と一致していなければならない。
+    //       ずれていたら「器を入れただけで日本語の表示が変わった」事故。
+    if (typeof q.unitKey !== "string") {
+      fail(t.id, "生成結果に unitKey が無い", String(q.unitKey));
+    } else if (!UNITS || !Object.prototype.hasOwnProperty.call(UNITS, q.unitKey)) {
+      fail(t.id, "生成された単位キーが表記表に無い", JSON.stringify(q.unitKey));
+    } else if (q.unit !== UNITS[q.unitKey].ja) {
+      fail(t.id, "単位の表示が表記表とずれている", `キー${JSON.stringify(q.unitKey)} → 表示${JSON.stringify(q.unit)}`);
+    }
 
     answers.add(answerKey(q.correctAnswer));
   }
@@ -2664,6 +2682,93 @@ if (failures.length) process.exitCode = 1;
     }
   }
   cov.covered("キーの重複を調べたテンプレ", checked, 80);
+}
+
+// --- 単位の表記表（UNIT_LABELS）が器の約束を守っているか ---
+// 2026-09-07: 英語圏展開のため、単位を「キー → 言語ごとの表記」で引く形にした。
+// キーは従来テンプレートが持っていた日本語表記そのもの。器を入れたことで
+// **既存の日本語の表示が1文字も変わっていない**ことを、改修時点の表記を写した
+// test/unit-labels-baseline.json と突き合わせて固定する。
+{
+  if (!UNITS) {
+    fail("(単位の表記表)", "UNIT_LABELS が無い", "src/questions/_base.js から消えている。単位の表記が言語で引けない");
+  } else {
+    // 1. 改修前の日本語表記から動いていないか（ベースラインと突き合わせ）
+    //    ⚠️ ベースラインは縮めない。キーを消す・ja を書き換えることは
+    //       「既存の問題の表示を変える」ことなので、意図的な変更でも
+    //       ベースラインと表の両方を同じコミットで直し、理由を書くこと。
+    const baseline = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "unit-labels-baseline.json"), "utf8")).labels;
+    let checkedBase = 0;
+    for (const key of Object.keys(baseline)) {
+      checkedBase++;
+      const entry = UNITS[key];
+      if (!entry) {
+        fail("(単位の表記表)", "既存の単位キーが表から消えている",
+          `${JSON.stringify(key)}。このキーを使うテンプレートの表示が変わる`);
+      } else if (entry.ja !== baseline[key]) {
+        fail("(単位の表記表)", "既存の日本語の単位表記が変わっている",
+          `${JSON.stringify(key)}: 改修前${JSON.stringify(baseline[key])} / いま${JSON.stringify(entry.ja)}`);
+      }
+    }
+    cov.covered("ベースラインと突き合わせた単位キー", checkedBase, 25);
+
+    // 2. ja の表記はキーと同一であること。キー＝従来の日本語表記、という設計の固定。
+    //    ここがずれると、テンプレートを1本も触っていないのに日本語の表示が変わる。
+    let checkedJa = 0;
+    for (const key of Object.keys(UNITS)) {
+      checkedJa++;
+      if (UNITS[key].ja !== key) {
+        fail("(単位の表記表)", "ja の表記がキーとずれている",
+          `${JSON.stringify(key)} → ${JSON.stringify(UNITS[key].ja)}。キーは従来の日本語表記そのもの`);
+      }
+    }
+    cov.covered("ja とキーの一致を調べた単位", checkedJa, 25);
+
+    // 3. テンプレートの unit が新しい形（表に登録されたキー、またはキーを返す関数）か。
+    //    関数の返り値と表・チャートの qData.unit は静的に列挙できないので、
+    //    上の生成検査（不変条件8）が見る。ここは静的に書かれた文字列だけ。
+    let checkedUnit = 0;
+    for (const t of TEMPLATES) {
+      if (typeof t.unit === "function") continue;
+      checkedUnit++;
+      const key = t.unit === undefined ? "" : t.unit;
+      if (typeof key !== "string" || !Object.prototype.hasOwnProperty.call(UNITS, key)) {
+        fail(t.id, "unit が表記表に登録されていない",
+          `unit=${JSON.stringify(t.unit)}。src/questions/_base.js の UNIT_LABELS に登録すること`);
+      }
+    }
+    cov.covered("unit の形を調べたテンプレ", checkedUnit, 80);
+
+    // 4. 言語の引き回し。generateQuestion(template, lang) が言語で表記を切り替えるか。
+    //    実物の en 列はまだ無い（翻訳フェーズで足す）ので、試験用の項目を
+    //    一時的に表へ足して器の動きだけを確かめる。
+    //    ⚠️ これが無いと「lang を無視して常に ja で引く」退行を、
+    //       全プロファイルが ja の今は誰も検知できない。
+    UNITS["_test_unit"] = { ja: "テスト単位", en: "test-units" };
+    const probe = {
+      id: "unit_lang_probe", category: "検査用", categoryId: 999, difficulty: 1,
+      templateText: "1+1は?", variables: {}, answerType: "number",
+      answerFormula: function () { return 2; },
+      unit: "_test_unit", explanationTemplate: "2です", timeLimitSec: 10
+    };
+    const qJa = GEN.generateQuestion(probe);
+    const qEn = GEN.generateQuestion(probe, "en");
+    const qXx = GEN.generateQuestion(probe, "xx");
+    if (!qJa || qJa.unit !== "テスト単位") {
+      fail("unit_lang_probe", "既定の言語(ja)で表の表記が出ない", JSON.stringify(qJa && qJa.unit));
+    }
+    if (!qEn || qEn.unit !== "test-units") {
+      fail("unit_lang_probe", "言語を指定しても単位の表記が切り替わらない",
+        `lang:"en" で ${JSON.stringify(qEn && qEn.unit)}。英語版を足しても単位が日本語のまま出る`);
+    }
+    if (!qXx || qXx.unit !== "_test_unit") {
+      fail("unit_lang_probe", "未翻訳の言語でキーに退避しない",
+        `lang:"xx" で ${JSON.stringify(qXx && qXx.unit)}。安全網（キーをそのまま出す）が壊れている`);
+    }
+    delete UNITS["_test_unit"];
+    cov.covered("言語の切り替えを調べた生成", 3, 3);
+  }
 }
 
 // --- 検査対象の内訳。合否より先に「何件見たか」を出す ---

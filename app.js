@@ -347,7 +347,11 @@
     state.questions = QuestionGenerator.generateExamSet({
       totalQuestions: questionCount,
       selectedCategories: selectedCategories,
-      selectedDifficulties: selectedDifficulties
+      selectedDifficulties: selectedDifficulties,
+      // 出題の言語。単位の表記（UNIT_LABELS）をこの言語で引く。
+      // ⚠️ 渡し忘れるとエンジンが "ja" に倒すので、英語のプロファイルを
+      //    足したとき単位だけ日本語で出る。test/profile.spec.js が見張る。
+      lang: PROFILE.lang
     });
 
     if (state.questions.length === 0) {

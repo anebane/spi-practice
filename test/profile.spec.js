@@ -366,10 +366,33 @@ for (const prof of allProfiles.filter(x => x.page)) {
 
     const seen = {};
     let short = 0;
+    const badUnits = new Set();   // 同じキーを何百回も報告しない
     for (let i = 0; i < 20; i++) {
       const set = G.generateExamSet(cfg);
       if (set.length !== want) short++;
-      for (const q of set) seen[q.difficulty] = (seen[q.difficulty] || 0) + 1;
+      for (const q of set) {
+        seen[q.difficulty] = (seen[q.difficulty] || 0) + 1;
+        // 単位がこのプロファイルの言語で引けるか。
+        // 2026-09-07: 単位は UNIT_LABELS（キー → 言語ごとの表記）で引く形にした。
+        // 全プロファイルが ja の今は全部引けるが、en のプロファイルを足した瞬間、
+        // en の列が無い単位はここで落ちる（翻訳漏れの検知が目的）。
+        if (typeof q.unitKey !== "string") {
+          if (!badUnits.has("(unitKeyなし)")) {
+            badUnits.add("(unitKeyなし)");
+            fail("生成結果に unitKey が無い",
+              `${prof.id}: ${q.templateId}。generator.js が単位キーを乗せていない`);
+          }
+        } else {
+          const entry = (ctx.UNIT_LABELS || {})[q.unitKey];
+          if (!entry || typeof entry[prof.lang] !== "string") {
+            if (!badUnits.has(q.unitKey)) {
+              badUnits.add(q.unitKey);
+              fail("単位がプロファイルの言語で引けない",
+                `${prof.id}(lang:${prof.lang}): キー${JSON.stringify(q.unitKey)} が UNIT_LABELS に無い（か ${prof.lang} の列が無い）`);
+            }
+          }
+        }
+      }
     }
     if (short > 0) {
       fail("宣言した条件で問題数がそろわない",
@@ -393,6 +416,48 @@ for (const prof of allProfiles.filter(x => x.page)) {
     }
   }
   cov.covered("試験を組めるか調べたプロファイル", checked, 2);
+}
+
+// --- 9. プロファイルが出題の言語を持っているか ---
+// 2026-09-07: 英語圏（SHL型）展開の器。lang が無いままエンジンが黙って "ja" に
+// 倒すと、英語のプロファイルを足したとき単位だけ日本語で出る。宣言を義務にする。
+{
+  const KNOWN_LANGS = ["ja", "en"];
+  let checked = 0;
+  for (const prof of allProfiles) {
+    checked++;
+    if (typeof prof.lang !== "string" || KNOWN_LANGS.indexOf(prof.lang) === -1) {
+      fail("プロファイルが言語(lang)を宣言していない",
+        `${prof.id}: lang=${JSON.stringify(prof.lang)}。${KNOWN_LANGS.map(x => JSON.stringify(x)).join(" / ")} のいずれかを宣言すること`);
+      continue;
+    }
+    // profileExamConfig が lang を運んでいるか。ここが途切れると、
+    // 宣言はあるのに出題は常に "ja" 扱いになる（画面からは見えない）。
+    const cfg = ctx.profileExamConfig(prof.id);
+    if (!cfg || cfg.lang !== prof.lang) {
+      fail("profileExamConfig が言語を渡していない",
+        `${prof.id}: 宣言 ${JSON.stringify(prof.lang)} / 設定 ${JSON.stringify(cfg && cfg.lang)}`);
+    }
+  }
+  cov.covered("言語を調べたプロファイル", checked, 2);
+}
+
+// --- 9b. app.js が出題時に言語を渡しているか ---
+// app.js は profileExamConfig を通らず generateExamSet を直接呼ぶ。
+// そこで lang を渡し忘れると、プロファイルの宣言が出題に届かない。
+// ⚠️ 判定は「generateExamSet の呼び出しの中」に限定する。
+//    ファイル全体の indexOf だと、コメントの言及に一致して誤検知する
+//    （indexOf("p.profile") が p.noprofile に一致した前科がある）。
+{
+  const app = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+  const call = app.match(/QuestionGenerator\.generateExamSet\(\{[\s\S]*?\}\)/);
+  if (!call) {
+    fail("app.js に generateExamSet の呼び出しが無い", "出題の入口が読めない。名前を変えたなら検査も直すこと");
+  } else if (!/lang:\s*PROFILE\.lang/.test(call[0])) {
+    fail("app.js が出題の言語を渡していない",
+      "generateExamSet の設定に lang: PROFILE.lang が無い。英語のプロファイルを足しても単位が日本語で出る");
+  }
+  cov.covered("app.js の言語の受け渡し", 1, 1);
 }
 
 // --- 出力 ---

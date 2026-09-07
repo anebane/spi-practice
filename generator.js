@@ -43,6 +43,19 @@ var QuestionGenerator = (function() {
     });
   }
 
+  // --- 単位キー → 表示する表記 ---
+  // テンプレートの unit は「単位キー」（従来の日本語表記そのもの）。
+  // 表示する表記は UNIT_LABELS（src/questions/_base.js）を出題言語で引く。
+  // 英語版は UNIT_LABELS に en の列を足すだけで、テンプレートは触らない。
+  // ⚠️ 未登録・未翻訳のキーはキーをそのまま返す（表示を壊さないための安全網）。
+  //    登録漏れは test/generator.spec.js が落とす。ここで例外にすると、
+  //    登録漏れ1つで本番の出題が丸ごと止まる。
+  function unitLabelFor(key, lang) {
+    var entry = (typeof UNIT_LABELS !== "undefined" && UNIT_LABELS) ? UNIT_LABELS[key] : null;
+    if (entry && typeof entry[lang] === "string") return entry[lang];
+    return key;
+  }
+
   // --- custom変数の後処理（変数生成の制約） ---
   // 制約の実体はすべてテンプレート側の resolve(vars) が持つ。
   // 以前はここに template.id === "..." の分岐が10件あったが、
@@ -56,7 +69,8 @@ var QuestionGenerator = (function() {
   }
 
   // --- パターン型問題の生成 ---
-  function generatePatternQuestion(template) {
+  function generatePatternQuestion(template, lang) {
+    lang = lang || "ja";
     var patterns = template.patterns.filter(function(p) { return !p._skip; });
     if (patterns.length === 0) return null;
     var pattern = patterns[Math.floor(Math.random() * patterns.length)];
@@ -71,14 +85,16 @@ var QuestionGenerator = (function() {
       answerType: template.answerType,
       correctAnswer: pattern.correctIndex,
       choices: pattern.choices,
-      unit: "",
+      unit: unitLabelFor("", lang),
+      unitKey: "",
       explanation: pattern.explanation,
       timeLimitSec: template.timeLimitSec
     };
   }
 
   // --- 表問題の生成 ---
-  function generateTableQuestion(template) {
+  function generateTableQuestion(template, lang) {
+    lang = lang || "ja";
     var tableData = template.tableGenerator();
     var qData = template.questionGenerator(tableData);
 
@@ -91,7 +107,8 @@ var QuestionGenerator = (function() {
       text: qData.text,
       answerType: template.answerType,
       correctAnswer: qData.answer,
-      unit: qData.unit || "",
+      unit: unitLabelFor(qData.unit || "", lang),
+      unitKey: qData.unit || "",
       explanation: qData.explanation,
       timeLimitSec: template.timeLimitSec
     };
@@ -107,7 +124,8 @@ var QuestionGenerator = (function() {
   }
 
   // --- チャート問題の生成 ---
-  function generateChartQuestion(template) {
+  function generateChartQuestion(template, lang) {
+    lang = lang || "ja";
     var chartData = template.chartGenerator();
     var qData = template.questionGenerator(chartData);
 
@@ -120,7 +138,8 @@ var QuestionGenerator = (function() {
       text: qData.text,
       answerType: template.answerType,
       correctAnswer: qData.answer,
-      unit: qData.unit || "",
+      unit: unitLabelFor(qData.unit || "", lang),
+      unitKey: qData.unit || "",
       explanation: qData.explanation,
       chartConfig: qData.chartConfig,
       timeLimitSec: template.timeLimitSec
@@ -136,7 +155,8 @@ var QuestionGenerator = (function() {
   }
 
   // --- テンプレート型問題の生成 ---
-  function generateTemplateQuestion(template) {
+  function generateTemplateQuestion(template, lang) {
+    lang = lang || "ja";
     // validate が厳しいテンプレートがある。実測で最も低いのは shigoto_tank_01 の
     // 合格率8.3%（A×B/(A+B) が整数になる組み合わせのみ許可）。
     // 100回だと約0.017%の確率で全滅して null を返し、出題数が足りなくなっていた。
@@ -156,7 +176,10 @@ var QuestionGenerator = (function() {
 
       // 単位は問題ごとに変わることがある（例: 単位変換は答えが m/秒 だったり
       // km/時 だったりする）。関数で返せるようにしておく。
-      var unitStr = typeof template.unit === "function"
+      // ⚠️ ここで得るのは「単位キー」。表示する表記は unitLabelFor で言語ごとに引く。
+      //    値によって単位が変わるテンプレ（sokudo_convert_01）も、関数が返すのは
+      //    キーなので個別対応は要らない（表への登録は検査が見張る）。
+      var unitKey = typeof template.unit === "function"
         ? template.unit(vars)
         : (template.unit || "");
 
@@ -165,7 +188,7 @@ var QuestionGenerator = (function() {
         if (!isFinite(answer) || isNaN(answer)) continue;
         // 答えが合理的な範囲かチェック
         var rounded = Math.round(answer * 10) / 10;
-        if (Math.abs(answer - rounded) > 0.001 && unitStr !== "%") {
+        if (Math.abs(answer - rounded) > 0.001 && unitKey !== "%") {
           // 小数点以下が長すぎる → 不適切
           // ただし%は小数1桁OK
           continue;
@@ -209,7 +232,8 @@ var QuestionGenerator = (function() {
         answerType: template.answerType,
         correctAnswer: answer,
         choices: null,
-        unit: unitStr,
+        unit: unitLabelFor(unitKey, lang),
+        unitKey: unitKey,
         explanation: explanation,
         timeLimitSec: template.timeLimitSec
       };
@@ -473,6 +497,10 @@ var QuestionGenerator = (function() {
     var totalQuestions = config.totalQuestions || 20;
     var selectedCategories = config.selectedCategories || [];
     var selectedDifficulties = config.selectedDifficulties || [1, 2, 3];
+    // 出題の言語。単位の表記（UNIT_LABELS）をこの言語で引く。
+    // プロファイル経由（profileExamConfig / app.js）では必ず渡ってくる。
+    // 無ければ "ja"（既存の直呼び・分野別練習ページを壊さないため）。
+    var lang = config.lang || "ja";
 
     // 対象テンプレートのフィルタ
     var templates = QUESTION_TEMPLATES.filter(function(t) {
@@ -519,13 +547,13 @@ var QuestionGenerator = (function() {
         var q = null;
 
         if (tmpl.type === "pattern") {
-          q = generatePatternQuestion(tmpl);
+          q = generatePatternQuestion(tmpl, lang);
         } else if (tmpl.type === "table") {
-          q = generateTableQuestion(tmpl);
+          q = generateTableQuestion(tmpl, lang);
         } else if (tmpl.type === "chart") {
-          q = generateChartQuestion(tmpl);
+          q = generateChartQuestion(tmpl, lang);
         } else {
-          q = generateTemplateQuestion(tmpl);
+          q = generateTemplateQuestion(tmpl, lang);
         }
 
         if (q) {
@@ -534,13 +562,13 @@ var QuestionGenerator = (function() {
           // 生成失敗 → 別のテンプレートで再試行
           var altTmpl = catTemplates[(i + 1) % catTemplates.length];
           if (altTmpl.type === "pattern") {
-            q = generatePatternQuestion(altTmpl);
+            q = generatePatternQuestion(altTmpl, lang);
           } else if (altTmpl.type === "table") {
-            q = generateTableQuestion(altTmpl);
+            q = generateTableQuestion(altTmpl, lang);
           } else if (altTmpl.type === "chart") {
-            q = generateChartQuestion(altTmpl);
+            q = generateChartQuestion(altTmpl, lang);
           } else {
-            q = generateTemplateQuestion(altTmpl);
+            q = generateTemplateQuestion(altTmpl, lang);
           }
           if (q) questions.push(q);
         }
@@ -561,11 +589,11 @@ var QuestionGenerator = (function() {
   // Public API
   return {
     generateExamSet: generateExamSet,
-    generateQuestion: function(template) {
-      if (template.type === "pattern") return generatePatternQuestion(template);
-      if (template.type === "table") return generateTableQuestion(template);
-      if (template.type === "chart") return generateChartQuestion(template);
-      return generateTemplateQuestion(template);
+    generateQuestion: function(template, lang) {
+      if (template.type === "pattern") return generatePatternQuestion(template, lang);
+      if (template.type === "table") return generateTableQuestion(template, lang);
+      if (template.type === "chart") return generateChartQuestion(template, lang);
+      return generateTemplateQuestion(template, lang);
     }
   };
 })();
