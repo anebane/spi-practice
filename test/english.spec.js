@@ -165,11 +165,27 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
       //    「問題文は英語なのにグラフだけ日本語」を誰も検出できない（2026-09-07 追加）。
       if (q.chartConfig) {
         const cc = q.chartConfig;
-        const ccTexts = [cc.title, cc.yAxisLabel]
-          .concat(cc.labels || [])
-          .concat((cc.datasets || []).map(ds => ds && ds.label))
-          .concat((cc.datasets || []).map(ds => ds && ds.subtitle));
-        for (const s of ccTexts) if (s) texts.push(String(s));
+        // ⚠️ **キーを列挙しない。**title / yAxisLabel / labels / datasets[].label /
+        //    datasets[].subtitle と個別に足していたら、**unit を入れ忘れて
+        //    グラフ4本に「万円」が残ったまま緑になった**（2026-09-07に実測で発覚）。
+        //    列挙は必ず漏れる。chartConfig の中の**すべての文字列**を見る。
+        const ccTexts = [];
+        (function walk(o) {
+          if (typeof o === "string") { ccTexts.push(o); return; }
+          if (Array.isArray(o)) { o.forEach(walk); return; }
+          if (o && typeof o === "object") { Object.keys(o).forEach(k => walk(o[k])); }
+        })(cc);
+        // ⚠️ chartConfig は **日本語混入だけ**を見る。文として扱わない。
+        //    「文字列を全部拾う」形にしたら type の値（bar / line / pie）まで
+        //    拾ってしまい、「文頭が小文字」で5件の誤検知が出た。
+        //    グラフの中身は文でも文章でもなく、ラベルと識別子が混ざっている。
+        const JP_CC = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/;
+        for (const cs of ccTexts) {
+          if (typeof cs !== "string" || !JP_CC.test(cs)) continue;
+          if (seen.has("cc" + t.id + cs)) continue;
+          seen.add("cc" + t.id + cs);
+          fail("グラフに日本語が残っている", `${t.id}: 「${cs}」`);
+        }
       }
       // ⚠️ 単位は「文」ではないので、文頭の大文字チェックにかけない
       //    （km を「文頭が小文字」と誤検知した）。

@@ -2434,5 +2434,13 @@
     "find": "  \"円\":   { ja: \"円\", en: \"yen\" },",
     "replace": "  \"円\":   { ja: \"円\" },",
     "expect": "english"
+  },
+  {
+    "name": "グラフの単位を言語変換しない",
+    "why": "chartConfig.unit が日本語のまま残る。テンプレート側で個別に直すと必ず漏れる（実際9本を英語化したとき unit だけ「万円」が残り、グラフ4本が日本語混じりで出た。検査もキーを列挙していたため見逃した）",
+    "file": "generator.js",
+    "find": "      chartConfig: localizeChartConfig(qData.chartConfig, lang),",
+    "replace": "      chartConfig: qData.chartConfig,",
+    "expect": "english"
   }
 ]

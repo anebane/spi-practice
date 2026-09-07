@@ -50,6 +50,21 @@ var QuestionGenerator = (function() {
   // ⚠️ 未登録・未翻訳のキーはキーをそのまま返す（表示を壊さないための安全網）。
   //    登録漏れは test/generator.spec.js が落とす。ここで例外にすると、
   //    登録漏れ1つで本番の出題が丸ごと止まる。
+  // chartConfig の中の単位表記を言語で引き直す。
+  // ⚠️ キーを列挙しない。unit を持つ場所が増えても自動で拾えるようにする。
+  function localizeChartConfig(cfg, lang) {
+    if (!cfg || typeof cfg !== "object") return cfg;
+    var out = Array.isArray(cfg) ? [] : {};
+    for (var k in cfg) {
+      if (!Object.prototype.hasOwnProperty.call(cfg, k)) continue;
+      var v = cfg[k];
+      if (k === "unit" && typeof v === "string") out[k] = unitLabelFor(v, lang);
+      else if (v && typeof v === "object") out[k] = localizeChartConfig(v, lang);
+      else out[k] = v;
+    }
+    return out;
+  }
+
   function unitLabelFor(key, lang) {
     var entry = (typeof UNIT_LABELS !== "undefined" && UNIT_LABELS) ? UNIT_LABELS[key] : null;
     if (entry && typeof entry[lang] === "string") return entry[lang];
@@ -145,7 +160,11 @@ var QuestionGenerator = (function() {
       unit: unitLabelFor(qData.unit || "", lang),
       unitKey: qData.unit || "",
       explanation: qData.explanation,
-      chartConfig: qData.chartConfig,
+      // ⚠️ chartConfig の中の単位を言語で引き直す。
+      //    テンプレート側で個別に直すと必ず漏れる（実際、9本を英語化したとき
+      //    unit だけ「万円」のまま残り、グラフ4本が日本語混じりで出た。
+      //    2026-09-07に実測で発覚）。**エンジンで一括して変換する。**
+      chartConfig: localizeChartConfig(qData.chartConfig, lang),
       timeLimitSec: template.timeLimitSec
     };
 
