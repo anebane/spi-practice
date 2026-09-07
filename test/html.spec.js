@@ -48,6 +48,35 @@ for (const p of pages) {
   const ogImg = html.match(/property="og:image" content="([^"]+)"/);
   if (!ogImg) fail(p, "og:imageが無い（共有時に画像なしのカードになる）", "");
   else if (!/^https:\/\//.test(ogImg[1])) fail(p, "og:imageが絶対URLでない（相対URLは多くのSNSで解決されない）", ogImg[1]);
+  else if (ogImg[1].startsWith(SITE + "/")) {
+    // ⚠️ 自分のドメインを指しているのに、その画像が無い場合を誰も見ていなかった。
+    //    パスを1文字打ち間違えても例外は出ず、共有したときだけ画像なしのカードになる。
+    //    **共有した本人には見えない**（カードを見るのは受け取り側）ので、機械で止める。
+    //    2026-09-07に /en/ 用の画像を足したときに気づいた。
+    const imgRel = ogImg[1].slice(SITE.length + 1);
+    if (!fs.existsSync(path.join(ROOT, imgRel))) {
+      fail(p, "og:imageのファイルが存在しない", `${ogImg[1]} → ${imgRel} が無い`);
+    }
+  }
+
+  // 2c. og:title と twitter:title が食い違っていないか
+  //     ⚠️ 2026-09-07に /koumuin/ で見つかった。ページを index.html から複製したとき
+  //        og だけ書き換えて twitter を消し忘れており、Xで共有すると
+  //        「SPI非言語 無料模擬試験」と出る状態が公開されていた。
+  //        **例外は出ず、共有した本人にも見えない**（カードを見るのは受け取り側）。
+  //        新しいページを作るたびに起きうるので、機械で止める。
+  const ogT = html.match(/property="og:title" content="([^"]+)"/);
+  const twT = html.match(/name="twitter:title" content="([^"]+)"/);
+  if (ogT && twT && ogT[1] !== twT[1]) {
+    fail(p, "og:title と twitter:title が違う（複製元の消し忘れ）",
+      `og「${ogT[1]}」 / twitter「${twT[1]}」`);
+  }
+  const ogD = html.match(/property="og:description" content="([^"]+)"/);
+  const twD = html.match(/name="twitter:description" content="([^"]+)"/);
+  if (ogD && twD && ogD[1] !== twD[1]) {
+    fail(p, "og:description と twitter:description が違う（複製元の消し忘れ）",
+      `og「${ogD[1].slice(0, 40)}…」 / twitter「${twD[1].slice(0, 40)}…」`);
+  }
 
   // 3. canonical が自分自身を指しているか（コピペ時の典型的な事故）
   const c = html.match(/rel="canonical" href="([^"]+)"/);

@@ -126,15 +126,15 @@ function startsLowercase(line) {
   return m ? m[1] === m[1].toLowerCase() : false;
 }
 
-// --- 検査 ---
-if (EN.length === 0 && BILINGUAL.length === 0) {
-  // ⚠️ 0件は「問題なし」ではない。英語テンプレートがまだ無いというだけ。
-  //    緑にするが、何も見ていないことを必ず表示する。
-  console.log("英語の問題文を検査");
-  console.log("   ℹ️ lang: \"en\" のテンプレートがまだ無いので、1件も見ていない");
-  console.log("   ✅ 検査自体は動作している（テンプレートを足すと効き始める）");
-  // 自己検査: ルールが壊れていないかを、わざと壊した文で確かめる。
-  // テンプレートが0件でも、ルールが機能しているかは確かめられる。
+// --- ルールの自己検査 ---
+// わざと壊した文を、各ルールが本当に検出できるかを確かめる。
+//
+// ⚠️ これは以前「英語テンプレートが0件のとき」だけ実行していた。
+//    つまり**検査対象がある本番の状況では一度も走っていなかった。**
+//    誤検知を消すつもりでルールを緩めても、緩めすぎたことに誰も気づけない。
+//    実際、DOUBLE_SPACE を 2 個以上 → 8 個以上に緩める変異が素通りした
+//    （2026-09-07の全件実行）。ルールが機能していることは常に確かめる。
+{
   const probes = [
     ["未展開", "A train travels {{distance}} km.", UNRESOLVED],
     ["浮動小数の誤差", "The answer is 0.30000000000000004.", FLOAT_NOISE],
@@ -148,6 +148,15 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
     else fail("ルールの自己検査", `${name}: 壊れた文「${text}」を検出できない`);
   }
   cov.covered("ルールの自己検査", ok, 5);
+}
+
+// --- 検査 ---
+if (EN.length === 0 && BILINGUAL.length === 0) {
+  // ⚠️ 0件は「問題なし」ではない。英語テンプレートがまだ無いというだけ。
+  //    緑にするが、何も見ていないことを必ず表示する。
+  console.log("英語の問題文を検査");
+  console.log("   ℹ️ lang: \"en\" のテンプレートがまだ無いので、1件も見ていない");
+  console.log("   ✅ 検査自体は動作している（テンプレートを足すと効き始める）");
 } else {
   let checked = 0;
   const seen = new Set();
@@ -305,6 +314,66 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
       + (NOT_YET.length > 6 ? ` ほか${NOT_YET.length - 6}本` : ""));
   }
   cov.covered("検査した生成結果", checked, 100);
+}
+
+// 英語の表に、日本の気候や日本の暮らしの数字がそのまま出ていないか。
+//
+// ⚠️ 言葉を英語にしただけでは、**中身が日本のまま**になる。
+//    実際に起きた: 都市名を London / Manchester に変えても、気温は
+//    東京の平年値（7月26℃）のままだった。英国の7月に26℃は無く、
+//    読み手には「日本の教材を機械翻訳したもの」と分かる。
+//    ネイティブ視点のレビューで指摘された類の破綻で、
+//    語法の検査では絶対に捕まらない（英文としては正しいため）。
+//
+// 判定はゆるく、明らかにおかしいものだけを落とす。
+// 英国の月平均気温は、いちばん暑い月でも20℃前後。ここでは23℃を上限にする。
+// （ばらつき±2℃を足しても現実の範囲に収まり、日本の26℃基準なら必ず超える）
+{
+  const MAX_C = 23, MIN_C = -6;
+  let cells = 0;
+  const bad = [];
+
+  // ⚠️ 表のセルは「21」で、単位は表の下に1度しか出ない。
+  //    /(\d+)°C/ で拾おうとすると1件も見ずに緑になる（実際に空振りさせた）。
+  //    単位が℃だと分かったら、そのあとに続く表の数値を全部読む。
+  const cellsOf = (text) => {
+    if (text.indexOf("°C") < 0) return [];
+    const out = [];
+    for (const line of text.split("\n")) {
+      if (line.indexOf("|") < 0) continue;
+      if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) continue;   // 区切り行
+      for (const cell of line.split("|")) {
+        const v = cell.trim();
+        if (/^-?\d+$/.test(v)) out.push(Number(v));
+      }
+    }
+    // 解説側は「21°C」の形で出る
+    const re = /(-?\d+)\s*°C/g;
+    let m;
+    while ((m = re.exec(text)) !== null) out.push(Number(m[1]));
+    return out;
+  };
+
+  for (const t of EN.concat(BILINGUAL)) {
+    for (let i = 0; i < ITER; i++) {
+      const q = t.lang === "en" ? GEN.generateQuestion(t) : GEN.generateQuestion(t, "en");
+      if (!q) continue;
+      const vals = cellsOf(String(q.text || "") + "\n" + String(q.explanation || ""));
+      for (const c of vals) {
+        cells++;
+        if (c > MAX_C || c < MIN_C) bad.push(`${t.id}: ${c}°C`);
+      }
+    }
+  }
+  if (cells) {
+    cov.covered("検査した気温の数値", cells, 100);
+    if (bad.length) {
+      const uniq = [...new Set(bad)];
+      fail("英語の気温が現実離れ",
+        `${bad.length}件（${MIN_C}〜${MAX_C}℃の外）: ` + uniq.slice(0, 4).join(", ")
+        + (uniq.length > 4 ? ` ほか${uniq.length - 4}種` : ""));
+    }
+  }
 }
 
 // --- 出力 ---

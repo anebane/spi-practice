@@ -74,7 +74,14 @@ var QUESTION_PROFILES = {
     // 結果のシェア文言。試験ごとに変える。
     // ⚠️ 就活のタグは公務員には付けない。実態と違う相手に届く。
     shareLabel: "SPI非言語 模擬試験",
-    shareTags: "#SPI #就活 #WEBテスティング"
+    shareTags: "#SPI #就活 #WEBテスティング",
+
+    // 結果画面にアフィリエイト枠を出すか。
+    // ⚠️ affiliate.js が持っている案件・見出し・PR表記は**全部日本語**で、
+    //    対象も日本の就活・転職サービス。英語のプロファイルで出すと、
+    //    英国の利用者に読めない広告を見せることになる（成果にもならない）。
+    //    プロファイル側の宣言にして、面を足すたびに明示的に決めさせる。
+    showAffiliate: true
   },
 
   // 公務員試験の数的処理・判断推理。
@@ -122,7 +129,46 @@ var QUESTION_PROFILES = {
     shortRetryCount: 10,
 
     shareLabel: "公務員試験 数的処理の練習",
-    shareTags: "#公務員試験 #数的処理 #判断推理"
+    shareTags: "#公務員試験 #数的処理 #判断推理",
+    showAffiliate: true
+  },
+
+  // 英国型（SHL等）の Numerical Reasoning。
+  //
+  // ⚠️ なぜ図表1分野だけで出すのか（2026-09-07）
+  //   英国の適性検査で最も一般的なのが Numerical Reasoning（表・グラフを
+  //   読んで計算する）で、これは既存の「図表の読み取り」10本とほぼ同じもの。
+  //   他分野の解説本文（28,371字）は未訳だが、**それを待つ理由が無い。**
+  //   1分野で成立する商品なので、翻訳の完了ではなく集客の検証を先に回す。
+  //
+  // ⚠️ 難易度は絞らない。SHL型は易しい読み取りから割合の比較まで幅がある。
+  //
+  // ⚠️ 分野の表示名は categoryId から CATEGORY_LABELS（src/questions/_base.js）で
+  //    引く。ここの name は画面のチェックボックスと突き合わせる用で、
+  //    出題される問題の分野名とは出所が違う。両方を英語にしないと片方が日本語で出る。
+  en: {
+    id: "en",
+    name: "Numerical Reasoning Practice",
+    lang: "en",
+    page: "/en/",
+    difficulties: [1, 2, 3],
+
+    examCategories: [
+      { id: 9, name: "Numerical Reasoning", slug: null }
+    ],
+    extraCategories: [],
+
+    // 実物のSHL型は18問前後・時間制限つき。10/15/20 を選べるようにする。
+    questionCounts: [10, 15, 20],
+    defaultQuestionCount: 15,
+    shortRetryCount: 10,
+
+    shareLabel: "Numerical Reasoning Practice",
+    shareTags: "#NumericalReasoning #AptitudeTest #Practice",
+
+    // ⚠️ 日本の就活・転職案件しか無いので出さない。
+    //    英語圏向けの収益手段は、集客が立ってから別に考える。
+    showAffiliate: false
   }
 };
 

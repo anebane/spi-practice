@@ -1097,10 +1097,10 @@
   },
   {
     "name": "案内文から分野名を落とす",
-    "why": "汎用文言に置き換える。利用者はどの分野に絞られたのか画面から分からない",
+    "why": "汎用文言に置き換える。利用者はどの分野に絞られたのか画面から分からない。文言を言語表に出したあとも、表の中身を差し替えれば同じことが起きる",
     "file": "app.js",
-    "find": "        note.textContent = \"「\" + name + \"」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。\";",
-    "replace": "        note.textContent = \"指定された分野だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。\";",
+    "find": "      categoryNote: function (name) { return \"「\" + name + \"」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。\"; },",
+    "replace": "      categoryNote: function (name) { return \"指定された分野だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。\"; },",
     "expect": "app"
   },
   {
@@ -1211,7 +1211,7 @@
     "name": "プリキャッシュをごっそり減らす",
     "why": "リスト整理のつもりで大半を消す。オフラインで開けないページだらけになる",
     "file": "sw.js",
-    "find": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/generator.js\",\n  \"/app.js\",\n  \"/favicon.svg\",\n  \"/manifest.json\",\n  OFFLINE_URL,\n  \"/koumuin/\",\n  \"/tamatebako-shisoku/\",\n  \"/tamatebako-shisoku/app.js\",\n  \"/icons/icon-192.png\",\n  \"/icons/icon-512.png\",\n  \"/icons/icon-maskable-512.png\",\n  \"/icons/apple-touch-icon-180.png\",",
+    "find": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/generator.js\",\n  \"/app.js\",\n  \"/favicon.svg\",\n  \"/manifest.json\",\n  OFFLINE_URL,\n  \"/koumuin/\",\n  \"/en/\",\n  \"/tamatebako-shisoku/\",\n  \"/tamatebako-shisoku/app.js\",\n  \"/icons/icon-192.png\",\n  \"/icons/icon-512.png\",\n  \"/icons/icon-maskable-512.png\",\n  \"/icons/apple-touch-icon-180.png\",",
     "replace": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/app.js\",",
     "expect": "pwa"
   },
@@ -2193,15 +2193,17 @@
     "name": "宿題の台帳に消えた分野を残す",
     "file": "test/category-pages-todo.json",
     "expect": "profile",
-    "find": "\"pending\": []",
-    "replace": "\"pending\": [{ \"id\": 99, \"note\": \"消した分野の残骸\" }]"
+    "find": "      \"key\": \"en:9\",",
+    "replace": "      \"key\": \"en:999\",",
+    "why": "分野やプロファイルを消したのに台帳の項目を残すと、台帳が「もう存在しない宿題」で膨らむ。台帳は縮む方向にのみ動かす約束が守られているかを見る"
   },
   {
     "name": "済んだ宿題を台帳に残す",
     "file": "test/category-pages-todo.json",
     "expect": "profile",
-    "find": "\"pending\": []",
-    "replace": "\"pending\": [{ \"id\": 1, \"note\": \"推論はもう作ったのに消し忘れ\" }]"
+    "find": "      \"key\": \"en:9\",",
+    "replace": "      \"key\": \"koumuin:14\",",
+    "why": "解説ページを作って slug を付けたのに台帳から消し忘れると、済んだ宿題が残り続けて台帳が信用できなくなる"
   },
   {
     "name": "画面の問題数選択のidを変える",
@@ -2311,8 +2313,8 @@
     "name": "既存の日本語の単位表記を変える",
     "why": "器を入れただけで既存の問題の表示が変わったら、改修ではなく事故。ベースラインで固定している",
     "file": "src/questions/_base.js",
-    "find": "\"円\":   { ja: \"円\", en: \"yen\" }",
-    "replace": "\"円\":   { ja: \"エン\", en: \"yen\" }",
+    "find": "\"円\":   { ja: \"円\", en: \"£\" }",
+    "replace": "\"円\":   { ja: \"エン\", en: \"£\" }",
     "expect": "generator"
   },
   {
@@ -2367,16 +2369,16 @@
     "name": "構成比の解説の英語を日本語に戻す",
     "why": "table_composition_01 の解説だけ日本語に戻る。問題文は英語のままなので目視では見逃しやすい",
     "file": "src/questions/09-zuhyo.js",
-    "find": "return \"Amount = \" + total.toLocaleString()",
-    "replace": "return \"金額 = \" + total.toLocaleString()",
+    "find": "return \"Amount = £\" + total.toLocaleString()",
+    "replace": "return \"金額 = £\" + total.toLocaleString()",
     "expect": "english"
   },
   {
     "name": "都市名の英語語彙を日本語に戻す",
     "why": "table_max_01 は答えが都市名の選択肢。選択肢まで検査していないと、英語の設問に日本語の選択肢が並ぶ",
     "file": "src/questions/09-zuhyo.js",
-    "find": "    cities: [\"Tokyo\", \"Osaka\", \"Nagoya\", \"Fukuoka\", \"Sapporo\"],",
-    "replace": "    cities: [\"東京\", \"大阪\", \"名古屋\", \"福岡\", \"札幌\"],",
+    "find": "{ name: \"London\",     offset: [0, 0, 0, 0] },",
+    "replace": "{ name: \"ロンドン\",     offset: [0, 0, 0, 0] },",
     "expect": "english"
   },
   {
@@ -2415,7 +2417,7 @@
     "name": "円グラフの英語タイトルを日本語に戻す",
     "why": "chart_pie_01 のタイトルは総額を含み Canvas にだけ出る。chartConfig の検査だけが捕まえられる",
     "file": "src/questions/09-zuhyo.js",
-    "find": "    pie1Title: function (total) { return \"Monthly Expenses (Total: \" + total.toLocaleString() + \" yen)\"; },",
+    "find": "    pie1Title: function (total) { return \"Monthly Expenses (Total: £\" + total.toLocaleString() + \")\"; },",
     "replace": "    pie1Title: function (total) { return \"月間支出の内訳（総額: \" + total.toLocaleString() + \"円）\"; },",
     "expect": "english"
   },
@@ -2431,7 +2433,7 @@
     "name": "円の英語表記を単位表から消す",
     "why": "unitLabelFor が未翻訳のときキー（日本語）を返すので、答えの単位だけ「円」で出る。画面上は単位が出ているので目視では気づけない",
     "file": "src/questions/_base.js",
-    "find": "  \"円\":   { ja: \"円\", en: \"yen\" },",
+    "find": "  \"円\":   { ja: \"円\", en: \"£\" },",
     "replace": "  \"円\":   { ja: \"円\" },",
     "expect": "english"
   },
@@ -2466,5 +2468,341 @@
     "find": "**Working**\\n1. Share of \" + cat + \":",
     "replace": "**Working**\\n① Share of \" + cat + \":",
     "expect": "english"
+  },
+  {
+    "name": "気温表の都市を固定する（毎回同じ5都市）",
+    "why": "気候差は都市に固定されているので、同じ5都市を毎回出すと「最も暖かい都市」が特定の都市に偏り、表を読まずに当てられる（福岡41%・実測）。都市プールから毎回選び直すことでしか消えない",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "var citySpecs = pool.slice(0, 5);",
+    "replace": "var citySpecs = L.cities.slice(0, 5);",
+    "expect": "generator"
+  },
+  {
+    "name": "英語の気温表を日本の気温にする",
+    "why": "英国で7月26℃・1月5℃は現実と合わない。基準値を言語ごとに持たないと、都市名だけ英国に変えても数値が日本のままになる",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "tempBase: [6, 10, 19, 13],",
+    "replace": "tempBase: [5, 14, 26, 19],",
+    "expect": "english"
+  },
+  {
+    "name": "英語の文言表からキーを1つ削る",
+    "why": "足りないキーは undefined として画面に出るだけで例外にならない。英語版を足すたびに起きうる漏れなので機械で止める",
+    "file": "app.js",
+    "find": "      btnNext: \"Next question\",\n",
+    "replace": "",
+    "expect": "ui-text"
+  },
+  {
+    "name": "英語の文言に日本語を残す",
+    "why": "言語表に移しても、英語の列に日本語を入れてしまえば英語の画面に日本語が出る。文法検査では捕まらない",
+    "file": "app.js",
+    "find": "      btnAnswerNext: \"Submit and continue\",",
+    "replace": "      btnAnswerNext: \"回答して次へ\",",
+    "expect": "ui-text"
+  },
+  {
+    "name": "日本語の画面文言を書き換える",
+    "why": "器の入れ替えで既存利用者の画面が変わったら改修ではなく事故。ベースラインで固定している",
+    "file": "app.js",
+    "find": "      btnNext: \"次の問題へ\",",
+    "replace": "      btnNext: \"つぎの問題へ\",",
+    "expect": "ui-text"
+  },
+  {
+    "name": "画面の文言を言語表から本体へ戻す",
+    "why": "移設し忘れた文言が本体に残ると、そこだけ日本語のまま出る。例外は出ないので目視では見つからない",
+    "file": "app.js",
+    "find": "    btnAnswer.textContent = T.btnAnswerNext;",
+    "replace": "    btnAnswer.textContent = \"回答して次へ\";",
+    "expect": "ui-text"
+  },
+  {
+    "name": "英語の文言だけ引数を減らす",
+    "why": "片方の言語でだけ値の抜けた文になる（「Question 3」で総数が消える）。表示は成立するので気づけない",
+    "file": "app.js",
+    "find": "      questionNumber: function (i, n) { return \"Question \" + i + \" of \" + n; },",
+    "replace": "      questionNumber: function (i) { return \"Question \" + i; },",
+    "expect": "ui-text"
+  },
+  {
+    "name": "未翻訳の言語で単位をキーに退避しない",
+    "why": "unitLabelFor は en の列が無いときキー（日本語表記）を返す約束。空文字を返すと、未訳の単位が「単位なし」として静かに消える。答えの単位が消えても例外は出ない",
+    "file": "generator.js",
+    "find": "    if (entry && typeof entry[lang] === \"string\") return entry[lang];\n    return key;",
+    "replace": "    if (entry && typeof entry[lang] === \"string\") return entry[lang];\n    return \"\";",
+    "expect": "generator"
+  },
+  {
+    "name": "試作の分野をプロファイルに載せる",
+    "why": "probe: true は「まだ出さない試作」の宣言。プロファイルに載せると本番の出題に混ざる。英語の試作テンプレ（en_speed_01）が公開試験に出る事故を防ぐ",
+    "file": "src/questions/_profile.js",
+    "find": "      { id: 9, name: \"Numerical Reasoning\", slug: null }",
+    "replace": "      { id: 90, name: \"Numerical Reasoning\", slug: null }",
+    "expect": "profile"
+  },
+  {
+    "name": "生成結果から unitKey を落とす",
+    "why": "unitKey は「翻訳前の単位キー」。これが無いと、未翻訳の単位を機械で洗い出せなくなる。表示は unit があるので画面は壊れず、翻訳漏れの検知だけが静かに死ぬ",
+    "file": "generator.js",
+    "find": "        unit: unitLabelFor(unitKey, lang),\n        unitKey: unitKey,",
+    "replace": "        unit: unitLabelFor(unitKey, lang),",
+    "expect": "profile"
+  },
+  {
+    "name": "出題の入口の名前を変える",
+    "why": "検査は app.js が generateExamSet を呼んでいることを前提に組み立てている。名前を変えたのに検査を直さないと、以後この経路の検査が全部が「見ていない」まま緑になる",
+    "file": "app.js",
+    "find": "    state.questions = QuestionGenerator.generateExamSet({",
+    "replace": "    state.questions = QuestionGenerator.buildExamSet({",
+    "expect": "profile"
+  },
+  {
+    "name": "app.js が出題の言語を渡さない",
+    "why": "lang を渡し忘れるとエンジンが ja に倒すので、英語のプロファイルでも単位だけ日本語で出る。英語の問題文に「万円」が混ざるが例外は出ない",
+    "file": "app.js",
+    "find": "      lang: PROFILE.lang\n    });",
+    "replace": "      totalTimeSec: null\n    });",
+    "expect": "profile"
+  },
+  {
+    "name": "複製元のtwitterカードを消し忘れる",
+    "why": "ページを複製したとき og だけ直して twitter を残すと、Xで共有したときだけ別ページの見出しが出る。共有した本人には見えない（カードを見るのは受け取り側）",
+    "file": "koumuin/index.html",
+    "find": "  <meta name=\"twitter:title\" content=\"公務員試験 数的処理・判断推理 無料練習 | 登録不要\">",
+    "replace": "  <meta name=\"twitter:title\" content=\"SPI非言語 無料模擬試験 | WEBテスティング形式・登録不要\">",
+    "expect": "html"
+  },
+  {
+    "name": "英語の単位を日本語と同じ付け方にする",
+    "why": "日本語の「値＋空白＋単位」を英語に流用すると「215 %」「530 £」になる。文字化けも例外も起きず、画面には数字も単位も出ているので目視では気づけない",
+    "file": "app.js",
+    "find": "        if ([\"£\", \"$\", \"€\", \"¥\"].indexOf(unit) >= 0) return unit + value;\n        if ([\"%\", \"°C\", \"°F\"].indexOf(unit) >= 0) return value + unit;",
+    "replace": "        if (false) return unit + value;\n        if (false) return value + unit;",
+    "expect": "ui-text"
+  },
+  {
+    "name": "英語の面に日本語の広告を出す",
+    "why": "affiliate.js の案件・見出し・PR表記は全部日本語で、対象も日本の就活サービス。英語の面に出しても読めず成果にもならないが、画面は成立するので気づけない",
+    "file": "src/questions/_profile.js",
+    "find": "    showAffiliate: false",
+    "replace": "    showAffiliate: true",
+    "expect": "profile"
+  },
+  {
+    "name": "app.js が広告の宣言を見なくなる",
+    "why": "プロファイルに showAffiliate を宣言しても、app.js が読まなければ飾りになる。全部の面で広告が出る状態に戻る",
+    "file": "app.js",
+    "find": "    if (PROFILE.showAffiliate && typeof Affiliate !== \"undefined\") {",
+    "replace": "    if (typeof Affiliate !== \"undefined\") {",
+    "expect": "profile"
+  },
+  {
+    "name": "画面文言の表の名前を変える",
+    "expect": "ui-text",
+    "file": "app.js",
+    "why": "UI_TEXT を別名にすると、検査が表を見つけられないまま『検査対象0件』で緑になりうる。器の名前は検査と実装の両方が知っている前提なので、片方だけ変えたら落ちること",
+    "find": "  var UI_TEXT = {",
+    "replace": "  var UI_STRINGS = {"
+  },
+  {
+    "name": "画面文言の日本語の列の名前を変える",
+    "expect": "ui-text",
+    "file": "app.js",
+    "why": "ja の列が無くなると突き合わせる相手が消え、キー0件のまま緑になりうる。日本語表示は全部 undefined になるが例外は出ない",
+    "find": "    ja: {",
+    "replace": "    jaJP: {"
+  },
+  {
+    "name": "英語だけにキーを足す",
+    "expect": "ui-text",
+    "file": "app.js",
+    "why": "片方の言語にだけキーを足すと、もう片方で undefined が画面に出る。追加時にいちばん起きやすい形",
+    "find": "      diffEasy: \"Easy\",",
+    "replace": "      diffEasy: \"Easy\",\n      onlyInEnglish: \"x\","
+  },
+  {
+    "name": "英語の文言だけ関数にする",
+    "expect": "ui-text",
+    "file": "app.js",
+    "why": "片方だけ関数にすると、文字列として使っている箇所に関数の中身が出る。引数の見本(ARGS)も無いので検査側も組み立てられない",
+    "find": "      btnNext: \"Next question\",",
+    "replace": "      btnNext: function () { return \"Next question\"; },"
+  },
+  {
+    "name": "画面文言のベースラインを壊す",
+    "expect": "ui-text",
+    "file": "test/ui-text-baseline.json",
+    "why": "ベースラインが読めなくなると、日本語の表示が変わっても照合されない。ファイルが壊れているのに緑で通るのがいちばん危ない",
+    "find": "{\n  \"shareText\"",
+    "replace": "{\n  \"shareText\" :: "
+  },
+  {
+    "name": "英語の解説に未展開の変数を残す",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "変数名を打ち間違えると解説に {{...}} がそのまま出る。日本語側では気づけても、英語は読み流されやすい",
+    "find": "2. Time: {{hours}} {{hourWord}}",
+    "replace": "2. Time: {{hours}} {{hourWordX}}"
+  },
+  {
+    "name": "英語の整数に .0 を付ける",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "整数なのに 240.0 と出る。桁の精度を主張してしまい、テストの解答欄の形とも合わない",
+    "find": "= {{answer}} km\\n\\n**Tip**",
+    "replace": "= {{answer}}.0 km\\n\\n**Tip**"
+  },
+  {
+    "name": "英語の文中に二重空白を残す",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "変数が空のまま埋まると空白が2つ並ぶ。表示は崩れないので目視では見つからない",
+    "find": "1. Speed: {{speed}} km per hour",
+    "replace": "1. Speed:  {{speed}} km per hour"
+  },
+  {
+    "name": "英語の記号の前に空白を入れる",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "「km per hour ?」のように記号の前に空白が入る。日本語の組版の癖がそのまま出た形で、英語では明確な誤り",
+    "find": "          + \" at a constant speed of \" + veh.speed + \" km per hour?\";",
+    "replace": "          + \" at a constant speed of \" + veh.speed + \" km per hour ?\";"
+  },
+  {
+    "name": "英語の数と名詞を一致させない",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "「2 hour」のように複数形にならない。日本語には無い規則なので、書いている側が気づけない典型",
+    "find": "          + \" travel in \" + v.hours + \" \" + plural(v.hours, \"hour\")",
+    "replace": "          + \" travel in \" + v.hours + \" \" + \"hour\""
+  },
+  {
+    "name": "英語の文頭を小文字にする",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "文頭が小文字のままの解説になる。読めてしまうので指摘されにくいが、機械翻訳の印象を強く与える",
+    "find": "**How to approach it**\\nDistance = speed",
+    "replace": "**How to approach it**\\ndistance = speed"
+  },
+  {
+    "name": "英語の検査ルールを緩める",
+    "expect": "english",
+    "file": "test/english.spec.js",
+    "why": "誤検知を消すつもりで閾値を緩めると、検出できない壊れ方ができる。ルールの自己検査はそれを捕まえるためにある",
+    "find": "const DOUBLE_SPACE = /[^\\n] {2,}[^\\n]/;",
+    "replace": "const DOUBLE_SPACE = /[^\\n] {8,}[^\\n]/;"
+  },
+  {
+    "name": "英語テンプレートの言語宣言を外す",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "lang: \"en\" が無いと english.spec の検査対象から外れ、英語の問題が1本も検査されないまま緑になる",
+    "find": "    lang: \"en\",",
+    "replace": "    lang: \"eng\","
+  },
+  {
+    "name": "英語の冠詞をanに固定する",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "「an bus」になる。常に a にする壊し方とは別経路（母音以外の語頭に an が付く）で、両方向を見ないと片側の検査が死ぬ",
+    "find": "  function article(word) {\n    return /^[aeiou]/i.test(word) ? \"an\" : \"a\";\n  }",
+    "replace": "  function article(word) {\n    return \"an\";\n  }"
+  },
+  {
+    "name": "英語の解説に生の割り算の結果を出す",
+    "expect": "english",
+    "file": "src/questions/90-en-probe.js",
+    "why": "割り切れない値をそのまま埋めると 83.33333333333333 が解説に出る。答えは別に丸められているので、答えを見ているだけでは気づけない",
+    "find": "        hourWord: plural(v.hours, \"hour\")",
+    "replace": "        hourWord: String(v.speed / 3)"
+  },
+  {
+    "name": "単位の表示を表記表とずらす",
+    "expect": "generator",
+    "file": "generator.js",
+    "why": "表記表を引いた結果に手を加えると、表の内容と画面の表示がずれる。表だけ見ても画面だけ見ても気づけない",
+    "find": "    if (entry && typeof entry[lang] === \"string\") return entry[lang];\n    return key;\n  }",
+    "replace": "    if (entry && typeof entry[lang] === \"string\") return entry[lang] + \" \";\n    return key;\n  }"
+  },
+  {
+    "name": "重複キー検査の対象ファイルを見失う",
+    "expect": "generator",
+    "file": "test/generator.spec.js",
+    "why": "表のファイル名を変えたのに検査を直さないと、重複キーを誰も見ていない状態になる。0件で緑になるのがいちばん危ない",
+    "find": "    [\"src/questions/_base.js\", \"UNIT_LABELS\"],",
+    "replace": "    [\"src/questions/_base_old.js\", \"UNIT_LABELS\"],"
+  },
+  {
+    "name": "単位表にキーを二重に書く",
+    "expect": "generator",
+    "file": "src/questions/_base.js",
+    "why": "JSは後の定義が勝つので、先に書いた行が黙って消える。2026-09-07に UNIT_LABELS の \"\" で実際に踏み、英語の列が消えた",
+    "find": "  \"人\":   { ja: \"人\" },",
+    "replace": "  \"人\":   { ja: \"人\" },\n  \"人\":   { ja: \"ニン\" },"
+  },
+  {
+    "name": "既存の単位キーを表から消す",
+    "expect": "generator",
+    "file": "src/questions/_base.js",
+    "why": "キーを消すと、そのキーを使うテンプレートの単位表示が変わる（キーがそのまま出る）。ベースラインはそれを止めるためにある",
+    "find": "  \"秒後\":  { ja: \"秒後\" },\n",
+    "replace": ""
+  },
+  {
+    "name": "テンプレートの単位を表記表に無い値にする",
+    "expect": "generator",
+    "file": "src/questions/90-en-probe.js",
+    "why": "表に無い単位キーを使うと、翻訳の対象から漏れたまま出題される。日本語では見た目が変わらないので気づけない",
+    "find": "    unit: \"km\",",
+    "replace": "    unit: \"kilometres\","
+  },
+  {
+    "name": "twitterの説明文だけ古いまま残す",
+    "expect": "html",
+    "file": "index.html",
+    "why": "og だけ直して twitter を直さないと、Xで共有したときだけ古い説明が出る。共有した本人には見えない",
+    "find": "<meta name=\"twitter:description\" content=\"SPI3 WEBテスティング形式の非言語を無料で練習。推論・損益算・確率などの主要分野に対応。問題はランダム生成で何度でも練習可能。登録不要。\">",
+    "replace": "<meta name=\"twitter:description\" content=\"SPI3 WEBテスティング形式の非言語を無料で練習。\">"
+  },
+  {
+    "name": "広告の宣言を書き忘れる",
+    "expect": "profile",
+    "file": "src/questions/_profile.js",
+    "why": "showAffiliate を宣言しない面ができると、広告を出すかどうかが未定のまま公開される。宣言が無いこと自体を落とす",
+    "find": "    shareTags: \"#公務員試験 #数的処理 #判断推理\",\n    showAffiliate: true",
+    "replace": "    shareTags: \"#公務員試験 #数的処理 #判断推理\""
+  },
+  {
+    "name": "表の問題から unitKey を落とす",
+    "expect": "generator",
+    "file": "generator.js",
+    "why": "unitKey は翻訳前の単位キー。落ちると未翻訳の単位を機械で洗い出せなくなる。表示は unit があるので画面は壊れず、翻訳漏れの検知だけが静かに死ぬ",
+    "find": "    var qData = template.questionGenerator(tableData, lang);\n\n    var result = {\n      id: template.id + \"_\" + Date.now() + \"_\" + Math.random().toString(36).substr(2, 5),\n      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない\n      category: categoryLabelFor(template.categoryId, template.category, lang),\n      categoryId: template.categoryId,\n      difficulty: template.difficulty || 2,\n      text: qData.text,\n      answerType: template.answerType,\n      correctAnswer: qData.answer,\n      unit: unitLabelFor(qData.unit || \"\", lang),\n      unitKey: qData.unit || \"\",",
+    "replace": "    var qData = template.questionGenerator(tableData, lang);\n\n    var result = {\n      id: template.id + \"_\" + Date.now() + \"_\" + Math.random().toString(36).substr(2, 5),\n      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない\n      category: categoryLabelFor(template.categoryId, template.category, lang),\n      categoryId: template.categoryId,\n      difficulty: template.difficulty || 2,\n      text: qData.text,\n      answerType: template.answerType,\n      correctAnswer: qData.answer,\n      unit: unitLabelFor(qData.unit || \"\", lang),"
+  },
+  {
+    "name": "既定の言語で表記表を引かない",
+    "expect": "generator",
+    "file": "generator.js",
+    "why": "ja だけ表を素通りさせると、キーと表記が違う単位で表示が壊れる。大半の単位はキー＝日本語表記なので症状が出ず、見つけにくい",
+    "find": "  function unitLabelFor(key, lang) {\n    var entry = (typeof UNIT_LABELS !== \"undefined\" && UNIT_LABELS) ? UNIT_LABELS[key] : null;",
+    "replace": "  function unitLabelFor(key, lang) {\n    if (lang === \"ja\") return key;\n    var entry = (typeof UNIT_LABELS !== \"undefined\" && UNIT_LABELS) ? UNIT_LABELS[key] : null;"
+  },
+  {
+    "name": "試作の分野を画面に無いまま追加する",
+    "expect": "profile",
+    "file": "src/questions/_profile.js",
+    "why": "probe: true の試作分野をプロファイルに載せると本番の出題に混ざる。分野9を差し替える壊し方は別経路で落ちてしまい、この経路自体は確かめられていなかった",
+    "find": "    examCategories: [\n      { id: 9, name: \"Numerical Reasoning\", slug: null }\n    ],",
+    "replace": "    examCategories: [\n      { id: 9, name: \"Numerical Reasoning\", slug: null },\n      { id: 90, name: \"Speed and Distance\", slug: null }\n    ],"
+  },
+  {
+    "name": "og:imageのパスを打ち間違える",
+    "why": "自分のドメインを指しているのに画像が無いと、共有したときだけ画像なしのカードになる。例外は出ず、共有した本人にも見えない（カードを見るのは受け取り側）",
+    "file": "en/index.html",
+    "find": "  <meta property=\"og:image\" content=\"https://tekisei-drill.com/en/ogp.png\">",
+    "replace": "  <meta property=\"og:image\" content=\"https://tekisei-drill.com/en/ogp-image.png\">",
+    "expect": "html"
   }
 ]

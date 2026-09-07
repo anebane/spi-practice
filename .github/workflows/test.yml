@@ -87,6 +87,11 @@ jobs:
       - name: 英語の問題文
         run: node test/english.spec.js
 
+      # 画面の文言。出題を英語にできても画面が日本語のままなら英語版は出せない。
+      # ⚠️ 文言の壊れ方は例外を出さない（undefined が画面に出るだけ）ので機械で止める。
+      - name: 画面の文言（ja/en の突き合わせ）
+        run: node test/ui-text.spec.js
+
       - name: 検査の登録漏れ（CIと破壊テストの両方に載っているか）
         run: node test/wiring.spec.js
 

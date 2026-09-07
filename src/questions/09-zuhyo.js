@@ -19,13 +19,38 @@ var ZUHYO_WORDS = {
     count: function (n) { return n + "個"; },
     sales2Rate: function (v2, v1, r) { return "増減率 = (" + v2 + " - " + v1 + ") / " + v1 + " × 100 = " + r + "%"; },
     // table_composition_01（構成比）
+    // ⚠️ 支出の総額の刻み。日本の月間家計は20万〜39万円なので10000刻み。
+    //    英語版（英国）は £2,000〜£3,900 なので100刻みにする。
+    //    ここを言語ごとに持たないと、英語版が「月間支出 £390,000」になる。
+    expenseScale: 10000,
     expenseCats: ["食費", "住居費", "交通費", "教育費", "その他"],
     comp1Header: function (total) { return "【月間支出の内訳】 総額: " + total.toLocaleString() + "円\n\n"; },
     amountAsk: function (cat) { return cat + "の金額はいくらか。"; },
     comp1Share: function (cat, pct) { return cat + "の割合: " + pct + "%"; },
     comp1Calc: function (total, pct, amount) { return "金額 = " + total.toLocaleString() + " × " + pct + "/100 = " + amount.toLocaleString() + "円"; },
     // table_max_01（最大値）
-    cities: ["東京", "大阪", "名古屋", "福岡", "札幌"],
+    // ⚠️ 都市ごとの気候差（平年値からの目安）を持つ。以前は全都市を同じ乱数で
+    //    作っていたため「札幌の7月が34℃で東京より暑い」「札幌の1月が8℃」など、
+    //    日本の利用者には明らかに変な表が出ていた（2026-09-07に英語圏レビューで
+    //    「データが実在しない」と指摘され、気象庁の平年値と照らして確認）。
+    //    offset は [1月, 4月, 7月, 10月] の基準値からの差。
+    // 気温の基準値（この言語圏の代表都市の平年値）と、都市ごとのずれ。
+    // ⚠️ 5都市固定にすると「最も高い都市」の答えが福岡41%に偏り、
+    //    表を読まずに当てられた（2,000回の実測）。10都市から毎回5つ選ぶ。
+    // ⚠️ 那覇は入れない。他都市と10℃以上離れていて、出るたびに答えが確定するため。
+    tempBase: [5, 14, 26, 19],
+    cities: [
+      { name: "東京",   offset: [0, 0, 0, 0] },
+      { name: "大阪",   offset: [1, 1, 2, 1] },
+      { name: "名古屋", offset: [0, 0, 1, 0] },
+      { name: "福岡",   offset: [2, 1, 1, 2] },
+      { name: "広島",   offset: [1, 0, 1, 1] },
+      { name: "高松",   offset: [1, 1, 2, 1] },
+      { name: "新潟",   offset: [-2, -3, -1, -2] },
+      { name: "仙台",   offset: [-3, -3, -3, -3] },
+      { name: "金沢",   offset: [-1, -1, 0, -1] },
+      { name: "札幌",   offset: [-9, -7, -5, -7] }
+    ],
     tempMonths: ["1月", "4月", "7月", "10月"],
     max1Intro: "次の表は各都市の月別平均気温を示している。",
     max1Ask: function (m) { return m + "の平均気温が最も高い都市はどこか。"; },
@@ -95,7 +120,7 @@ var ZUHYO_WORDS = {
   en: {
     departments: ["Sales", "Development", "Administration", "Planning"],
     quarters: ["Q1", "Q2", "Q3", "Q4"],
-    salesIntro: "The table below shows quarterly revenue by department (in units of 10,000 yen).",
+    salesIntro: "The table below shows quarterly revenue by department.",
     salesAsk: function (d) { return "What is the total annual revenue of the " + d + " department?"; },
     salesExpLead: function (d) { return "Quarterly revenue of the " + d + " department:"; },
     money: function (n) { return String(n); },
@@ -109,13 +134,30 @@ var ZUHYO_WORDS = {
     count: function (n) { return n + " units"; },
     sales2Rate: function (v2, v1, r) { return "Percentage change = (" + v2 + " - " + v1 + ") / " + v1 + " × 100 = " + r + "%"; },
     // table_composition_01
-    expenseCats: ["Food", "Housing", "Transportation", "Education", "Other"],
-    comp1Header: function (total) { return "[Monthly Expenses] Total: " + total.toLocaleString() + " yen\n\n"; },
-    amountAsk: function (cat) { return "What is the amount for " + cat + "?"; },
+    // ⚠️ 英国の家計に「教育費」の費目は普通は立たない（公立が原則無償）。
+    //    Education を Utilities（光熱・通信費）に替える。
+    expenseScale: 100,
+    expenseCats: ["Food", "Housing", "Transport", "Utilities", "Other"],
+    comp1Header: function (total) { return "[Monthly Expenses] Total: £" + total.toLocaleString() + "\n\n"; },
+    amountAsk: function (cat) { return "How much is spent on " + cat.toLowerCase() + " each month?"; },
     comp1Share: function (cat, pct) { return "Share of " + cat + ": " + pct + "%"; },
-    comp1Calc: function (total, pct, amount) { return "Amount = " + total.toLocaleString() + " × " + pct + "/100 = " + amount.toLocaleString() + " yen"; },
+    comp1Calc: function (total, pct, amount) { return "Amount = £" + total.toLocaleString() + " × " + pct + "/100 = £" + amount.toLocaleString(); },
     // table_max_01
-    cities: ["Tokyo", "Osaka", "Nagoya", "Fukuoka", "Sapporo"],
+    // ⚠️ 英語版は英国の都市・英国の気温にする。日本の都市名と26℃の7月は
+    //    英国の読み手には現実感が無く、ネイティブレビューで指摘された箇所。
+    tempBase: [6, 10, 19, 13],
+    cities: [
+      { name: "London",     offset: [0, 0, 0, 0] },
+      { name: "Bristol",    offset: [0, 0, -1, 0] },
+      { name: "Cardiff",    offset: [0, 0, -1, 0] },
+      { name: "Plymouth",   offset: [1, 1, -1, 1] },
+      { name: "Birmingham", offset: [-1, -1, -2, -1] },
+      { name: "Manchester", offset: [-1, -1, -2, -1] },
+      { name: "Leeds",      offset: [-1, -1, -2, -1] },
+      { name: "Newcastle",  offset: [-2, -2, -3, -2] },
+      { name: "Glasgow",    offset: [-2, -2, -3, -2] },
+      { name: "Edinburgh",  offset: [-2, -3, -4, -2] }
+    ],
     tempMonths: ["January", "April", "July", "October"],
     max1Intro: "The table below shows the average monthly temperature in each city.",
     max1Ask: function (m) { return "Which city has the highest average temperature in " + m + "?"; },
@@ -125,21 +167,25 @@ var ZUHYO_WORDS = {
     // table_diff_01
     stores: ["Store A", "Store B", "Store C", "Store D"],
     storeMonths: ["April", "May", "June", "July", "August"],
-    diff1Intro: "The table below shows monthly revenue for each store (in units of 10,000 yen).",
-    diff1Ask: function (s) { return "For " + s + ", what is the amount of the largest month-over-month revenue change (by absolute value)? (Use a plus sign for an increase and a minus sign for a decrease.)"; },
+    diff1Intro: "The table below shows monthly revenue for each store.",
+    diff1Ask: function (s) { return "What was the largest month-on-month change in revenue at " + s + "?\nUse a minus sign if the change was a fall."; },
     diff1ExpLead: function (s) { return "Month-over-month revenue changes for " + s + ":"; },
     signedMoney: function (d) { return (d >= 0 ? "+" : "") + d; },
     diff1ExpEnd: function (m) { return "Largest change: " + m + " at "; },
     // chart_bar_01
+    // ⚠️ 「Administration に売上がある」は英語圏の読み手には意味が通らない
+    //    （管理部門は費用側で、売上を持たない）。ネイティブレビューの指摘。
+    //    売上を持ちうる単位＝支店・地域・事業部だけにする。
+    //    支店名も日本の都市ではなく英国の都市にする。
     barDeptSets: [
-      { names: ["Sales", "Development", "Administration", "Planning", "HR"], word: "department" },
-      { names: ["Tokyo Branch", "Osaka Branch", "Nagoya Branch", "Fukuoka Branch", "Sapporo Branch"], word: "branch" },
+      { names: ["London", "Manchester", "Birmingham", "Leeds", "Glasgow"], word: "branch" },
+      { names: ["North", "South", "East", "West", "Central"], word: "region" },
       { names: ["Division A", "Division B", "Division C", "Division D"], word: "division" }
     ],
     bar1Title: function (w) { return "Revenue by " + w.charAt(0).toUpperCase() + w.slice(1) + " (FY2024)"; },
     revenueLabel: "Revenue",
-    revenueAxis: "Revenue (×10,000 yen)",
-    bar1Text: function (w) { return "The chart below shows the annual revenue of each " + w + " (in units of 10,000 yen).\n\nWhat is the difference between the highest and the lowest revenue?"; },
+    revenueAxis: "Revenue (£000s)",
+    bar1Text: function (w) { return "The chart below shows the annual revenue of each " + w + ".\n\nWhat is the difference between the highest and the lowest revenue?"; },
     bar1Exp: function (maxLabel, maxVal, minLabel, minVal, diff) {
       return "**How to approach it**\nRead the highest and lowest values from the bar chart and find the difference.\n\n**Working**\n1. Highest: " + maxLabel + " = " + maxVal + "\n2. Lowest: " + minLabel + " = " + minVal + "\n3. Difference = " + maxVal + " - " + minVal + " = " + diff + "\n\n**Tip**\n- Compare the bars by height\n- Difference = highest − lowest";
     },
@@ -147,7 +193,7 @@ var ZUHYO_WORDS = {
     barCmpTitle: "Revenue by Product",
     prevYear: "Last Year",
     thisYear: "This Year",
-    barCmpText: "The chart below shows last year's and this year's revenue for each product (in units of 10,000 yen).\n\nWhat is the largest increase in revenue from last year among the products?",
+    barCmpText: "The chart below shows last year's and this year's revenue for each product.\n\nWhat is the largest increase in revenue from last year among the products?",
     barCmpDetail: function (label, prev, curr, d) { return label + ": " + prev + " → " + curr + " (" + (d >= 0 ? "+" : "") + d + ")"; },
     barCmpExp: function (details, maxLabel, maxIncrease) {
       return "**How to approach it**\nFor each product, compute this year minus last year and find the largest increase.\n\n**Working**\nIncrease for each product:\n" + details + "\n\nLargest increase: " + maxLabel + " at +" + maxIncrease + "\n\n**Tip**\n- Compare the paired bars for each product\n- Increase = this year's value − last year's value";
@@ -155,26 +201,31 @@ var ZUHYO_WORDS = {
     // chart_line_01
     lineMonths: ["April", "May", "June", "July", "August", "September"],
     lineTitle: "Monthly Revenue",
-    lineText: "The chart below shows the monthly revenue of a store (in units of 10,000 yen).\n\nWhat is the amount of the largest month-over-month change (by absolute value)? (Use a plus sign for an increase and a minus sign for a decrease.)",
+    lineText: "The chart below shows the monthly revenue of a store.\n\nWhat was the largest month-on-month change in revenue?\nUse a minus sign if the change was a fall.",
     lineExp: function (details, maxMonth, signed) {
       return "**How to approach it**\nCompute the change for each month-to-month interval and find the one with the largest absolute value.\n\n**Working**\nChanges between months:\n" + details + "\n\nLargest absolute change: " + maxMonth + " at " + signed + "\n\n**Tip**\n- A steeper line segment means a larger change\n- Mind the direction of the change (plus/minus)";
     },
     // chart_pie_01
-    pie1Title: function (total) { return "Monthly Expenses (Total: " + total.toLocaleString() + " yen)"; },
+    pie1Title: function (total) { return "Monthly Expenses (Total: £" + total.toLocaleString() + ")"; },
     pie1Label: "Expenses",
-    pie1Intro: function (total) { return "The pie chart below shows the breakdown of monthly expenses (total " + total.toLocaleString() + " yen)."; },
+    pie1Intro: function (total) { return "The pie chart below shows the breakdown of monthly expenses (total £" + total.toLocaleString() + ")."; },
     pie1Exp: function (cat, pct, total, amount) {
-      return "**How to approach it**\nRead the share from the pie chart and multiply it by the total.\n\n**Working**\n1. Share of " + cat + ": " + pct + "%\n2. Amount = " + total.toLocaleString() + " × " + pct + " / 100\n  = " + amount.toLocaleString() + " yen\n\n**Tip**\n- Each slice represents a share of the whole\n- Amount = total × share(%) / 100";
+      return "**How to approach it**\nRead the share from the pie chart and multiply it by the total.\n\n**Working**\n1. Share of " + cat + ": " + pct + "%\n2. Amount = £" + total.toLocaleString() + " × " + pct + " / 100\n  = £" + amount.toLocaleString() + "\n\n**Tip**\n- Each slice represents a share of the whole\n- Amount = total × share(%) / 100";
     },
     // chart_pie_compare_01
-    costCats: ["Labor", "Materials", "Advertising", "Other"],
-    pieCmpNameSets: [["Division A", "Division B"], ["East Japan", "West Japan"], ["First Half", "Second Half"]],
-    pieCmpTitle: "Expense Breakdown by Division (×10,000 yen)",
+    // ⚠️ Labour は英国綴り。East/West Japan は英国向けに North/South にする。
+    costCats: ["Labour", "Materials", "Advertising", "Other"],
+    pieCmpNameSets: [["Division A", "Division B"], ["North Region", "South Region"], ["First Half", "Second Half"]],
+    pieCmpTitle: "Expense Breakdown (£000s)",
     // en は円グラフ上のサブタイトルも語彙で持つ（Canvas に描かれるため）。
     // _base.js の drawMultiPieChart が ds.subtitle を優先して描く。
     pieSubtitle: function (name, total) { return name + " (total " + total.toLocaleString() + ")"; },
-    pieCmpIntro: function (n0, t0, n1, t1) { return "The two pie charts below show the expense breakdown of " + n0 + " (total " + t0.toLocaleString() + ") and " + n1 + " (total " + t1.toLocaleString() + "), in units of 10,000 yen."; },
-    pieCmpAsk: function (cat) { return "What is the difference in the amount for " + cat + "?"; },
+    // ⚠️ 数値だけ出すと単位が分からない。図の表題（£000s）を読まないと
+    //    金額の桁が決まらないので、設問文の側にも1文で明示する。
+    pieCmpIntro: function (n0, t0, n1, t1) { return "The two pie charts below show the expense breakdown of " + n0 + " (total " + t0.toLocaleString() + ") and " + n1 + " (total " + t1.toLocaleString() + "). All figures are in £000s."; },
+    // ⚠️ 比較の相手は「上半期/下半期」とは限らず、Division A/B や North/South のこともある。
+    //    "between the two halves" と固定すると、3組中2組で設問が図と食い違う。
+    pieCmpAsk: function (cat, n0, n1) { return "What is the difference in spending on " + cat.toLowerCase() + " between " + n0 + " and " + n1 + "?"; },
     pieCmpExp: function (p) {
       return "**How to approach it**\nCompute each amount from its share and total, then find the difference.\n\n**Working**\n1. " + p.cat + " for " + p.n0 + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "\n2. " + p.cat + " for " + p.n1 + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "\n3. Difference = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "\n  (" + p.larger + " is larger)\n\n**Tip**\n- Compare amounts, not shares\n- The totals differ, so the same share means a different amount";
     }
@@ -300,7 +351,7 @@ var ZUHYO_WORDS = {
           remaining -= val;
         }
       });
-      var totalAmount = (Math.floor(Math.random() * 20) + 20) * 10000;
+      var totalAmount = (Math.floor(Math.random() * 20) + 20) * L.expenseScale;
       return { categories: categories, percentages: data, totalAmount: totalAmount };
     },
     questionGenerator: function(tableData, lang) {
@@ -333,14 +384,24 @@ var ZUHYO_WORDS = {
     type: "table",
     tableGenerator: function(lang) {
       var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
-      var cities = L.cities;
+      // ⚠️ 並び順を混ぜるだけでは足りない。気候差は都市に固定されているので、
+      //    5都市を毎回全部出すと「いちばん暖かい都市」が同じ答えに偏る
+      //    （福岡41%・実測2,000回）。**どの5都市を出すかを毎回選び直す。**
+      var pool = L.cities.slice();
+      for (var sh = pool.length - 1; sh > 0; sh--) {
+        var sw = Math.floor(Math.random() * (sh + 1));
+        var tmp = pool[sh]; pool[sh] = pool[sw]; pool[sw] = tmp;
+      }
+      var citySpecs = pool.slice(0, 5);
+      var cities = citySpecs.map(function (c) { return c.name; });
       var months = L.tempMonths;
       var data = {};
-      cities.forEach(function(city) {
-        data[city] = {};
+      // 基準はその言語圏の代表都市の平年値。offset を足して気候差を出す。
+      var base = L.tempBase;
+      citySpecs.forEach(function(spec) {
+        data[spec.name] = {};
         months.forEach(function(m, i) {
-          var base = [5, 15, 30, 18][i];
-          data[city][m] = base + Math.floor(Math.random() * 8) - 3;
+          data[spec.name][m] = base[i] + spec.offset[i] + Math.floor(Math.random() * 5) - 2;
         });
       });
       return { rows: cities, cols: months, data: data, unit: "℃" };
@@ -716,7 +777,7 @@ var ZUHYO_WORDS = {
           remaining -= val;
         }
       }
-      var totalAmount = (Math.floor(Math.random() * 15) + 25) * 10000;
+      var totalAmount = (Math.floor(Math.random() * 15) + 25) * L.expenseScale;
       return {
         chartType: "pie",
         title: L.pie1Title(totalAmount),
@@ -813,7 +874,7 @@ var ZUHYO_WORDS = {
       var larger = amount0 > amount1 ? ds0.label : ds1.label;
 
       return {
-        text: L.pieCmpIntro(ds0.label, ds0.total, ds1.label, ds1.total) + "\n\n" + L.pieCmpAsk(cat),
+        text: L.pieCmpIntro(ds0.label, ds0.total, ds1.label, ds1.total) + "\n\n" + L.pieCmpAsk(cat, ds0.label, ds1.label),
         answer: diff,
         unit: "万円",
         explanation: L.pieCmpExp({

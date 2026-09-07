@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<title>OGP source (en)</title>
+<!--
+  ⚠️ これは公開ページではなく、en/ogp.png を作るための元データ。
+     日本語版の ogp.png は画像だけがコミットされていて作り方が残っていなかったため、
+     英語版は**元のHTMLを一緒に残す**（次に文言を変える人が作り直せるように）。
+
+  ⚠️ 置き場所は tools/ 配下。公開ツリー（en/ 直下など）に置くと
+     test/html.spec.js が「ページ」として拾い、description も canonical も
+     AdSense も無いと言って落ちる。実際に落とした。
+
+  作り方:
+    1. リポジトリのルートで簡易サーバを立てる（python3 -m http.server 8899）
+    2. http://localhost:8899/tools/ogp/en.html を 1200x630 のビューポートで開く
+    3. ビューポートのスクリーンショットを en/ogp.png として保存する
+  ⚠️ 1200x630 は og:image の標準比率。ここを変えるなら index.html の
+     og:image:width / og:image:height も一緒に変えること。
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px;
+    background: #f4f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1e2a78;
+    display: flex; flex-direction: column; align-items: center;
+    padding-top: 46px;
+    overflow: hidden;
+  }
+  .brand { font-size: 19px; font-weight: 600; letter-spacing: .04em; color: #3949ab; }
+  h1 { font-size: 42px; font-weight: 800; margin-top: 12px; letter-spacing: -.01em; }
+  .beta {
+    display: inline-block; vertical-align: 12px; margin-left: 10px;
+    background: #f26a1b; color: #fff; font-size: 17px; font-weight: 700;
+    border-radius: 6px; padding: 3px 9px;
+  }
+  .sub { margin-top: 12px; font-size: 19px; color: #4a5387; }
+  .pills { margin-top: 20px; display: flex; gap: 14px; }
+  .pill {
+    background: #e8eaf6; color: #2b3a8f; font-size: 17px; font-weight: 600;
+    border-radius: 999px; padding: 9px 22px;
+  }
+  .cards { margin-top: 26px; display: flex; gap: 22px; }
+  .card {
+    width: 240px; height: 218px; background: #fff; border: 1px solid #e3e5ee;
+    border-radius: 14px; padding: 20px 20px; text-align: center;
+  }
+  .icon {
+    width: 50px; height: 50px; border-radius: 50%; background: #e8eaf6;
+    margin: 0 auto 13px; display: flex; align-items: center; justify-content: center;
+    font-size: 27px; color: #2b3a8f;
+  }
+  .card h2 { font-size: 18px; font-weight: 700; line-height: 1.32; }
+  .card p { margin-top: 9px; font-size: 14px; line-height: 1.55; color: #545b7d; }
+  .cta {
+    margin-top: 26px; background: #26307a; color: #fff;
+    font-size: 20px; font-weight: 700; border-radius: 9px; padding: 15px 50px;
+  }
+</style>
+</head>
+<body>
+  <div class="brand">Infinite Aptitude Drill</div>
+  <h1>Numerical Reasoning Practice<span class="beta">&beta;</span></h1>
+  <div class="sub">Tables, bar charts, line graphs and pie charts &mdash; free, no sign-up</div>
+
+  <div class="pills">
+    <span class="pill">No sign-up</span>
+    <span class="pill">Completely free</span>
+    <span class="pill">New questions every time</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="icon">&#8734;</div>
+      <h2>New questions every time</h2>
+      <p>The figures are generated when the question is served, so you cannot memorise the answers.</p>
+    </div>
+    <div class="card">
+      <div class="icon">&#9201;</div>
+      <h2>Practise under the clock</h2>
+      <p>Test mode runs a timer across the set. Practice mode marks each question as you go.</p>
+    </div>
+    <div class="card">
+      <div class="icon">&#9678;</div>
+      <h2>See where the time goes</h2>
+      <p>Your score comes with the time spent per question, so you know what to fix.</p>
+    </div>
+  </div>
+
+  <div class="cta">Start the test</div>
+</body>
+</html>

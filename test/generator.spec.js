@@ -2370,6 +2370,73 @@ if (failures.length) process.exitCode = 1;
 
 
 //
+// 「常に同じ**中身**を選ぶ」で当たらないか。
+//
+// 位置の検査（この下）とは別物で、両方要る。位置の検査は
+// 「常に3番目を選ぶ」を見るので、正解が毎回3番目でなければ通ってしまう。
+// だが選択肢の中身に偏りがあれば、位置が一様でも表を読まずに当たる。
+//
+// 実際に2度踏んだ:
+//   sokudo_round_01 … 答えが実質2通りしかなく、当てずっぽうで51.5%
+//   table_max_01   … 気温を現実的にしたら「最も暖かい都市」が福岡41%（5択）
+//
+// ⚠️ 測るのは「**その中身を常に選ぶ戦略**の的中率」であって、
+//    中身ごとの出現率ではない。選択肢に入っていない回は外れるので、
+//    的中率 = その中身が正解だった回数 ÷ 全問題数 になる。
+//    比較相手は当てずっぽうの期待値（1/選択肢数の平均）。
+//
+//    この測り方でないと、現実的なデータを不当に落とす。福岡は暖かいので
+//    出れば勝ちやすいが、5都市中5都市を毎回出すか10都市から5つ選ぶかで
+//    戦略の的中率は41%→23%に変わる。前者だけを落としたい。
+{
+  const SAMPLES = 1200;
+  const RATIO = 1.5;     // 当てずっぽうの何倍まで許すか
+  const MIN_Q = 200;     // これ未満しか生成できないテンプレートは判定しない
+
+  const guessable = [];
+  let checked = 0, skipped = 0;
+
+  for (const t of TEMPLATES) {
+    const wins = new Map();
+    let total = 0, chanceSum = 0;
+    for (let i = 0; i < SAMPLES; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q || !Array.isArray(q.choices) || !q.choices.length) continue;
+      if (!(q.correctAnswer >= 0 && q.correctAnswer < q.choices.length)) continue;
+      total++;
+      chanceSum += 1 / q.choices.length;
+      const key = String(q.choices[q.correctAnswer]);
+      wins.set(key, (wins.get(key) || 0) + 1);
+    }
+    if (total < MIN_Q) { if (total) skipped++; continue; }
+    checked++;
+    const chance = chanceSum / total;            // 当てずっぽうの的中率
+    let bestKey = null, bestWins = 0;
+    for (const [k, v] of wins) if (v > bestWins) { bestWins = v; bestKey = k; }
+    const rate = bestWins / total;
+    if (rate > chance * RATIO) {
+      guessable.push(
+        `${t.id}（${total}問・答えは${wins.size}種）: 「${bestKey}」を選び続けると`
+        + ` ${(rate * 100).toFixed(1)}% 的中。当てずっぽうは ${(chance * 100).toFixed(1)}%`
+        + `（${(rate / chance).toFixed(2)}倍）`);
+    }
+  }
+
+  cov.covered("中身の偏りを調べたテンプレート", checked, 10);
+  cov.skipped("標本が足りず判定しなかったテンプレート", skipped, `${MIN_Q}問未満`);
+
+  console.log(`\n正解の中身の偏り: ${checked}テンプレート`);
+  if (!guessable.length) {
+    console.log(`   ✅ どの中身も、選び続けて当てずっぽうの${RATIO}倍を超えない`);
+  } else {
+    console.log(`   ❌ 読まずに当てられるテンプレート ${guessable.length}件`);
+    guessable.forEach(m => console.log(`   - ${m}`));
+    process.exitCode = 1;
+  }
+}
+
+
+//
 // 既存の検査（順位）とは見ているものが違う。両方要る。
 //   既存 … 「常に最大を選ぶ」で当たらないか。順序が定義できるものだけが対象
 //   これ … 「常に3番目」「最後は選ばない」で当たらないか。選択式すべてが対象
@@ -2725,6 +2792,72 @@ if (failures.length) process.exitCode = 1;
   cov.covered("キーの重複を調べたテンプレ", checked, 80);
 }
 
+// --- 語彙表・単位表のキーが重複していないか ---
+// ⚠️ テンプレートのキー重複は上で見ているが、その検査は _base.js を
+//    **明示的に除外している**（テンプレート1本の範囲で数える作りのため）。
+//    2026-09-07に UNIT_LABELS へ "" を足したところ、既に "" があり、
+//    JSは後勝ちなので新しく書いた en の列が黙って消えた。緑のまま通った。
+//    同じ罠を3度踏んでいるので、表そのものを対象にする。
+//
+// ⚠️ 行の見た目で数えない。問題文に "{{" や ":" が入るので、
+//    文字列リテラルを飛ばしながら波括弧の深さを追い、**同じ深さの兄弟キー**
+//    だけを突き合わせる。深さを見ないと ja と en の同名キーを重複と誤検知する。
+{
+  const TABLES = [
+    ["src/questions/_base.js", "UNIT_LABELS"],
+    ["src/questions/_base.js", "CATEGORY_LABELS"],
+    ["src/questions/09-zuhyo.js", "ZUHYO_WORDS"]
+  ];
+  let tablesChecked = 0, keysChecked = 0;
+
+  for (const [rel, name] of TABLES) {
+    const file = path.join(__dirname, "..", rel);
+    if (!fs.existsSync(file)) { fail("(表の重複キー)", "ファイルが無い", rel); continue; }
+    const text = fs.readFileSync(file, "utf8");
+    const at = text.indexOf("var " + name + " = {");
+    if (at < 0) { fail("(表の重複キー)", "表が見つからない", `${rel}: ${name}`); continue; }
+    tablesChecked++;
+
+    let i = text.indexOf("{", at);
+    let depth = 0;
+    const stack = [];          // 深さごとの「その階層で見たキー」
+    const dup = [];
+    while (i < text.length) {
+      const c = text[i];
+      if (c === '"' || c === "'") {          // 文字列は丸ごと飛ばす
+        const q = c; i++;
+        while (i < text.length && text[i] !== q) { if (text[i] === "\\") i++; i++; }
+        i++; continue;
+      }
+      if (c === "/" && text[i + 1] === "/") { // 行コメントも飛ばす
+        while (i < text.length && text[i] !== "\n") i++;
+        continue;
+      }
+      if (c === "{") { depth++; stack[depth] = new Set(); i++; continue; }
+      if (c === "}") { depth--; i++; if (depth === 0) break; continue; }
+      // キー: 行頭の空白のあとに続く「識別子または引用符つき文字列」＋コロン
+      const m = /^\n[ \t]*("(?:[^"\\]|\\.)*"|[A-Za-z_$][\w$]*)\s*:/.exec(text.slice(i));
+      if (m) {
+        const key = m[1];
+        keysChecked++;
+        if (stack[depth]) {
+          if (stack[depth].has(key)) dup.push(`${name}: ${key}（深さ${depth}）`);
+          else stack[depth].add(key);
+        }
+        i += m[0].length;
+        continue;
+      }
+      i++;
+    }
+    if (dup.length) {
+      fail("(表の重複キー)", "同じ階層にキーが2回書かれている",
+        `${rel}: ${[...new Set(dup)].join(" / ")}。JSは後の定義が勝つので、先に書いた方が黙って消える`);
+    }
+  }
+  cov.covered("重複キーを調べた表", tablesChecked, 3);
+  cov.covered("重複キーを調べたキー", keysChecked, 100);
+}
+
 // --- 単位の表記表（UNIT_LABELS）が器の約束を守っているか ---
 // 2026-09-07: 英語圏展開のため、単位を「キー → 言語ごとの表記」で引く形にした。
 // キーは従来テンプレートが持っていた日本語表記そのもの。器を入れたことで
@@ -2752,6 +2885,33 @@ if (failures.length) process.exitCode = 1;
           `${JSON.stringify(key)}: 改修前${JSON.stringify(baseline[key])} / いま${JSON.stringify(entry.ja)}`);
       }
     }
+    // ⚠️ ここまでは「ベースラインに載っているキー」しか見ていない。
+    //    つまり**ベースラインから1件消せば、その分だけ検査が減って緑のまま通る。**
+    //    実際、変異「単位のベースラインから1件消す」は壊しても落ちなかった（2026-09-07の全件実行）。
+    //    検査の分母を、検査される側が自由に縮められる形になっていた。
+    //    表とベースラインのキー集合が**完全に一致する**ことを要求して塞ぐ。
+    //    単位を足すときはベースラインにも足す（それが「表示を決めた」という記録になる）。
+    {
+      const inTable = Object.keys(UNITS);
+      const inBase = Object.keys(baseline);
+      const missing = inTable.filter(k => !(k in baseline));
+      const extra = inBase.filter(k => !(k in UNITS));
+      if (missing.length) {
+        fail("(単位の表記表)", "ベースラインに無い単位キーがある",
+          `${missing.map(k => JSON.stringify(k)).join(", ")}。`
+          + `単位を足したらベースラインにも登録すること（登録しないとその単位は照合されない）`);
+      }
+      if (extra.length) {
+        fail("(単位の表記表)", "ベースラインだけに残っている単位キーがある",
+          `${extra.map(k => JSON.stringify(k)).join(", ")}。`
+          + `表から消したなら、消した理由を添えてベースラインからも消すこと`);
+      }
+      if (inTable.length !== inBase.length) {
+        fail("(単位の表記表)", "表とベースラインの件数が違う",
+          `表 ${inTable.length}件 / ベースライン ${inBase.length}件`);
+      }
+    }
+
     cov.covered("ベースラインと突き合わせた単位キー", checkedBase, 25);
 
     // 2. ja の表記はキーと同一であること。キー＝従来の日本語表記、という設計の固定。

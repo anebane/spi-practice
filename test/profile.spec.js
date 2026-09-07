@@ -94,22 +94,28 @@ const all = allCategories;   // 既存の記述との互換。新しく書くな
   const inTemplates = new Set(ctx.QUESTION_TEMPLATES.map(q => q.categoryId));
   const probeIds = new Set(
     ctx.QUESTION_TEMPLATES.filter(q => q.probe === true).map(q => q.categoryId));
+  // ⚠️ 判定の順番が要。以前は先頭が `if (declared.has(id)) continue;` で、
+  //    **プロファイルに載っている試作**（＝いちばん捕まえたい事故）が
+  //    そこで素通りしていた。到達不能な検査になっていて、
+  //    2026-09-07の全件実行で「どの変異でも落ちない失敗経路」として露見した。
+  //    「載っているか」より先に「載っていてはいけないものか」を見る。
   for (const id of inTemplates) {
-    if (declared.has(id)) continue;
-    if (probeIds.has(id)) {
-      // 試作は出題に出ないので、出題プロファイルに無くてよい。
-      // ⚠️ ただし出題に出る分野に probe が混ざっていたら、それは事故。
-      const inProfile = allProfiles.some(p =>
-        p.examCategories.concat(p.extraCategories || []).some(c => c.id === id));
-      if (inProfile) {
-        const name = ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
-        fail("試作がプロファイルに載っている", `${name}（id ${id}）。probe: true のまま出題される`);
-      }
+    const isProbe = probeIds.has(id);
+    const inProfile = declared.has(id);
+    const nameOf = () => ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
+
+    // 試作が出題プロファイルに載っていたら事故。出題に混ざる。
+    if (isProbe && inProfile) {
+      fail("試作がプロファイルに載っている", `${nameOf()}（id ${id}）。probe: true のまま出題される`);
       continue;
     }
-    const name = ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
+    // 出題プロファイルに載っている通常の分野。問題なし。
+    if (inProfile) continue;
+    // 試作は出題に出ないので、載っていなくてよい（probe: true が明示的な宣言）。
+    if (isProbe) continue;
+
     fail("どのプロファイルにも載っていない分野がある",
-      `${name}（id ${id}）。出題も導線も出ない。試作なら probe: true を宣言すること`);
+      `${nameOf()}（id ${id}）。出題も導線も出ない。試作なら probe: true を宣言すること`);
   }
   cov.covered("テンプレートの分野", inTemplates.size, 12);
 }
@@ -123,7 +129,7 @@ for (const prof of allProfiles.filter(x => x.page)) {
   const block = html.match(/id="category-select"([\s\S]*?)<\/div>/);
   if (!block) {
     fail("index.html の分野選択が見つからない", 'id="category-select" のブロックが無い');
-    cov.covered("画面のチェックボックス", 0, 10);
+    cov.covered("画面のチェックボックス", 0, 1);
   } else {
     const boxes = [...block[1].matchAll(/value="(\d+)"[^>]*><span>([^<]+)<\/span>/g)]
       .map(m => ({ id: Number(m[1]), name: m[2] }));
@@ -139,7 +145,11 @@ for (const prof of allProfiles.filter(x => x.page)) {
         fail("プロファイルにあるが画面に無い分野", `${rel}: ${c.name}（id ${c.id}）。模擬試験に出す宣言なのに選べない`);
       }
     }
-    cov.covered("画面のチェックボックス（" + prof.id + "）", boxes.length, 10);
+    // ⚠️ 下限を10で決め打ちにしていたが、英語版は1分野（Numerical Reasoning）
+    //    しか出さないので、正しい画面が「検査対象が少なすぎる」で落ちた。
+    //    下限の目的は「正規表現が空振りして0件のまま緑になる」を防ぐことなので、
+    //    プロファイルが宣言している分野数をそのまま下限にする。
+    cov.covered("画面のチェックボックス（" + prof.id + "）", boxes.length, want.length);
   }
 
   // --- 難易度のチェックボックスが、宣言した帯と一致するか ---
@@ -177,51 +187,85 @@ for (const prof of allProfiles.filter(x => x.page)) {
   //    コメントは検査ではないので誰も催促しない。宿題は台帳に登録させる。
   const TODO = new Set(
     JSON.parse(fs.readFileSync(path.join(__dirname, "category-pages-todo.json"), "utf8"))
-      .pending.map(x => x.id)
+      .pending.map(x => x.key)
   );
 
-  // ⚠️ `all` は spi プロファイルの分野だけ。公務員専用の分野（整数の性質・操作と手順）
-  //    が漏れるので、全プロファイルの分野を id で重複排除して見る。
-  //    今朝も同じ取り違えをして誤検知した（2026-09-06）。
-  const everyCat = [];
-  const seenId = new Set();
+  // ⚠️ id で重複排除してはいけない。**解説ページは分野ごとではなくプロファイルごとに要る。**
+  //    2026-09-07に en プロファイル（分野9・slug なし）を足したとき、
+  //    同じ id 9 を spi が slug「zuhyo」で持っているせいで en の側が一度も見られず、
+  //    「英語の面に解説ページが1枚も無い」まま緑で通った。
+  //    以前の取り違えは「spi だけ見る」だったが、id での重複排除も同じ穴を作る。
+  //    見る単位は **(プロファイル, 分野)** の組。台帳のキーも "<profile>:<id>"。
+  const everyPair = [];
   for (const prof of allProfiles) {
     for (const c of prof.examCategories.concat(prof.extraCategories || [])) {
-      if (seenId.has(c.id)) continue;
-      seenId.add(c.id);
-      everyCat.push(c);
+      everyPair.push({ profile: prof.id, cat: c, key: prof.id + ":" + c.id });
     }
   }
 
   let checked = 0;
-  for (const c of everyCat) {
+  for (const e of everyPair) {
+    const c = e.cat;
     checked++;
     if (!c.slug) {
-      if (!TODO.has(c.id)) {
-        fail("解説ページを作らないまま分野を足している",
-          `${c.name}（id ${c.id}）に slug が無い。作るなら categories/ にページを、`
-          + `後回しにするなら理由を添えて test/category-pages-todo.json に登録すること`);
+      if (!TODO.has(e.key)) {
+        fail("解説ページを作らないまま分野を出している",
+          `${e.profile} の「${c.name}」（id ${c.id}）に slug が無い。作るなら categories/ にページを、`
+          + `後回しにするなら理由を添えて test/category-pages-todo.json に "${e.key}" で登録すること`);
       }
       continue;
     }
     const p = path.join(ROOT, "categories", c.slug, "index.html");
     if (!fs.existsSync(p)) {
-      fail("解説ページが無い分野に導線を出している", `${c.name} → categories/${c.slug}/ が存在しない`);
+      fail("解説ページが無い分野に導線を出している",
+        `${e.profile} の「${c.name}」 → categories/${c.slug}/ が存在しない`);
     }
   }
 
   // 台帳に載っているのに slug が付いた（＝ページを作った）ものは、台帳から消す。
   // 宿題台帳は縮む方向にのみ動かす。
-  for (const id of TODO) {
-    const c = everyCat.find(x => x.id === id);
-    if (!c) {
-      fail("宿題の台帳に存在しない分野が載っている", `id ${id}。分野を消したら台帳からも消すこと`);
-    } else if (c.slug) {
+  for (const key of TODO) {
+    const e = everyPair.find(x => x.key === key);
+    if (!e) {
+      fail("宿題の台帳に存在しない組み合わせが載っている",
+        `${key}。分野やプロファイルを消したら台帳からも消すこと`);
+    } else if (e.cat.slug) {
       fail("宿題が済んでいるのに台帳に残っている",
-        `${c.name}: slug「${c.slug}」が付いている。test/category-pages-todo.json から消すこと`);
+        `${key}: slug「${e.cat.slug}」が付いている。test/category-pages-todo.json から消すこと`);
     }
   }
-  cov.covered("slug を調べた分野", checked, 12);
+  cov.covered("slug を調べた（プロファイル, 分野）の組", checked, 12);
+}
+
+// --- 4c. 日本語の広告を、日本語以外の面に出していないか ---
+// ⚠️ affiliate.js が持つ案件・見出し・PR表記は全部日本語で、対象も日本の
+//    就活・転職サービス。英語の面で出すと読めない広告になり、成果にもならない。
+//    「出す/出さない」を app.js の中で lang から推測させると、
+//    日本語の面を増やすたびに条件が増えて、いつか取り違える。
+//    プロファイルに宣言させ、宣言と言語の組み合わせをここで見る。
+{
+  let checked = 0;
+  for (const prof of allProfiles) {
+    checked++;
+    if (typeof prof.showAffiliate !== "boolean") {
+      fail("showAffiliate を宣言していない",
+        `${prof.id}: 結果画面に広告枠を出すかどうかが宣言されていない。`
+        + `面を足すたびに明示的に決めること`);
+      continue;
+    }
+    if (prof.lang !== "ja" && prof.showAffiliate) {
+      fail("日本語以外の面に日本語の広告を出している",
+        `${prof.id}（lang: ${prof.lang}）が showAffiliate: true。`
+        + `affiliate.js の案件・見出し・PR表記はすべて日本語`);
+    }
+  }
+  // app.js が宣言を見ているか。見ていなければ宣言は飾りになる。
+  const appSrc = fs.readFileSync(path.join(ROOT, "app.js"), "utf8");
+  if (appSrc.indexOf("PROFILE.showAffiliate") < 0) {
+    fail("app.js が showAffiliate を見ていない",
+      "宣言だけあって参照が無い。どの面でも広告が出る（または出ない）ままになる");
+  }
+  cov.covered("広告の宣言を調べたプロファイル", checked, 3);
 }
 
 // --- 5. 逆向き: 存在する解説ページが、プロファイルから漏れていないか ---

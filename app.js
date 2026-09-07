@@ -54,6 +54,129 @@
 
   var CATEGORY_PAGES = profileCategoryPages(PROFILE_ID);
 
+  // ============================================================
+  // 画面の文言
+  // ============================================================
+  // ⚠️ 出題を英語にできても、画面が日本語のままなら英語版は出せない。
+  //    テンプレート側は ZUHYO_WORDS、単位は UNIT_LABELS、画面はここ、
+  //    という同じ形にしている。**新しい言語を足すときは en の隣に列を足すだけ**で、
+  //    この下のロジックは1行も触らない。それがこの表を作った理由。
+  //
+  // ⚠️ 文字列の連結を呼び出し側に残さない。「分野: 」+ cat のように書くと、
+  //    語順が違う言語で必ず破綻する（英語は "Category: X" で同じだが、
+  //    「問題 3 / 20」は "Question 3 of 20" で区切りごと変わる）。
+  //    だから可変部を持つものは関数にして、組み立てごとこの表に置く。
+  var UI_TEXT = {
+    ja: {
+      shareText: function (label, pct, correct, total, tags) {
+        return label + "で " + pct + "% (" + correct + "/" + total + "問正解) でした！"
+          + "\n無料・登録不要で何度でも練習できる\n" + tags;
+      },
+      categoriesLabel: function (n) { return "対応分野（" + n + "分野）"; },
+      categoryNote: function (name) { return "「" + name + "」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。"; },
+      alertNoCategory:   "少なくとも1つの分野を選択してください。",
+      alertNoDifficulty: "少なくとも1つの難易度を選択してください。",
+      alertNoQuestions:  "問題を生成できませんでした。設定を変更してください。",
+      alertError: function (msg) { return "エラーが発生しました: " + msg; },
+      timeRemaining: function (mm, ss) { return "残り時間 " + mm + ":" + ss; },
+      questionCategory: function (cat) { return "分野: " + cat; },
+      questionDifficulty: function (d) { return "難易度: " + d; },
+      questionNumber: function (i, n) { return "問題 " + i + " / " + n; },
+      btnAnswerNext: "回答して次へ",
+      btnNext: "次の問題へ",
+      answerLabel: "回答",
+      phNumerator: "分子",
+      phDenominator: "分母",
+      phValue: "数値を入力",
+      feedbackSkipped: function (ans) { return "スキップしました。正解: " + ans; },
+      feedbackCorrect: "正解!",
+      feedbackIncorrect: function (user, ans) { return "不正解。あなたの回答: " + user + "  正解: " + ans; },
+      peekAnswer: function (ans) { return "正解: " + ans; },
+      unanswered: "未回答",
+      unknownChoice: "不明",
+      resultDetail: function (correct, total) { return correct + " / " + total + " 問正解"; },
+      categoryScore: function (correct, total, pct, sec) { return correct + "/" + total + " (" + pct + "%)  " + sec + "秒/問"; },
+      ctaTitle: function (cat, rate) { return cat + " の正答率は " + rate + "% でした"; },
+      ctaBody: "解き方を確認して、この分野だけをもう一度練習できます。",
+      ctaButton: function (cat) { return cat + " の解き方を見る"; },
+      reviewProgress: function (i, n) { return "問題 " + i + " / " + n; },
+      reviewMeta: function (cat, d) { return "  分野: " + cat + "  難易度: " + d; },
+      reviewPeeked: "解説を見た",
+      reviewSkipped: "未回答（スキップ）",
+      reviewCorrect: "正解",
+      reviewIncorrect: "不正解",
+      yourAnswerLabel: function (ans) { return "あなたの回答: " + ans; },
+      correctAnswerLabel: function (ans) { return "正解: " + ans; },
+      diffEasy: "易",
+      diffMedium: "中",
+      diffHard: "難",
+      confirmSkip: "回答が入力されていません。スキップしますか？",
+      // 答えと単位のつなぎ方。日本語は「215 %」「530 円」で従来どおり半角空白。
+      formatWithUnit: function (value, unit) { return value + (unit ? " " + unit : ""); }
+    },
+    en: {
+      shareText: function (label, pct, correct, total, tags) {
+        return "I scored " + pct + "% (" + correct + "/" + total + ") on " + label + "."
+          + "\nFree unlimited practice, no sign-up needed.\n" + tags;
+      },
+      categoriesLabel: function (n) { return "Topics covered (" + n + ")"; },
+      categoryNote: function (name) { return "Only \u201c" + name + "\u201d will be set. You can change this in the topic list below."; },
+      alertNoCategory:   "Select at least one topic.",
+      alertNoDifficulty: "Select at least one difficulty level.",
+      alertNoQuestions:  "No questions could be generated. Please change your settings.",
+      alertError: function (msg) { return "Something went wrong: " + msg; },
+      timeRemaining: function (mm, ss) { return "Time left " + mm + ":" + ss; },
+      questionCategory: function (cat) { return "Topic: " + cat; },
+      questionDifficulty: function (d) { return "Difficulty: " + d; },
+      questionNumber: function (i, n) { return "Question " + i + " of " + n; },
+      btnAnswerNext: "Submit and continue",
+      btnNext: "Next question",
+      answerLabel: "Your answer",
+      phNumerator: "Numerator",
+      phDenominator: "Denominator",
+      phValue: "Enter a number",
+      feedbackSkipped: function (ans) { return "Skipped. The correct answer is " + ans + "."; },
+      feedbackCorrect: "Correct.",
+      feedbackIncorrect: function (user, ans) { return "Not quite. You answered " + user + ". The correct answer is " + ans + "."; },
+      peekAnswer: function (ans) { return "Correct answer: " + ans; },
+      unanswered: "No answer",
+      unknownChoice: "Unknown",
+      resultDetail: function (correct, total) { return correct + " of " + total + " correct"; },
+      categoryScore: function (correct, total, pct, sec) { return correct + "/" + total + " (" + pct + "%)  " + sec + "s per question"; },
+      ctaTitle: function (cat, rate) { return "You scored " + rate + "% on " + cat; },
+      ctaBody: "Review the method and practise this topic on its own.",
+      ctaButton: function (cat) { return "See how to solve " + cat; },
+      reviewProgress: function (i, n) { return "Question " + i + " of " + n; },
+      reviewMeta: function (cat, d) { return "  Topic: " + cat + "  Difficulty: " + d; },
+      reviewPeeked: "Viewed the solution",
+      reviewSkipped: "No answer (skipped)",
+      reviewCorrect: "Correct",
+      reviewIncorrect: "Incorrect",
+      yourAnswerLabel: function (ans) { return "Your answer: " + ans; },
+      correctAnswerLabel: function (ans) { return "Correct answer: " + ans; },
+      diffEasy: "Easy",
+      diffMedium: "Medium",
+      diffHard: "Hard",
+      confirmSkip: "You have not entered an answer. Skip this question?",
+      // ⚠️ 英語は単位の付け方が3通りあり、日本語の「値＋空白＋単位」を
+      //    そのまま流用すると全部おかしくなる。実際に「215 %」「530 £」と出ていた。
+      //      通貨  … 前に付ける（£530）
+      //      記号  … 空白なしで後ろ（215%）
+      //      語    … 空白ありで後ろ（600 km / 12 units）
+      formatWithUnit: function (value, unit) {
+        if (!unit) return String(value);
+        if (["£", "$", "€", "¥"].indexOf(unit) >= 0) return unit + value;
+        if (["%", "°C", "°F"].indexOf(unit) >= 0) return value + unit;
+        return value + " " + unit;
+      }
+    }
+  };
+
+  // ⚠️ 未知の言語は ja に倒す。英語のプロファイルを足したのに
+  //    UI_TEXT に列が無い、という取り違えを画面の崩壊ではなく日本語表示で受ける。
+  var T = UI_TEXT[PROFILE.lang === "en" ? "en" : "ja"];
+
+
   // --- 誤り報告 ---
   var REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform?usp=pp_url";
 
@@ -79,9 +202,7 @@
     // シェアの動機を完全に潰していた。例外が出ないので気づけない類。
     state.answers.forEach(function(a) { if (a && a.isCorrect) totalCorrect++; });
     var percent = Math.round((totalCorrect / totalQuestions) * 100);
-    var text = PROFILE.shareLabel + "で " + percent + "% (" + totalCorrect + "/" + totalQuestions + "問正解) でした！"
-      + "\n無料・登録不要で何度でも練習できる"
-      + "\n" + PROFILE.shareTags;
+    var text = T.shareText(PROFILE.shareLabel, percent, totalCorrect, totalQuestions, PROFILE.shareTags);
     var url = "https://tekisei-drill.com/";
     window.open(
       "https://x.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(url),
@@ -217,7 +338,7 @@
       if (!names.length) return;
       var label = document.getElementById("categories-label");
       var list = document.getElementById("categories-list");
-      if (label) label.textContent = "対応分野（" + names.length + "分野）";
+      if (label) label.textContent = T.categoriesLabel(names.length);
       if (list) list.textContent = names.join(" / ");
     })();
 
@@ -273,7 +394,7 @@
 
       var note = document.getElementById("category-param-note");
       if (note) {
-        note.textContent = "「" + name + "」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。";
+        note.textContent = T.categoryNote(name);
         note.style.display = "";
       }
       trackEvent("category_practice_start", { category_id: want });
@@ -334,12 +455,12 @@
     }
 
     if (selectedCategories.length === 0) {
-      alert("少なくとも1つの分野を選択してください。");
+      alert(T.alertNoCategory);
       return;
     }
 
     if (selectedDifficulties.length === 0) {
-      alert("少なくとも1つの難易度を選択してください。");
+      alert(T.alertNoDifficulty);
       return;
     }
 
@@ -355,7 +476,7 @@
     });
 
     if (state.questions.length === 0) {
-      alert("問題を生成できませんでした。設定を変更してください。");
+      alert(T.alertNoQuestions);
       return;
     }
 
@@ -382,7 +503,7 @@
     showQuestion(0);
     startTimer();
     } catch(e) {
-      alert("エラーが発生しました: " + e.message);
+      alert(T.alertError(e.message));
       console.error(e);
     }
   }
@@ -430,7 +551,7 @@
     var el = document.getElementById("total-timer");
     var min = Math.floor(state.totalTimeRemaining / 60);
     var sec = state.totalTimeRemaining % 60;
-    el.textContent = "残り時間 " + pad2(min) + ":" + pad2(sec);
+    el.textContent = T.timeRemaining(pad2(min), pad2(sec));
 
     el.classList.remove("warning", "danger");
     if (state.totalTimeRemaining <= 60) {
@@ -464,11 +585,11 @@
     document.getElementById("peek-overlay").style.display = "none";
 
     // メタ情報
-    document.getElementById("question-category").textContent = "分野: " + q.category;
+    document.getElementById("question-category").textContent = T.questionCategory(q.category);
     var diffEl = document.getElementById("question-difficulty");
-    diffEl.textContent = "難易度: " + difficultyLabel(q.difficulty);
+    diffEl.textContent = T.questionDifficulty(difficultyLabel(q.difficulty));
     diffEl.className = "question-difficulty diff-" + q.difficulty;
-    document.getElementById("question-number").textContent = "問題 " + (index + 1) + " / " + state.questions.length;
+    document.getElementById("question-number").textContent = T.questionNumber(index + 1, state.questions.length);
     document.getElementById("progress-display").textContent = (index + 1) + " / " + state.questions.length;
 
     // 問題文
@@ -501,7 +622,7 @@
 
     // ボタンテキスト更新
     var btnAnswer = document.getElementById("btn-answer");
-    btnAnswer.textContent = "回答して次へ";
+    btnAnswer.textContent = T.btnAnswerNext;
     btnAnswer.disabled = false;
     document.getElementById("btn-skip").style.display = "";
     document.getElementById("btn-peek").style.display = "";
@@ -527,11 +648,11 @@
         } else if (!inTable) {
           beforeTable.push(line);
         } else {
-          if (line.indexOf("（単位") !== -1) {
-            afterTable.push(line);
-          } else {
-            afterTable.push(line);
-          }
+          // ⚠️ ここは以前「（単位…）の行か」で分岐していたが、両側の処理が
+          //    同じで意味が無かった。単位の行も他の行と同じく表の後に置く。
+          //    英語版では「(unit: …)」になるので、日本語の判定を残すと
+          //    「動いていない条件が言語を跨いで残る」状態になる。
+          afterTable.push(line);
         }
       });
 
@@ -613,19 +734,19 @@
 
     } else if (q.answerType === "fraction") {
       area.innerHTML =
-        '<label>回答</label>' +
+        '<label>' + escapeHtml(T.answerLabel) + '</label>' +
         '<div class="fraction-input">' +
-        '<input type="number" id="answer-numerator" placeholder="分子">' +
+        '<input type="number" id="answer-numerator" placeholder="' + escapeHtml(T.phNumerator) + '">' +
         '<span class="fraction-slash">/</span>' +
-        '<input type="number" id="answer-denominator" placeholder="分母">' +
+        '<input type="number" id="answer-denominator" placeholder="' + escapeHtml(T.phDenominator) + '">' +
         '</div>';
 
     } else {
       // number
       area.innerHTML =
-        '<label>回答</label>' +
+        '<label>' + escapeHtml(T.answerLabel) + '</label>' +
         '<div class="answer-input">' +
-        '<input type="number" id="answer-value" step="any" placeholder="数値を入力">' +
+        '<input type="number" id="answer-value" step="any" placeholder="' + escapeHtml(T.phValue) + '">' +
         '<span class="answer-unit">' + escapeHtml(q.unit) + '</span>' +
         '</div>';
 
@@ -807,20 +928,20 @@
     var resultDiv = document.getElementById("feedback-result");
     if (skipped) {
       resultDiv.className = "feedback-result incorrect";
-      resultDiv.textContent = "スキップしました。正解: " + formatAnswer(q.correctAnswer, q);
+      resultDiv.textContent = T.feedbackSkipped(formatAnswer(q.correctAnswer, q));
     } else if (isCorrect) {
       resultDiv.className = "feedback-result correct";
-      resultDiv.textContent = "正解!";
+      resultDiv.textContent = T.feedbackCorrect;
     } else {
       resultDiv.className = "feedback-result incorrect";
-      resultDiv.textContent = "不正解。あなたの回答: " + formatAnswer(userAnswer, q) + "  正解: " + formatAnswer(q.correctAnswer, q);
+      resultDiv.textContent = T.feedbackIncorrect(formatAnswer(userAnswer, q), formatAnswer(q.correctAnswer, q));
     }
 
     document.getElementById("feedback-explanation").textContent = q.explanation;
 
     // ボタンを「次へ」に変更
     var btnAnswer = document.getElementById("btn-answer");
-    btnAnswer.textContent = "次の問題へ";
+    btnAnswer.textContent = T.btnNext;
     document.getElementById("btn-skip").style.display = "none";
 
     // スクロール
@@ -836,7 +957,7 @@
     trackEvent("peek_explanation", { template_id: q.templateId || "", category: q.category, difficulty: q.difficulty });
 
     // 正解と解説を表示
-    document.getElementById("peek-correct-answer").textContent = "正解: " + formatAnswer(q.correctAnswer, q);
+    document.getElementById("peek-correct-answer").textContent = T.peekAnswer(formatAnswer(q.correctAnswer, q));
     document.getElementById("peek-explanation").textContent = q.explanation;
     document.getElementById("peek-overlay").style.display = "";
 
@@ -874,15 +995,15 @@
 
   // --- 回答のフォーマット ---
   function formatAnswer(answer, q) {
-    if (answer === null || answer === undefined) return "未回答";
+    if (answer === null || answer === undefined) return T.unanswered;
 
     if (q.answerType === "choice") {
-      return q.choices[answer] || "不明";
+      return q.choices[answer] || T.unknownChoice;
     }
     if (q.answerType === "fraction") {
       return answer.numerator + "/" + answer.denominator;
     }
-    return answer + (q.unit ? " " + q.unit : "");
+    return T.formatWithUnit(answer, q.unit);
   }
 
   // --- 試験終了 ---
@@ -999,7 +1120,7 @@
 
     // スコア表示
     document.getElementById("result-score").textContent = percent + "%";
-    document.getElementById("result-detail").textContent = totalCorrect + " / " + totalQuestions + " 問正解";
+    document.getElementById("result-detail").textContent = T.resultDetail(totalCorrect, totalQuestions);
 
     var min = Math.floor(totalTime / 60);
     var sec = totalTime % 60;
@@ -1024,7 +1145,7 @@
       row.innerHTML =
         '<span class="cat-name">' + escapeHtml(cat) + '</span>' +
         '<div class="cat-bar-bg"><div class="cat-bar-fill" style="width:' + catPercent + '%"></div></div>' +
-        '<span class="cat-score">' + data.correct + '/' + data.total + ' (' + catPercent + '%)  ' + avgTime + '秒/問</span>';
+        '<span class="cat-score">' + escapeHtml(T.categoryScore(data.correct, data.total, catPercent, avgTime)) + '</span>';
       catResultsEl.appendChild(row);
     }
 
@@ -1044,7 +1165,9 @@
     // 既卒が申し込むと全件否認される。見出し・注記・PR表記は
     // affiliate.js が枠ごとに必ず出すので、ここからは渡さない
     //（渡す形にすると「渡し忘れた枠」を作れてしまう）。
-    if (typeof Affiliate !== "undefined") {
+    // ⚠️ 出すかどうかはプロファイルの宣言で決める（showAffiliate）。
+    //    ここで lang を見て分岐すると、日本語の面を増やすたびに条件が増える。
+    if (PROFILE.showAffiliate && typeof Affiliate !== "undefined") {
       Affiliate.renderAll(document.getElementById("affiliate-result"), {
         percent: percent,
         placement: "result"
@@ -1066,10 +1189,10 @@
       });
       if (target && targetRate < 100) {
         weakEl.innerHTML =
-          '<p class="cta-title">' + escapeHtml(target) + ' の正答率は ' + targetRate + '% でした</p>' +
-          '<p>解き方を確認して、この分野だけをもう一度練習できます。</p>' +
+          '<p class="cta-title">' + escapeHtml(T.ctaTitle(target, targetRate)) + '</p>' +
+          '<p>' + escapeHtml(T.ctaBody) + '</p>' +
           '<a class="cta-btn" href="categories/' + CATEGORY_PAGES[target] + '/">' +
-          escapeHtml(target) + ' の解き方を見る</a>';
+          escapeHtml(T.ctaButton(target)) + '</a>';
         weakEl.style.display = "";
 
         // ⚠️ このCTAのクリックは、これまで一度も計測されていなかった。
@@ -1206,23 +1329,23 @@
     var q = state.questions[index];
     var a = state.answers[index];
 
-    document.getElementById("review-progress").textContent = "問題 " + (index + 1) + " / " + state.questions.length;
+    document.getElementById("review-progress").textContent = T.reviewProgress(index + 1, state.questions.length);
 
     // 正誤
     var resultEl = document.getElementById("review-result");
-    var meta = "  分野: " + q.category + "  難易度: " + difficultyLabel(q.difficulty);
+    var meta = T.reviewMeta(q.category, difficultyLabel(q.difficulty));
     if (a.peeked) {
       resultEl.className = "review-result skipped";
-      resultEl.textContent = "解説を見た" + meta;
+      resultEl.textContent = T.reviewPeeked + meta;
     } else if (a.skipped) {
       resultEl.className = "review-result skipped";
-      resultEl.textContent = "未回答（スキップ）" + meta;
+      resultEl.textContent = T.reviewSkipped + meta;
     } else if (a.isCorrect) {
       resultEl.className = "review-result correct";
-      resultEl.textContent = "正解" + meta;
+      resultEl.textContent = T.reviewCorrect + meta;
     } else {
       resultEl.className = "review-result incorrect";
-      resultEl.textContent = "不正解" + meta;
+      resultEl.textContent = T.reviewIncorrect + meta;
     }
 
     // 問題文
@@ -1239,8 +1362,8 @@
 
     // 回答
     var answerHtml =
-      '<div class="your-answer">あなたの回答: ' + escapeHtml(formatAnswer(a.userAnswer, q)) + '</div>' +
-      '<div class="correct-answer">正解: ' + escapeHtml(formatAnswer(q.correctAnswer, q)) + '</div>';
+      '<div class="your-answer">' + escapeHtml(T.yourAnswerLabel(formatAnswer(a.userAnswer, q))) + '</div>' +
+      '<div class="correct-answer">' + escapeHtml(T.correctAnswerLabel(formatAnswer(q.correctAnswer, q))) + '</div>';
     document.getElementById("review-answer").innerHTML = answerHtml;
 
     // 解説
@@ -1299,9 +1422,9 @@
   }
 
   function difficultyLabel(d) {
-    if (d === 1) return "易";
-    if (d === 3) return "難";
-    return "中";
+    if (d === 1) return T.diffEasy;
+    if (d === 3) return T.diffHard;
+    return T.diffMedium;
   }
 
   // --- イベントバインド ---
@@ -1317,7 +1440,7 @@
       var answer = getUserAnswer();
       if (answer === null) {
         // 未入力の場合確認
-        if (!confirm("回答が入力されていません。スキップしますか？")) return;
+        if (!confirm(T.confirmSkip)) return;
         recordAnswer(null, true);
         return;
       }

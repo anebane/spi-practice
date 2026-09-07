@@ -82,6 +82,7 @@ const SPECS = {
   profile: "test/profile.spec.js",
   pwa: "test/pwa.spec.js",
   tools: "test/tools.spec.js",
+  "ui-text": "test/ui-text.spec.js",
   wiring: "test/wiring.spec.js"
 };
 

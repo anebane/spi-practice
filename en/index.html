@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free Numerical Reasoning Practice | New questions every time, no sign-up</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <meta name="description" content="Practise numerical reasoning for free: tables, bar charts, line graphs and pie charts, with a timer and worked solutions. The numbers are generated fresh for every question, so you cannot memorise the answers. No sign-up.">
+  <link rel="canonical" href="https://tekisei-drill.com/en/">
+  <!-- ⚠️ 日本語版の ogp.png は「SPI非言語 無料模擬試験」と日本語で書かれた画像。
+       英語ページで共有すると日本語のカードが出るので、英語専用の画像を用意した。
+       生成元は tools/ogp/en.html（作り方はそのファイルの先頭に書いてある）。 -->
+  <meta property="og:image" content="https://tekisei-drill.com/en/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:title" content="Free Numerical Reasoning Practice | No sign-up">
+  <meta property="og:description" content="Timed numerical reasoning practice with worked solutions. Every question is generated fresh, so the answers cannot be memorised.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tekisei-drill.com/en/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Free Numerical Reasoning Practice | No sign-up">
+  <meta name="twitter:description" content="Timed numerical reasoning practice with worked solutions. Every question is generated fresh, so the answers cannot be memorised.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Numerical Reasoning Practice",
+    "url": "https://tekisei-drill.com/en/",
+    "description": "Free numerical reasoning practice. Read tables, bar charts, line graphs and pie charts under a timer, then check the worked solution. The numbers are generated for each question, so the same question is very unlikely to appear twice. No sign-up.",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Any",
+    "browserRequirements": "Requires JavaScript. Modern browser required.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "GBP"
+    },
+    "featureList": [
+      "Tables, bar charts, line graphs and pie charts",
+      "Randomly generated values for unlimited practice",
+      "Timed test mode and untimed practice mode with instant solutions",
+      "Worked solution for every question",
+      "Score breakdown by question type"
+    ],
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Graduate and professional job applicants sitting aptitude tests"
+    },
+    "inLanguage": "en-GB",
+    "isAccessibleForFree": true
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is a numerical reasoning test?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A numerical reasoning test gives you a table or chart and asks you to work out a figure from it under time pressure. The arithmetic itself is straightforward: percentages, ratios, differences and rates of change. What makes it hard is doing it quickly and reading the right number out of the data. Employers use it to sift graduate and professional applications."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it really free, with no limit on attempts?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. There is no sign-up and no limit. The figures in each question are generated when the question is served, so repeating a set does not mean repeating the same questions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use a calculator?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, and you should. Most employers allow a calculator for numerical reasoning, so practising without one trains the wrong skill. Time yourself with the calculator you plan to use on the day."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between test mode and practice mode?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Test mode runs a timer across the whole set and shows your results at the end, which is closer to the real thing. Practice mode marks each question as you go and shows the worked solution immediately, which is better while you are still learning the method."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SPDZ1K30TB"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SPDZ1K30TB');
+  </script>
+
+  <link rel="stylesheet" href="../style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a237e">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Numerical Drill">
+  <!-- Google AdSense（審査用スニペット / 全ページ必須）
+       ⚠️ 手で貼ると必ず漏れる。test/html.spec.js が全ページの有無を検査している。 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5409685648363967" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- ===== Start screen ===== -->
+  <div id="screen-start" class="screen active">
+    <div class="start-container">
+      <p class="brand-name">Infinite Aptitude Drill</p>
+      <h1 class="start-title">Numerical Reasoning Practice <span class="beta-badge">&beta;</span></h1>
+      <p class="start-subtitle">Tables, bar charts, line graphs and pie charts &mdash; timed, with worked solutions</p>
+      <div class="hero-badges">
+        <span class="hero-badge">No sign-up</span>
+        <span class="hero-badge">Completely free</span>
+        <span class="hero-badge">Newly generated questions</span>
+      </div>
+
+      <div class="feature-cards">
+        <div class="feature-card">
+          <div class="feature-icon-circle">&#8734;</div>
+          <strong class="feature-title">New questions every time</strong>
+          <p class="feature-desc">The figures are generated when the question is served, so the same question is very unlikely to come up twice. You cannot end up memorising answers instead of methods.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-circle">&#9201;</div>
+          <strong class="feature-title">Practise under the clock</strong>
+          <p class="feature-desc">Test mode runs a timer across the whole set, so you can feel how long you can afford to spend. Practice mode marks each question as you go.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-circle">&#9678;</div>
+          <strong class="feature-title">See where the time goes</strong>
+          <p class="feature-desc">Your score comes with the time spent per question, so you can tell whether you are getting them wrong or simply too slow.</p>
+        </div>
+      </div>
+
+      <div class="start-categories">
+        <!-- 分野の数と名前は下の出題分野チェックボックスが唯一の出所。
+             ここは JS が埋め直す。test/html.spec.js が一致を検査する。 -->
+        <div class="categories-label" id="categories-label">Topics covered</div>
+        <div class="categories-list" id="categories-list">Numerical Reasoning</div>
+      </div>
+
+      <div class="config-section">
+        <div class="config-group">
+          <label class="config-label">Questions</label>
+          <div class="config-options" id="question-count">
+            <button class="config-btn" data-value="10">10</button>
+            <button class="config-btn active" data-value="15">15</button>
+            <button class="config-btn" data-value="20">20</button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">Mode</label>
+          <div class="config-options" id="exam-mode">
+            <button class="config-btn active" data-value="exam">Test mode</button>
+            <button class="config-btn" data-value="practice">Practice mode</button>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">Difficulty</label>
+          <div class="difficulty-grid" id="difficulty-select">
+            <label class="difficulty-item"><input type="checkbox" value="1" checked><span>Easy</span></label>
+            <label class="difficulty-item"><input type="checkbox" value="2" checked><span>Medium</span></label>
+            <label class="difficulty-item"><input type="checkbox" value="3" checked><span>Hard</span></label>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">Topics</label>
+          <div class="category-grid" id="category-select">
+            <label class="category-item"><input type="checkbox" value="9" checked><span>Numerical Reasoning</span></label>
+          </div>
+          <div class="category-actions">
+            <button class="link-btn" id="select-all">Select all</button>
+            <button class="link-btn" id="deselect-all">Clear all</button>
+          </div>
+          <p class="legal-lead">Only numerical reasoning is available in English at the moment. Verbal and logical reasoning are not covered.</p>
+        </div>
+      </div>
+
+      <p class="legal-lead" id="category-param-note" style="display:none"></p>
+      <button class="btn-primary btn-large" id="btn-start">Start the test</button>
+      <p id="pwa-install" class="legal-lead" hidden></p>
+
+      <div class="faq-section">
+        <h2 class="faq-heading">Common questions</h2>
+        <details class="faq-item">
+          <summary>What is a numerical reasoning test?</summary>
+          <p>You are given a table or a chart and asked to work out a figure from it against the clock. The arithmetic is not advanced &mdash; percentages, ratios, differences, rates of change &mdash; but you have to find the right number in the data and do the sum quickly. Employers use it to sift graduate and professional applications, usually before an interview.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I use a calculator?</summary>
+          <p>Yes, and you should. Most employers allow one, so practising mental arithmetic instead trains the wrong skill. Use the calculator you intend to use on the day, and time yourself with it. Being slow with an unfamiliar calculator costs more marks than being weak at arithmetic.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Is it really free, with no limit?</summary>
+          <p>Yes. No sign-up, no account, no limit on attempts. The figures in each question are generated when the question is served, so going through a set again does not give you the same questions back.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What is not covered?</summary>
+          <p>Only numerical reasoning. There is no verbal reasoning, no logical or inductive reasoning, and no situational judgement. Within numerical reasoning, questions are limited to what can be read from a table or a chart, so there are no geometry or diagram-drawing questions.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Will this replace a real practice test from the publisher?</summary>
+          <p>No. If your employer names the test they use, take that publisher's own practice test as well &mdash; the exact format, wording and timing come from them. Use this to build up speed on the underlying reading and arithmetic, which is the part that actually improves with repetition.</p>
+        </details>
+      </div>
+
+      <section class="home-about">
+        <h2 class="faq-heading">About this tool</h2>
+        <p>This page gives you unlimited numerical reasoning practice: tables, bar charts, line graphs and pie charts, with a worked solution for every question.</p>
+
+        <p>The thing that makes it different is that <strong>the numbers are generated at the moment the question is served.</strong> It is not a fixed bank of questions shown in a different order. That matters because with a fixed bank, the second time through you are remembering answers rather than practising the method, and your score stops telling you anything. Here that cannot happen.</p>
+
+        <p>There is no account. Your results are kept in your own browser's storage and are never sent to or stored on this site's servers. Clearing your browser data clears them too.</p>
+
+        <p>&#9888; <strong>This is not a substitute for the test publisher's own practice materials.</strong> If you know which test you are sitting, use their practice test for the format and timing. Use this for the repetition.</p>
+
+        <p class="legal-note">This site is independent. It is not affiliated with, endorsed by, or licensed by any test publisher, and the questions here are not past papers &mdash; they are generated to resemble common question formats.</p>
+      </section>
+
+      <div class="beta-notice">
+        This is a beta. Questions and solutions are generated with AI and may contain errors. If you spot one, please tell us through the <a href="https://docs.google.com/forms/d/e/1FAIpQLScTjYxpgdkzXOzY71vEcz4UieRPBsm3beXb1minuQcppyzvSA/viewform" target="_blank" rel="noopener">feedback form</a>.
+      </div>
+
+      <footer class="site-footer">
+        <nav class="site-footer-nav">
+          <a href="../about.html">About (Japanese)</a>
+          <a href="../privacy.html">Privacy policy (Japanese)</a>
+          <a href="../contact.html">Contact (Japanese)</a>
+        </nav>
+        <p class="site-footer-copy">&copy; 2026 Infinite Aptitude Drill</p>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ===== Test screen ===== -->
+  <div id="screen-exam" class="screen">
+    <header class="exam-header">
+      <div class="exam-header-left">
+        <span class="exam-logo">Infinite Aptitude Drill <span class="beta-badge-sm">&beta;</span></span>
+      </div>
+      <div class="exam-header-right">
+        <span class="timer-display" id="total-timer">Time left</span>
+        <span class="progress-display" id="progress-display"></span>
+      </div>
+    </header>
+
+    <div class="exam-body">
+      <div class="question-meta">
+        <span class="question-category" id="question-category">Topic</span>
+        <span class="question-difficulty" id="question-difficulty"></span>
+        <span class="question-number" id="question-number">Question</span>
+      </div>
+
+      <div class="question-content" id="question-content">
+        <!-- 問題文がここに入る -->
+      </div>
+
+      <div class="answer-area" id="answer-area">
+        <!-- 回答入力UIがここに入る -->
+      </div>
+
+      <div class="question-timer-bar">
+        <div class="question-timer-fill" id="question-timer-fill"></div>
+      </div>
+
+      <div class="practice-feedback" id="practice-feedback" style="display:none;">
+        <div class="feedback-result" id="feedback-result"></div>
+        <div class="feedback-explanation" id="feedback-explanation"></div>
+      </div>
+
+      <div class="exam-actions">
+        <button class="btn-primary" id="btn-answer">Submit and continue</button>
+        <button class="btn-secondary" id="btn-skip">Skip</button>
+        <button class="btn-secondary" id="btn-peek">Show the solution</button>
+      </div>
+
+      <div class="peek-overlay" id="peek-overlay" style="display:none;">
+        <div class="peek-overlay-backdrop" id="peek-backdrop"></div>
+        <div class="peek-panel">
+          <div class="peek-header">
+            <span class="peek-title">Solution (timer paused)</span>
+          </div>
+          <div class="peek-body">
+            <div class="peek-correct-answer" id="peek-correct-answer"></div>
+            <div class="peek-explanation" id="peek-explanation"></div>
+          </div>
+          <div class="peek-actions">
+            <button class="btn-primary" id="btn-peek-close">Close and continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Result screen ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-container">
+      <h2 class="result-title">Your result</h2>
+
+      <div class="result-summary">
+        <div class="result-score">
+          <div class="score-label">Score</div>
+          <div class="score-value" id="result-score"></div>
+          <div class="score-detail" id="result-detail"></div>
+        </div>
+        <div class="result-time">
+          <div class="score-label">Time taken</div>
+          <div class="score-value" id="result-time"></div>
+        </div>
+      </div>
+
+      <div class="score-bar-container">
+        <div class="score-bar" id="score-bar"></div>
+      </div>
+
+      <h3 class="section-title">Breakdown by topic</h3>
+      <div class="cta-box" id="weak-category-cta" style="display:none"></div>
+        <div class="category-results" id="category-results">
+        <!-- 分野別成績がここに入る -->
+      </div>
+
+      <!-- 広告枠。⚠️ このページでは**描画されない**。
+           en プロファイルが showAffiliate: false を宣言しており、app.js が見ている。
+           affiliate.js の案件・見出し・PR表記はすべて日本語で、対象も日本の
+           就活・転職サービスなので、英国の利用者に出す意味がないため。
+           枠の要素だけ他ページと同じ形で残してある（構造を揃えるため）。
+           ⚠️ ここに直接リンクを書かないこと（test/html.spec.js が直書きを検出して落とす）。 -->
+      <div id="affiliate-result" style="display:none"></div>
+
+      <div class="radar-chart-container">
+        <canvas id="radar-chart" width="400" height="400"></canvas>
+      </div>
+
+      <p class="retry-note">The figures are chosen when each question is served. Your next set will not be a repeat of this one.</p>
+
+      <div class="result-actions">
+        <button class="btn-primary" id="btn-review">Review the solutions</button>
+        <button class="btn-secondary" id="btn-retry">Try again</button>
+        <button class="btn-secondary" id="btn-retry-short" style="display:none">Just 10 more</button>
+        <button class="btn-secondary" id="btn-back">Back to settings</button>
+      </div>
+
+      <div class="share-section">
+        <button class="btn-share-x" id="btn-share-x">Share on &#120143;</button>
+      </div>
+
+      <div class="beta-notice">
+        If you find a mistake in a question, please use the &ldquo;Report a problem with this question&rdquo; button on the review screen.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Review screen ===== -->
+  <div id="screen-review" class="screen">
+    <header class="exam-header">
+      <div class="exam-header-left">
+        <span class="exam-logo">Solutions</span>
+      </div>
+      <div class="exam-header-right">
+        <button class="btn-header" id="btn-review-back">Back to results</button>
+      </div>
+    </header>
+
+    <div class="review-body">
+      <div class="review-nav">
+        <button class="btn-secondary btn-small" id="btn-review-prev">Previous</button>
+        <span class="review-progress" id="review-progress">Question</span>
+        <button class="btn-secondary btn-small" id="btn-review-next">Next</button>
+      </div>
+
+      <div class="review-content">
+        <div class="review-result" id="review-result"></div>
+        <div class="review-question" id="review-question"></div>
+        <div class="review-answer" id="review-answer"></div>
+        <div class="review-explanation" id="review-explanation"></div>
+        <button class="btn-report" id="btn-report-error">Report a problem with this question</button>
+      </div>
+
+      <div class="review-list" id="review-list">
+        <!-- 問題一覧ナビがここに入る -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚠️ この宣言で app.js が出す試験が決まる。questions.js より後、app.js より前に置く。 -->
+  <script src="../questions.js"></script>
+  <script>var ACTIVE_PROFILE = "en";</script>
+  <script src="../generator.js"></script>
+  <script src="../affiliate.js"></script>
+  <script src="../app.js"></script>
+  <script src="/pwa.js" defer></script>
+</body>
+</html>

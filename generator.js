@@ -71,6 +71,16 @@ var QuestionGenerator = (function() {
     return key;
   }
 
+  // 分野の表示名も言語で引く（CATEGORY_LABELS は src/questions/_base.js）。
+  // ⚠️ テンプレートの category は日本語なので、ここを通さないと
+  //    英語の問題なのに画面の分野名だけ日本語で出る。例外は出ない。
+  function categoryLabelFor(categoryId, fallback, lang) {
+    var entry = (typeof CATEGORY_LABELS !== "undefined" && CATEGORY_LABELS)
+      ? CATEGORY_LABELS[categoryId] : null;
+    if (entry && typeof entry[lang] === "string") return entry[lang];
+    return fallback;
+  }
+
   // --- custom変数の後処理（変数生成の制約） ---
   // 制約の実体はすべてテンプレート側の resolve(vars) が持つ。
   // 以前はここに template.id === "..." の分岐が10件あったが、
@@ -84,6 +94,12 @@ var QuestionGenerator = (function() {
   }
 
   // --- パターン型問題の生成 ---
+  // ⚠️ 2026-09-07時点、**`patterns` を持つテンプレートは1本も無い。**
+  //    つまりこの関数は一度も実行されていない。
+  //    「壊しても検査が落ちない」のは検査の不備ではなく到達不能だからで、
+  //    実際ここに変異を書いて空振りした。変異を書く前に呼ばれるか確かめること。
+  //    残してあるのは出題形式の選択肢として設計に含まれているため。
+  //    使う当てが無いと判断したら消す（そのときは 583行・598行の呼び出しも一緒に）。
   function generatePatternQuestion(template, lang) {
     lang = lang || "ja";
     var patterns = template.patterns.filter(function(p) { return !p._skip; });
@@ -93,7 +109,7 @@ var QuestionGenerator = (function() {
     return {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
-      category: template.category,
+      category: categoryLabelFor(template.categoryId, template.category, lang),
       categoryId: template.categoryId,
       difficulty: template.difficulty,
       text: pattern.text,
@@ -120,7 +136,7 @@ var QuestionGenerator = (function() {
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
-      category: template.category,
+      category: categoryLabelFor(template.categoryId, template.category, lang),
       categoryId: template.categoryId,
       difficulty: template.difficulty || 2,
       text: qData.text,
@@ -151,7 +167,7 @@ var QuestionGenerator = (function() {
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
-      category: template.category,
+      category: categoryLabelFor(template.categoryId, template.category, lang),
       categoryId: template.categoryId,
       difficulty: template.difficulty || 2,
       text: qData.text,
@@ -248,7 +264,7 @@ var QuestionGenerator = (function() {
       var result = {
         id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
-        category: template.category,
+        category: categoryLabelFor(template.categoryId, template.category, lang),
         categoryId: template.categoryId,
         difficulty: template.difficulty,
         text: text,

@@ -48,6 +48,45 @@ var QUESTION_TEMPLATES = [];
 //    formatTable など _base.js 側からも引きたいので、共有版をここに置く。
 //    ⚠️ 未翻訳のときはキー（日本語）をそのまま返す。英語の面に日本語が出るが、
 //       test/english.spec.js が「英語の面に日本語が混ざっている」で落とす。
+// ============================================================
+// 分野の表示名
+// ============================================================
+// ⚠️ テンプレートは category に日本語の分野名を持っている。
+//    英語のプロファイルでそのまま出すと、問題文は英語なのに
+//    画面に「分野: 図表の読み取り」と出る。**例外は出ない。**
+//
+//    単位（UNIT_LABELS）と同じ形にして、テンプレートは触らずに
+//    categoryId から言語ごとの表示名を引く。en が無いものは
+//    テンプレートの日本語をそのまま返す（未訳が画面の崩壊にならないように）。
+//
+// ⚠️ 英語版で最初に出すのは資料解釈だけ。英国の適性検査では
+//    これを Numerical Reasoning と呼ぶ。「図表の読み取り」の直訳
+//    （Reading charts and tables）では受験者が探している言葉にならない。
+var CATEGORY_LABELS = {
+  1:  { ja: "推論",           en: "Logical Reasoning" },
+  2:  { ja: "場合の数・確率",   en: "Probability" },
+  3:  { ja: "集合",           en: "Sets" },
+  4:  { ja: "損益算",         en: "Profit and Loss" },
+  5:  { ja: "速度算",         en: "Speed, Distance and Time" },
+  6:  { ja: "仕事算",         en: "Work Rate" },
+  7:  { ja: "濃度算",         en: "Mixtures and Concentration" },
+  8:  { ja: "割合・比",       en: "Ratio and Proportion" },
+  9:  { ja: "図表の読み取り",  en: "Numerical Reasoning" },
+  10: { ja: "順列・組み合わせ", en: "Permutations and Combinations" },
+  11: { ja: "四則逆算" },
+  12: { ja: "語句の関係" },
+  13: { ja: "規則性・方角" },
+  14: { ja: "整数の性質" },
+  15: { ja: "操作と手順" }
+};
+
+// categoryId から表示名を引く。未登録・未訳のときは fallback（テンプレートの値）。
+function categoryLabelFor(categoryId, fallback, lang) {
+  var entry = CATEGORY_LABELS[categoryId];
+  if (entry && typeof entry[lang] === "string") return entry[lang];
+  return fallback;
+}
+
 function unitLabelFor(key, lang) {
   var e = UNIT_LABELS[key];
   if (e && typeof e[lang] === "string") return e[lang];
@@ -55,7 +94,12 @@ function unitLabelFor(key, lang) {
 }
 
 var UNIT_LABELS = {
-  "":     { ja: "" },
+  // ⚠️「単位なし」も単位キーの一つとして登録してある。
+  //    選択式の問題（都市名を選ぶなど）は単位を持たないので "" が来る。
+  //    en を書かないと test/profile.spec.js が「en の列が無い」と報告するが、
+  //    それは未翻訳ではなく「単位が無い」。検査側に例外を作るのではなく、
+  //    表の側で「どの言語でも空」と宣言する（検査に抜け道を作らないため）。
+  "":     { ja: "", en: "" },
   "%":    { ja: "%", en: "%" },
   "cm":   { ja: "cm" },
   "g":    { ja: "g" },
@@ -64,14 +108,19 @@ var UNIT_LABELS = {
   "m":    { ja: "m" },
   "m/分": { ja: "m/分" },
   "m/秒": { ja: "m/秒" },
-  // ⚠️「万円」は日本固有の単位。英語圏には「万」の桁が無いので、
-  //    表記をそのまま訳せない。表の注記側で「in units of 10,000 yen」と
-  //    説明しているので、単位そのものは "×10,000 yen" と書く。
-  "万円":  { ja: "万円", en: "\u00d710,000 yen" },
+  // ⚠️「万円」は日本固有の単位で、英語圏に「万」の桁は無い。
+  //    最初 "×10,000 yen" にしたが、英語圏レビューで「×は掛け算としか読めず、
+  //    表の 280 が ¥280万 なのか ¥2,800,000 なのか一拍考えることになる。
+  //    制限時間のあるテストで一拍考えさせた時点でその設問は失敗」と指摘された。
+  //    実際のSHL系テストの慣習に合わせ、**通貨を£にして (£000s) 形式**にする。
+  //    値そのものは変えない（1万円 ≒ £000s の桁感で自然に読める）。
+  "万円":  { ja: "万円", en: "£000s" },
   "人":   { ja: "人" },
-  // 「個」は答えの単位ではなく表の注記（table_sales_02）で使う。英語では単に units
-  "個":   { ja: "個", en: "units" },
-  "円":   { ja: "円", en: "yen" },
+  // 「個」は答えの単位ではなく表の注記（table_sales_02）で使う。
+  // ⚠️ en を "units" にすると表の下が「(unit: units)」という同語反復になる。
+  //    英語の資料解釈では「何を数えた単位か」を書くのが普通なので "units sold"。
+  "個":   { ja: "個", en: "units sold" },
+  "円":   { ja: "円", en: "£" },
   "分":   { ja: "分" },
   "分後":  { ja: "分後" },
   "回":   { ja: "回" },
