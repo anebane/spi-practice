@@ -399,3 +399,34 @@ CLAUDE.md の鉄則6に対して**機械の検査が無かった**。人の目�
   解説ページを作らないまま分野を追加できた。宿題台帳（`test/category-pages-todo.json`）を新設
 - **閾値を40→50%に上げたら、別の変異が発火しなくなった**。判定軸を2本立てにした
 - **単体で確認したつもりが、その後の変更で崩れていた**。最後は必ず全件実行で確かめる
+
+## 2026-09-07: 英語圏（SHL型）展開 — 図表10本の英語化が完了
+
+SHLの中核 numerical reasoning に合わせ、図表（categoryId 9）から英語化した。
+`table_sales_01` で方式を確立（コミット 20994ee）→ 残り9本に適用（ブランチ `en-zuhyo-charts`）。
+
+### 方式（図表だけ特殊）
+- 図表は `templateText` を持たず、文言が `tableGenerator` / `questionGenerator` に直書き
+  → **語彙を `src/questions/09-zuhyo.js` 先頭の `ZUHYO_WORDS` に出して lang で引く**
+- 英語化が済んだテンプレートだけが `i18n: true` を宣言し、`test/english.spec.js` の検査対象になる
+- 単位は `UNIT_LABELS`（`_base.js`）に en を足す。万円=×10,000 yen / 個=units / 円=yen / ℃=°C
+
+### ⚠️ グラフは Canvas に描く（今回わかった構造）
+- タイトル・Y軸ラベル・凡例（`datasets[].label`）・円グラフのサブタイトルは
+  `chartConfig` に入り、`_base.js` の `draw*Chart` が Canvas に描く。**text に出ない**
+- english.spec が chartConfig を見ていなかった → 検査対象に追加（変異も追加）
+- `drawMultiPieChart` の「（計 …万円）」だけは描画側の直書きだった。
+  en は `ds.subtitle` を語彙から与え、描画側はあれば優先。ja は従来経路のまま
+
+### 検証の型（このまま次の分野でも使う）
+- 改修前後を**同じ乱数種で突き合わせて差0件**を確認してから進める
+  （今回は10本×200問、chartConfig 全体を含めて差0件）
+- 検査の失敗を疑う前に**出力を全文見る**。今回は逆に検査側の誤検知が2件
+  （「2022 to」を数+名詞、「Product A」のAを冠詞と判定）→ ルールを絞り、
+  緩めた2ルールは en-probe の変異で「まだ落ちる」ことを再実測した
+
+### 次にやること（英語展開）
+- 英語の「面」（ページ・プロファイル）が無い。`_profile.js` に en プロファイルを作り、
+  ページ側から `lang: "en"` で生成する導線をつなぐ
+- 図表以外の分野は `templateText` / `explanationTemplate` の翻訳方式（未着手79本の大半）
+- ブランチ `en-zuhyo-charts` は未マージ・未push（矢野さんの判断待ち）
