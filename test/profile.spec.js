@@ -85,12 +85,31 @@ const all = allCategories;   // 既存の記述との互換。新しく書くな
   for (const prof of allProfiles) {
     for (const c of prof.examCategories.concat(prof.extraCategories || [])) declared.add(c.id);
   }
+  // ⚠️ 試作（probe: true）は、どのプロファイルにも入れずに置く。
+  //    英語の品質を機械で守れるかを確かめるための1本など、
+  //    「出題には出さないが検査は通したい」ものがある。
+  //    ただし**黙って除外しない**。テンプレート側に probe を明示させ、
+  //    理由をコメントで残させる。宿題台帳と同じ考え方
+  //    （「忘れた」と「決めてやっている」を区別する）。
   const inTemplates = new Set(ctx.QUESTION_TEMPLATES.map(q => q.categoryId));
+  const probeIds = new Set(
+    ctx.QUESTION_TEMPLATES.filter(q => q.probe === true).map(q => q.categoryId));
   for (const id of inTemplates) {
-    if (!declared.has(id)) {
-      const name = ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
-      fail("どのプロファイルにも載っていない分野がある", `${name}（id ${id}）。出題も導線も出ない`);
+    if (declared.has(id)) continue;
+    if (probeIds.has(id)) {
+      // 試作は出題に出ないので、出題プロファイルに無くてよい。
+      // ⚠️ ただし出題に出る分野に probe が混ざっていたら、それは事故。
+      const inProfile = allProfiles.some(p =>
+        p.examCategories.concat(p.extraCategories || []).some(c => c.id === id));
+      if (inProfile) {
+        const name = ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
+        fail("試作がプロファイルに載っている", `${name}（id ${id}）。probe: true のまま出題される`);
+      }
+      continue;
     }
+    const name = ctx.QUESTION_TEMPLATES.find(q => q.categoryId === id).category;
+    fail("どのプロファイルにも載っていない分野がある",
+      `${name}（id ${id}）。出題も導線も出ない。試作なら probe: true を宣言すること`);
   }
   cov.covered("テンプレートの分野", inTemplates.size, 12);
 }

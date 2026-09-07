@@ -2274,5 +2274,29 @@
     "find": "    window.gtag(\"event\", name, p);",
     "replace": "    window.gtagDisabled(\"event\", name, p);",
     "expect": "analytics"
+  },
+  {
+    "name": "英語の冠詞を常に a にする",
+    "why": "a/an は語頭の母音で変わる。値によって変わるので、生成のたびに壊れうる。日本語には無い壊れ方",
+    "file": "src/questions/90-en-probe.js",
+    "find": "    return /^[aeiou]/i.test(word) ? \"an\" : \"a\";",
+    "replace": "    return \"a\";",
+    "expect": "english"
+  },
+  {
+    "name": "英語の単複を常に複数形にする",
+    "why": "1 hours のような不一致が出る。数が変数なので生成のたびに壊れうる",
+    "file": "src/questions/90-en-probe.js",
+    "find": "    return n === 1 ? word : word + \"s\";",
+    "replace": "    return word + \"s\";",
+    "expect": "english"
+  },
+  {
+    "name": "試作の probe 宣言を外す",
+    "why": "試作はどのプロファイルにも入れずに置く。probe の宣言が無いと『載っていない分野』か『試作』かを区別できず、忘れて放置されたものと決めてやっているものが同じ顔になる",
+    "file": "src/questions/90-en-probe.js",
+    "find": "    probe: true,",
+    "replace": "    // probe: true,",
+    "expect": "profile"
   }
 ]

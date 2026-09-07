@@ -81,6 +81,12 @@ jobs:
       - name: 出題プロファイルと実体の整合
         run: node test/profile.spec.js
 
+      # 英語で生成した問題文の健全性。日本語とは壊れ方が違うので専用の検査。
+      # ⚠️ 無限に出るということは破綻も無限に出るということ。
+      #    英語テンプレートを足すなら、先にここが動いていること。
+      - name: 英語の問題文
+        run: node test/english.spec.js
+
       - name: 検査の登録漏れ（CIと破壊テストの両方に載っているか）
         run: node test/wiring.spec.js
 

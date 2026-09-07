@@ -76,6 +76,7 @@ const SPECS = {
   analytics: "test/analytics.spec.js",
   app: "test/app.spec.js",
   deeplink: "test/deeplink.spec.js",
+  english: "test/english.spec.js",
   generator: "test/generator.spec.js",
   html: "test/html.spec.js",
   profile: "test/profile.spec.js",
