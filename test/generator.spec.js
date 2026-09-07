@@ -2564,6 +2564,47 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 「最大の変化」を聞く問題で、正解が2つ出ていないか ---
+//
+// ⚠️ 2026-09-07に英語版のレビューで発覚。絶対値が同じ変化が2つあると
+//    「絶対値が最大の変化」の条件を両方が満たすのに、実装は先に見つけた
+//    ほうだけを正解にしていた。**もう一方を答えた人が不当に不正解になる。**
+//    実測で table_diff_01 は20.1%、chart_line_01 は37.3%がこの状態だった。
+//    日本語版の本番でも起きていた（英語で読ませて初めて見えた）。
+//
+// ⚠️ 解説に「A→B: +70」の形で差分を並べる型だけを見る。
+//    形が違う型は判定しない（誤検知を出さないため）。
+{
+  const N = 400;
+  let checked = 0, ties = 0;
+  const samples = [];
+  for (const t of TEMPLATES) {
+    let looked = 0;
+    for (let i = 0; i < N; i++) {
+      const q = GEN.generateQuestion(t);
+      if (!q) continue;
+      const diffs = [...String(q.explanation || "").matchAll(/:\s*([+-]\d+)/g)].map(m => Number(m[1]));
+      if (diffs.length < 2) continue;
+      // 「最大の変化」を聞いている問題かどうかを、答えが差分のどれかと一致するかで見る
+      const absMax = Math.max(...diffs.map(Math.abs));
+      if (Math.abs(Number(q.correctAnswer)) !== absMax) continue;
+      looked++;
+      const tied = diffs.filter(d => Math.abs(d) === absMax);
+      if (tied.length > 1) {
+        ties++;
+        if (samples.length < 3) samples.push(`${t.id}: ${diffs.join(", ")} → 正解が${tied.length}つ`);
+      }
+    }
+    checked += looked;
+  }
+  if (ties) {
+    fail("最大の変化を聞く問題で正解が2つある",
+      `${ties}件 / ${checked}件（${(ties / checked * 100).toFixed(1)}%）: ${samples.join(" / ")}`);
+  }
+  // 0件だと「タイが無い」ではなく「1問も見ていない」。
+  cov.covered("最大の変化を調べた問題", checked, 100);
+}
+
 // --- 答えの種類が少なすぎないか（勘で当たる問題になっていないか）---
 //
 // ⚠️ 既存の多様性検査は「問題文の種類」を数えていて、「答えの種類」を見ていない。

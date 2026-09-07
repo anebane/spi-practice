@@ -83,7 +83,7 @@
       return v.speed * v.hours;
     },
     unit: "km",
-    explanationTemplate: "[Approach]\nDistance = speed × time.\nKeep the units consistent: the speed is given in km per hour, and the time is in hours, so the result is in kilometers.\n\n[Solution]\n1. Speed: {{speed}} km per hour\n2. Time: {{hours}} {{hourWord}}\n3. Distance = {{speed}} × {{hours}} = {{answer}} km\n\n[Note]\nWhen the units do not match, convert before multiplying.\nFor example, 30 minutes is 0.5 hours, not 30.",
+    explanationTemplate: "**How to approach it**\nDistance = speed × time.\nKeep the units consistent: the speed is given in km per hour, and the time is in hours, so the result is in kilometers.\n\n**Working**\n1. Speed: {{speed}} km per hour\n2. Time: {{hours}} {{hourWord}}\n3. Distance = {{speed}} × {{hours}} = {{answer}} km\n\n**Tip**\nWhen the units do not match, convert before multiplying.\nFor example, 30 minutes is 0.5 hours, not 30.",
     timeLimitSec: 60,
     validate: function (v) {
       return v.speed * v.hours <= 5000;

@@ -2391,8 +2391,8 @@
     "name": "棒グラフの英語タイトルを日本語に戻す",
     "why": "グラフのタイトルは Canvas に描かれ text に出ない。chartConfig を検査していないと「問題文は英語なのにグラフだけ日本語」を誰も検出できない",
     "file": "src/questions/09-zuhyo.js",
-    "find": "    bar1Title: \"Revenue by Department (FY2024)\",",
-    "replace": "    bar1Title: \"部門別売上高（2024年度）\",",
+    "find": "    bar1Title: function (w) { return \"Revenue by \" + w.charAt(0).toUpperCase() + w.slice(1) + \" (FY2024)\"; },",
+    "replace": "    bar1Title: function (w) { return w + \"別売上高（2024年度）\"; },",
     "expect": "english"
   },
   {
@@ -2441,6 +2441,30 @@
     "file": "generator.js",
     "find": "      chartConfig: localizeChartConfig(qData.chartConfig, lang),",
     "replace": "      chartConfig: qData.chartConfig,",
+    "expect": "english"
+  },
+  {
+    "name": "最大変化のタイ解消をやめる（表）",
+    "why": "絶対値が同じ変化が2つあると正解が2つになり、もう一方を答えた人が不当に不正解になる。実測で20.1%。日本語版の本番でも起きていた（2026-09-07に英語レビューで発覚）",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "        var lim = Math.floor((Math.abs(peak) - 10) / 10);\n        steps.push((Math.floor(Math.random() * (lim * 2 + 1)) - lim) * 10);\n      }\n      // 差を固定したまま、全体を持ち上げて最小値が下限を割らないようにする。",
+    "replace": "        steps.push(-peak);\n      }\n      // 差を固定したまま、全体を持ち上げて最小値が下限を割らないようにする。",
+    "expect": "generator"
+  },
+  {
+    "name": "設問の呼び名をラベルと切り離す",
+    "why": "ラベルが「東京支店」でも設問が「各部門」になる。設問と図表が別のものを指す状態は、英語版だけでなく日本語版にも元からあった",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "        text: L.bar1Text(chartData.labelWord),",
+    "replace": "        text: L.bar1Text(\"部門\"),",
+    "expect": "english"
+  },
+  {
+    "name": "英語の解説にCJKの丸数字を使う",
+    "why": "①②③はCJK用の丸数字で、欧文フォントスタックでは豆腐に化ける。日本の参考書の作法がそのまま出ているのが一目で分かる（英語圏のレビューで指摘）",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "**Working**\\n1. Share of \" + cat + \":",
+    "replace": "**Working**\\n① Share of \" + cat + \":",
     "expect": "english"
   }
 ]

@@ -41,15 +41,18 @@ var ZUHYO_WORDS = {
     signedMoney: function (d) { return (d >= 0 ? "+" : "") + d + "万円"; },
     diff1ExpEnd: function (m) { return "最大変動: " + m + " で "; },
     // chart_bar_01（棒グラフ）
+    // ⚠️ 呼び名（unit名）をセットごとに持つ。以前はラベルが「東京支店」でも
+    //    設問文が「各部門」で固定だった（2026-09-07に英語版のレビューで発覚。
+    //    日本語版にも同じ不整合があった）。
     barDeptSets: [
-      ["営業部", "開発部", "総務部", "企画部", "人事部"],
-      ["東京支店", "大阪支店", "名古屋支店", "福岡支店", "札幌支店"],
-      ["A事業部", "B事業部", "C事業部", "D事業部"]
+      { names: ["営業部", "開発部", "総務部", "企画部", "人事部"], word: "部門" },
+      { names: ["東京支店", "大阪支店", "名古屋支店", "福岡支店", "札幌支店"], word: "支店" },
+      { names: ["A事業部", "B事業部", "C事業部", "D事業部"], word: "事業部" }
     ],
-    bar1Title: "部門別売上高（2024年度）",
+    bar1Title: function (w) { return w + "別売上高（2024年度）"; },
     revenueLabel: "売上高",
     revenueAxis: "売上高（万円）",
-    bar1Text: "次のグラフは各部門の年間売上高を示している。\n\n売上が最も高い部門と最も低い部門の差額はいくらか。",
+    bar1Text: function (w) { return "次のグラフは各" + w + "の年間売上高を示している。\n\n売上が最も高い" + w + "と最も低い" + w + "の差額はいくらか。"; },
     bar1Exp: function (maxLabel, maxVal, minLabel, minVal, diff) {
       return "【考え方】\n棒グラフから最大値と最小値を読み取り、差を求めます。\n\n【解法】\n① 最大: " + maxLabel + " = " + maxVal + "万円\n② 最小: " + minLabel + " = " + minVal + "万円\n③ 差額 = " + maxVal + " - " + minVal + " = " + diff + "万円\n\n【ポイント】\n・棒グラフでは棒の高さで数値を比較\n・差額 = 最大値 − 最小値";
     },
@@ -129,16 +132,16 @@ var ZUHYO_WORDS = {
     diff1ExpEnd: function (m) { return "Largest change: " + m + " at "; },
     // chart_bar_01
     barDeptSets: [
-      ["Sales", "Development", "Administration", "Planning", "HR"],
-      ["Tokyo Branch", "Osaka Branch", "Nagoya Branch", "Fukuoka Branch", "Sapporo Branch"],
-      ["Division A", "Division B", "Division C", "Division D"]
+      { names: ["Sales", "Development", "Administration", "Planning", "HR"], word: "department" },
+      { names: ["Tokyo Branch", "Osaka Branch", "Nagoya Branch", "Fukuoka Branch", "Sapporo Branch"], word: "branch" },
+      { names: ["Division A", "Division B", "Division C", "Division D"], word: "division" }
     ],
-    bar1Title: "Revenue by Department (FY2024)",
+    bar1Title: function (w) { return "Revenue by " + w.charAt(0).toUpperCase() + w.slice(1) + " (FY2024)"; },
     revenueLabel: "Revenue",
     revenueAxis: "Revenue (×10,000 yen)",
-    bar1Text: "The chart below shows the annual revenue of each department (in units of 10,000 yen).\n\nWhat is the difference between the highest and the lowest revenue?",
+    bar1Text: function (w) { return "The chart below shows the annual revenue of each " + w + " (in units of 10,000 yen).\n\nWhat is the difference between the highest and the lowest revenue?"; },
     bar1Exp: function (maxLabel, maxVal, minLabel, minVal, diff) {
-      return "[Approach]\nRead the highest and lowest values from the bar chart and find the difference.\n\n[Solution]\n① Highest: " + maxLabel + " = " + maxVal + "\n② Lowest: " + minLabel + " = " + minVal + "\n③ Difference = " + maxVal + " - " + minVal + " = " + diff + "\n\n[Notes]\n- Compare the bars by height\n- Difference = highest − lowest";
+      return "**How to approach it**\nRead the highest and lowest values from the bar chart and find the difference.\n\n**Working**\n1. Highest: " + maxLabel + " = " + maxVal + "\n2. Lowest: " + minLabel + " = " + minVal + "\n3. Difference = " + maxVal + " - " + minVal + " = " + diff + "\n\n**Tip**\n- Compare the bars by height\n- Difference = highest − lowest";
     },
     // chart_bar_compare_01
     barCmpTitle: "Revenue by Product",
@@ -147,21 +150,21 @@ var ZUHYO_WORDS = {
     barCmpText: "The chart below shows last year's and this year's revenue for each product (in units of 10,000 yen).\n\nWhat is the largest increase in revenue from last year among the products?",
     barCmpDetail: function (label, prev, curr, d) { return label + ": " + prev + " → " + curr + " (" + (d >= 0 ? "+" : "") + d + ")"; },
     barCmpExp: function (details, maxLabel, maxIncrease) {
-      return "[Approach]\nFor each product, compute this year minus last year and find the largest increase.\n\n[Solution]\nIncrease for each product:\n" + details + "\n\nLargest increase: " + maxLabel + " at +" + maxIncrease + "\n\n[Notes]\n- Compare the paired bars for each product\n- Increase = this year's value − last year's value";
+      return "**How to approach it**\nFor each product, compute this year minus last year and find the largest increase.\n\n**Working**\nIncrease for each product:\n" + details + "\n\nLargest increase: " + maxLabel + " at +" + maxIncrease + "\n\n**Tip**\n- Compare the paired bars for each product\n- Increase = this year's value − last year's value";
     },
     // chart_line_01
     lineMonths: ["April", "May", "June", "July", "August", "September"],
     lineTitle: "Monthly Revenue",
     lineText: "The chart below shows the monthly revenue of a store (in units of 10,000 yen).\n\nWhat is the amount of the largest month-over-month change (by absolute value)? (Use a plus sign for an increase and a minus sign for a decrease.)",
     lineExp: function (details, maxMonth, signed) {
-      return "[Approach]\nCompute the change for each month-to-month interval and find the one with the largest absolute value.\n\n[Solution]\nChanges between months:\n" + details + "\n\nLargest absolute change: " + maxMonth + " at " + signed + "\n\n[Notes]\n- A steeper line segment means a larger change\n- Mind the direction of the change (plus/minus)";
+      return "**How to approach it**\nCompute the change for each month-to-month interval and find the one with the largest absolute value.\n\n**Working**\nChanges between months:\n" + details + "\n\nLargest absolute change: " + maxMonth + " at " + signed + "\n\n**Tip**\n- A steeper line segment means a larger change\n- Mind the direction of the change (plus/minus)";
     },
     // chart_pie_01
     pie1Title: function (total) { return "Monthly Expenses (Total: " + total.toLocaleString() + " yen)"; },
     pie1Label: "Expenses",
     pie1Intro: function (total) { return "The pie chart below shows the breakdown of monthly expenses (total " + total.toLocaleString() + " yen)."; },
     pie1Exp: function (cat, pct, total, amount) {
-      return "[Approach]\nRead the share from the pie chart and multiply it by the total.\n\n[Solution]\n① Share of " + cat + ": " + pct + "%\n② Amount = " + total.toLocaleString() + " × " + pct + " / 100\n  = " + amount.toLocaleString() + " yen\n\n[Notes]\n- Each slice represents a share of the whole\n- Amount = total × share(%) / 100";
+      return "**How to approach it**\nRead the share from the pie chart and multiply it by the total.\n\n**Working**\n1. Share of " + cat + ": " + pct + "%\n2. Amount = " + total.toLocaleString() + " × " + pct + " / 100\n  = " + amount.toLocaleString() + " yen\n\n**Tip**\n- Each slice represents a share of the whole\n- Amount = total × share(%) / 100";
     },
     // chart_pie_compare_01
     costCats: ["Labor", "Materials", "Advertising", "Other"],
@@ -173,7 +176,7 @@ var ZUHYO_WORDS = {
     pieCmpIntro: function (n0, t0, n1, t1) { return "The two pie charts below show the expense breakdown of " + n0 + " (total " + t0.toLocaleString() + ") and " + n1 + " (total " + t1.toLocaleString() + "), in units of 10,000 yen."; },
     pieCmpAsk: function (cat) { return "What is the difference in the amount for " + cat + "?"; },
     pieCmpExp: function (p) {
-      return "[Approach]\nCompute each amount from its share and total, then find the difference.\n\n[Solution]\n① " + p.cat + " for " + p.n0 + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "\n② " + p.cat + " for " + p.n1 + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "\n③ Difference = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "\n  (" + p.larger + " is larger)\n\n[Notes]\n- Compare amounts, not shares\n- The totals differ, so the same share means a different amount";
+      return "**How to approach it**\nCompute each amount from its share and total, then find the difference.\n\n**Working**\n1. " + p.cat + " for " + p.n0 + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "\n2. " + p.cat + " for " + p.n1 + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "\n3. Difference = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "\n  (" + p.larger + " is larger)\n\n**Tip**\n- Compare amounts, not shares\n- The totals differ, so the same share means a different amount";
     }
   }
 };
@@ -414,13 +417,51 @@ var ZUHYO_WORDS = {
       var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var store = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
+      // ⚠️ 絶対値が同じ差が2つあると、正解が2つになる（+70 と -70 の両方が
+      //    「絶対値が最大の変化」を満たす）。以前は先に見つけたほうを正解にして
+      //    いたため、**もう一方を答えた人が不当に不正解になっていた**。
+      //    実測で2,000問中401件（20.1%）がこの状態だった（2026-09-07）。
+      //    タイが起きたら、その差を1つずらして一意にする。
+      // ⚠️ 絶対値が同じ変化が2つあると「絶対値が最大の変化」を両方が満たし、
+      //    正解が2つになる。以前は先に見つけたほうだけを正解にしていたため、
+      //    もう一方を答えた人が不当に不正解になっていた（実測20.1%）。
+      //
+      //    ⚠️ 「ずらして消えるまで繰り返す」も試したが、収束しないことがある
+      //       （差が0のとき+10ずらすと、最大が10なら新しいタイを作る。
+      //        8回で抜けるとタイのまま出る）。**確実な作り方に変える。**
+      //    最大にする1つを先に決め、他の差はその絶対値より必ず小さくする。
+      // ⚠️ 差の列を先に決め、そこから値を組み立てる。値を先に決めて差を見る形だと、
+      //    下限（50未満にしない）の補正が差を変えてしまい、タイが復活する
+      //    （20,000問中16件残った。2026-09-07に実測）。
+      var pickIdx = Math.floor(Math.random() * (cols.length - 1));
+      var peak = (Math.floor(Math.random() * 4) + 5) * 10;        // 50〜80
+      if (Math.random() < 0.5) peak = -peak;
+      var steps = [];
+      for (var s1 = 0; s1 < cols.length - 1; s1++) {
+        if (s1 === pickIdx) { steps.push(peak); continue; }
+        var lim = Math.floor((Math.abs(peak) - 10) / 10);
+        steps.push((Math.floor(Math.random() * (lim * 2 + 1)) - lim) * 10);
+      }
+      // 差を固定したまま、全体を持ち上げて最小値が下限を割らないようにする。
+      var run = [0], acc = 0;
+      for (var s2 = 0; s2 < steps.length; s2++) { acc += steps[s2]; run.push(acc); }
+      var lowest = Math.min.apply(null, run);
+      var base = 100 - lowest;                       // 最小が100になるよう底上げ
+      var vals = run.map(function (v) { return v + base; });
+      for (var s4 = 0; s4 < cols.length; s4++) {
+        tableData.data[store][cols[s4]] = vals[s4];
+      }
+      var diffs = [];
+      for (var s3 = 1; s3 < cols.length; s3++) {
+        diffs.push(tableData.data[store][cols[s3]] - tableData.data[store][cols[s3-1]]);
+      }
+
       var maxDiff = 0;
       var maxMonth = "";
-      for (var i = 1; i < cols.length; i++) {
-        var diff = tableData.data[store][cols[i]] - tableData.data[store][cols[i-1]];
-        if (Math.abs(diff) > Math.abs(maxDiff)) {
-          maxDiff = diff;
-          maxMonth = cols[i-1] + "→" + cols[i];
+      for (var i3 = 0; i3 < diffs.length; i3++) {
+        if (Math.abs(diffs[i3]) > Math.abs(maxDiff)) {
+          maxDiff = diffs[i3];
+          maxMonth = cols[i3] + "→" + cols[i3 + 1];
         }
       }
       return {
@@ -458,14 +499,19 @@ var ZUHYO_WORDS = {
     type: "chart",
     chartGenerator: function(lang) {
       var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
-      var deptNames = L.barDeptSets;
-      var labels = deptNames[Math.floor(Math.random() * deptNames.length)];
+      var sets = L.barDeptSets;
+      var chosen = sets[Math.floor(Math.random() * sets.length)];
+      var labels = chosen.names;
+      var word = chosen.word;
       var data = labels.map(function() {
         return (Math.floor(Math.random() * 40) + 10) * 10;
       });
       return {
         chartType: "bar",
-        title: L.bar1Title,
+        title: L.bar1Title(word),
+        // ⚠️ 設問文でも同じ呼び名を使う必要があるので、chartConfig に載せて渡す。
+        //    ここが無いと「東京支店」のグラフに「各部門の」という設問が付く。
+        labelWord: word,
         labels: labels,
         datasets: [{ label: L.revenueLabel, data: data, color: "#4285f4" }],
         unit: "万円",
@@ -483,7 +529,7 @@ var ZUHYO_WORDS = {
       var minLabel = labels[data.indexOf(minVal)];
 
       return {
-        text: L.bar1Text,
+        text: L.bar1Text(chartData.labelWord),
         answer: diff,
         unit: "万円",
         explanation: L.bar1Exp(maxLabel, maxVal, minLabel, minVal, diff),
@@ -596,6 +642,23 @@ var ZUHYO_WORDS = {
       var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var data = chartData.datasets[0].data;
       var labels = chartData.labels;
+
+      // ⚠️ table_diff_01 と同じバグ。絶対値が同じ変化が2つあると正解が2つになり、
+      //    もう一方を答えた人が不当に不正解になる（実測37.3%）。
+      //    ずらして直す方式は収束しないので、**差の列を先に決めて値を組み立てる**。
+      var pickIdx = Math.floor(Math.random() * (data.length - 1));
+      var peak = (Math.floor(Math.random() * 4) + 5) * 10;
+      if (Math.random() < 0.5) peak = -peak;
+      var steps = [];
+      for (var s1 = 0; s1 < data.length - 1; s1++) {
+        if (s1 === pickIdx) { steps.push(peak); continue; }
+        var lim = Math.floor((Math.abs(peak) - 10) / 10);
+        steps.push((Math.floor(Math.random() * (lim * 2 + 1)) - lim) * 10);
+      }
+      var run = [0], acc = 0;
+      for (var s2 = 0; s2 < steps.length; s2++) { acc += steps[s2]; run.push(acc); }
+      var lowest = Math.min.apply(null, run);
+      for (var s3 = 0; s3 < data.length; s3++) data[s3] = run[s3] - lowest + 150;
 
       var maxDiff = 0;
       var maxMonth = "";
