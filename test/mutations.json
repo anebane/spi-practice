@@ -2311,8 +2311,8 @@
     "name": "既存の日本語の単位表記を変える",
     "why": "器を入れただけで既存の問題の表示が変わったら、改修ではなく事故。ベースラインで固定している",
     "file": "src/questions/_base.js",
-    "find": "\"円\":   { ja: \"円\" }",
-    "replace": "\"円\":   { ja: \"エン\" }",
+    "find": "\"円\":   { ja: \"円\", en: \"yen\" }",
+    "replace": "\"円\":   { ja: \"エン\", en: \"yen\" }",
     "expect": "generator"
   },
   {
@@ -2353,6 +2353,86 @@
     "file": "src/questions/09-zuhyo.js",
     "find": "    departments: [\"Sales\", \"Development\", \"Administration\", \"Planning\"],",
     "replace": "    departments: [\"営業部\", \"開発部\", \"総務部\", \"企画部\"],",
+    "expect": "english"
+  },
+  {
+    "name": "図表の商品名の英語語彙を日本語に戻す",
+    "why": "table_sales_02 の表と chart_bar_compare_01 の凡例の両方で、英語面に商品名が日本語で出る",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    products: [\"Product A\", \"Product B\", \"Product C\", \"Product D\"],",
+    "replace": "    products: [\"商品A\", \"商品B\", \"商品C\", \"商品D\"],",
+    "expect": "english"
+  },
+  {
+    "name": "構成比の解説の英語を日本語に戻す",
+    "why": "table_composition_01 の解説だけ日本語に戻る。問題文は英語のままなので目視では見逃しやすい",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "return \"Amount = \" + total.toLocaleString()",
+    "replace": "return \"金額 = \" + total.toLocaleString()",
+    "expect": "english"
+  },
+  {
+    "name": "都市名の英語語彙を日本語に戻す",
+    "why": "table_max_01 は答えが都市名の選択肢。選択肢まで検査していないと、英語の設問に日本語の選択肢が並ぶ",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    cities: [\"Tokyo\", \"Osaka\", \"Nagoya\", \"Fukuoka\", \"Sapporo\"],",
+    "replace": "    cities: [\"東京\", \"大阪\", \"名古屋\", \"福岡\", \"札幌\"],",
+    "expect": "english"
+  },
+  {
+    "name": "英語の符号付き金額に万円を付ける",
+    "why": "table_diff_01 と chart_line_01 の解説の変動額に日本語の単位が混ざる",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    signedMoney: function (d) { return (d >= 0 ? \"+\" : \"\") + d; },",
+    "replace": "    signedMoney: function (d) { return (d >= 0 ? \"+\" : \"\") + d + \"万円\"; },",
+    "expect": "english"
+  },
+  {
+    "name": "棒グラフの英語タイトルを日本語に戻す",
+    "why": "グラフのタイトルは Canvas に描かれ text に出ない。chartConfig を検査していないと「問題文は英語なのにグラフだけ日本語」を誰も検出できない",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    bar1Title: \"Revenue by Department (FY2024)\",",
+    "replace": "    bar1Title: \"部門別売上高（2024年度）\",",
+    "expect": "english"
+  },
+  {
+    "name": "2系列棒グラフの英語凡例を日本語に戻す",
+    "why": "凡例（datasets[].label）は Canvas に描かれ text に出ない。chartConfig の検査だけが捕まえられる",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    prevYear: \"Last Year\",",
+    "replace": "    prevYear: \"前年\",",
+    "expect": "english"
+  },
+  {
+    "name": "折れ線グラフの英語の月名を日本語に戻す",
+    "why": "chart_line_01 の X軸ラベルと解説の期間表記が日本語に戻る",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    lineMonths: [\"April\", \"May\", \"June\", \"July\", \"August\", \"September\"],",
+    "replace": "    lineMonths: [\"4月\", \"5月\", \"6月\", \"7月\", \"8月\", \"9月\"],",
+    "expect": "english"
+  },
+  {
+    "name": "円グラフの英語タイトルを日本語に戻す",
+    "why": "chart_pie_01 のタイトルは総額を含み Canvas にだけ出る。chartConfig の検査だけが捕まえられる",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    pie1Title: function (total) { return \"Monthly Expenses (Total: \" + total.toLocaleString() + \" yen)\"; },",
+    "replace": "    pie1Title: function (total) { return \"月間支出の内訳（総額: \" + total.toLocaleString() + \"円）\"; },",
+    "expect": "english"
+  },
+  {
+    "name": "2円グラフの英語サブタイトルを日本語に戻す",
+    "why": "サブタイトル「Division A (total 3,600)」は drawMultiPieChart が ds.subtitle から描く。chartConfig の検査だけが捕まえられる",
+    "file": "src/questions/09-zuhyo.js",
+    "find": "    pieSubtitle: function (name, total) { return name + \" (total \" + total.toLocaleString() + \")\"; },",
+    "replace": "    pieSubtitle: function (name, total) { return name + \"（計 \" + total.toLocaleString() + \"万円）\"; },",
+    "expect": "english"
+  },
+  {
+    "name": "円の英語表記を単位表から消す",
+    "why": "unitLabelFor が未翻訳のときキー（日本語）を返すので、答えの単位だけ「円」で出る。画面上は単位が出ているので目視では気づけない",
+    "file": "src/questions/_base.js",
+    "find": "  \"円\":   { ja: \"円\", en: \"yen\" },",
+    "replace": "  \"円\":   { ja: \"円\" },",
     "expect": "english"
   }
 ]

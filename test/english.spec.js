@@ -93,6 +93,11 @@ const UNCOUNTABLE = new Set(["water", "work", "money", "salt", "juice", "milk", 
 //    結果として本物を見逃す」を、英語版でもそのまま踏んだ。
 const UNIT_SYMBOLS = new Set(["km", "m", "cm", "mm", "kg", "g", "mg", "l", "ml",
   "h", "min", "s", "sec", "kmh", "mph", "yen", "usd", "eur", "gbp", "px", "kb", "mb"]);
+// ⚠️ 「from 2022 to 2024」の「2022 to」を「数 + 名詞」と誤検知した（2026-09-07、
+//    図表の英語化で実測）。前置詞・接続詞は数えられる名詞になりえないので飛ばす。
+//    単位記号の教訓と同じで、除外は「名詞でありえない語」だけに絞る。
+const NON_NOUNS = new Set(["to", "of", "and", "or", "in", "on", "at", "per", "by",
+  "for", "from", "with", "as", "is", "are", "was", "were", "the"]);
 const IRREGULAR = { person: "people", child: "children", foot: "feet", man: "men", woman: "women" };
 function pluralOf(word) {
   if (IRREGULAR[word]) return IRREGULAR[word];
@@ -154,6 +159,18 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
       if (!q) continue;
       checked++;
       const texts = [q.text, String(q.explanation || "")].concat(q.choices || []).filter(Boolean);
+      // ⚠️ グラフは Canvas に描く。タイトル・軸ラベル・凡例（datasets[].label）・
+      //    円グラフのサブタイトル（datasets[].subtitle）は chartConfig に入っていて
+      //    text には出てこないが、画面には出る。ここを見ないと
+      //    「問題文は英語なのにグラフだけ日本語」を誰も検出できない（2026-09-07 追加）。
+      if (q.chartConfig) {
+        const cc = q.chartConfig;
+        const ccTexts = [cc.title, cc.yAxisLabel]
+          .concat(cc.labels || [])
+          .concat((cc.datasets || []).map(ds => ds && ds.label))
+          .concat((cc.datasets || []).map(ds => ds && ds.subtitle));
+        for (const s of ccTexts) if (s) texts.push(String(s));
+      }
       // ⚠️ 単位は「文」ではないので、文頭の大文字チェックにかけない
       //    （km を「文頭が小文字」と誤検知した）。
       //    ただし日本語混入だけは必ず見る。unitLabelFor は未翻訳のとき
@@ -189,6 +206,7 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
           const word = m[2];
           if (UNCOUNTABLE.has(word)) continue;
           if (UNIT_SYMBOLS.has(word)) continue;
+          if (NON_NOUNS.has(word)) continue;
           const plural = pluralOf(word);
           const isPlural = Object.values(IRREGULAR).includes(word) || /s$/.test(word);
           if (n === 1 && isPlural && !seen.has("s1" + key + word)) {
@@ -206,6 +224,11 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
           const art = m[1].toLowerCase();
           const word = m[2];
           if (ARTICLE_EXCEPTIONS.has(word)) continue;
+          // ⚠️ 「Product A at +70」「Division A is larger」の A を冠詞と誤検知した
+          //    （2026-09-07、図表の英語化で実測）。大文字始まりの語の直後に来る
+          //    大文字の A / An は名前の一部とみなして飛ばす。文頭の A は前が
+          //    改行や句読点なのでこの条件に当たらず、従来どおり検査される。
+          if ((m[1] === "A" || m[1] === "An") && /[A-Z][A-Za-z]*\s$/.test(text.slice(0, m.index))) continue;
           const wantAn = /^[aeiou]/.test(word);
           if (wantAn && art === "a" && !seen.has("aa" + key + word)) {
             seen.add("aa" + key + word);

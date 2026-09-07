@@ -9,7 +9,85 @@ var ZUHYO_WORDS = {
     salesAsk: function (d) { return d + "の年間売上の合計はいくらか。"; },
     salesExpLead: function (d) { return d + "の各四半期の売上:"; },
     money: function (n) { return n + "万円"; },
-    total: "合計"
+    total: "合計",
+    // table_sales_02（増減率）
+    products: ["商品A", "商品B", "商品C", "商品D"],
+    years: ["2022年", "2023年", "2024年"],
+    sales2Intro: "次の表は各商品の年間販売数を示している。",
+    sales2Ask: function (p, y1, y2) { return p + "の" + y1 + "から" + y2 + "への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）"; },
+    sales2ExpLead: function (p) { return p + "の販売数:"; },
+    count: function (n) { return n + "個"; },
+    sales2Rate: function (v2, v1, r) { return "増減率 = (" + v2 + " - " + v1 + ") / " + v1 + " × 100 = " + r + "%"; },
+    // table_composition_01（構成比）
+    expenseCats: ["食費", "住居費", "交通費", "教育費", "その他"],
+    comp1Header: function (total) { return "【月間支出の内訳】 総額: " + total.toLocaleString() + "円\n\n"; },
+    amountAsk: function (cat) { return cat + "の金額はいくらか。"; },
+    comp1Share: function (cat, pct) { return cat + "の割合: " + pct + "%"; },
+    comp1Calc: function (total, pct, amount) { return "金額 = " + total.toLocaleString() + " × " + pct + "/100 = " + amount.toLocaleString() + "円"; },
+    // table_max_01（最大値）
+    cities: ["東京", "大阪", "名古屋", "福岡", "札幌"],
+    tempMonths: ["1月", "4月", "7月", "10月"],
+    max1Intro: "次の表は各都市の月別平均気温を示している。",
+    max1Ask: function (m) { return m + "の平均気温が最も高い都市はどこか。"; },
+    max1ExpLead: function (m) { return m + "の各都市の気温:"; },
+    temp: function (n) { return n + "℃"; },
+    max1ExpEnd: function (city, val) { return "最も高いのは" + city + "の" + val + "℃です。"; },
+    // table_diff_01（最大変動）
+    stores: ["A店", "B店", "C店", "D店"],
+    storeMonths: ["4月", "5月", "6月", "7月", "8月"],
+    diff1Intro: "次の表は各店舗の月別売上を示している。",
+    diff1Ask: function (s) { return s + "で前月比の売上変動額（絶対値）が最も大きかった変動の変動額はいくらか。（増加はプラス、減少はマイナスで答えよ）"; },
+    diff1ExpLead: function (s) { return s + "の月別売上変動:"; },
+    signedMoney: function (d) { return (d >= 0 ? "+" : "") + d + "万円"; },
+    diff1ExpEnd: function (m) { return "最大変動: " + m + " で "; },
+    // chart_bar_01（棒グラフ）
+    barDeptSets: [
+      ["営業部", "開発部", "総務部", "企画部", "人事部"],
+      ["東京支店", "大阪支店", "名古屋支店", "福岡支店", "札幌支店"],
+      ["A事業部", "B事業部", "C事業部", "D事業部"]
+    ],
+    bar1Title: "部門別売上高（2024年度）",
+    revenueLabel: "売上高",
+    revenueAxis: "売上高（万円）",
+    bar1Text: "次のグラフは各部門の年間売上高を示している。\n\n売上が最も高い部門と最も低い部門の差額はいくらか。",
+    bar1Exp: function (maxLabel, maxVal, minLabel, minVal, diff) {
+      return "【考え方】\n棒グラフから最大値と最小値を読み取り、差を求めます。\n\n【解法】\n① 最大: " + maxLabel + " = " + maxVal + "万円\n② 最小: " + minLabel + " = " + minVal + "万円\n③ 差額 = " + maxVal + " - " + minVal + " = " + diff + "万円\n\n【ポイント】\n・棒グラフでは棒の高さで数値を比較\n・差額 = 最大値 − 最小値";
+    },
+    // chart_bar_compare_01（2系列棒グラフ）
+    barCmpTitle: "商品別売上高の推移",
+    prevYear: "前年",
+    thisYear: "今年",
+    barCmpText: "次のグラフは各商品の前年と今年の売上高を示している。\n\n前年からの売上増加額が最も大きい商品の増加額はいくらか。",
+    barCmpDetail: function (label, prev, curr, d) { return label + ": " + prev + " → " + curr + "（" + (d >= 0 ? "+" : "") + d + "万円）"; },
+    barCmpExp: function (details, maxLabel, maxIncrease) {
+      return "【考え方】\n各商品の「今年 − 前年」を計算し、最大の増加額を求めます。\n\n【解法】\n各商品の増加額:\n" + details + "\n\n最大の増加額: " + maxLabel + " の +" + maxIncrease + "万円\n\n【ポイント】\n・2系列の棒グラフでは同じカテゴリの棒を比較\n・増加額 = 今年の値 − 前年の値";
+    },
+    // chart_line_01（折れ線グラフ）
+    lineMonths: ["4月", "5月", "6月", "7月", "8月", "9月"],
+    lineTitle: "月別売上高の推移",
+    lineText: "次のグラフはある店舗の月別売上高の推移を示している。\n\n前月比の売上変動額（絶対値）が最も大きい期間の変動額はいくらか。（増加はプラス、減少はマイナスで答えよ）",
+    lineExp: function (details, maxMonth, signed) {
+      return "【考え方】\n折れ線グラフの各月間の変動額を計算し、絶対値が最大のものを求めます。\n\n【解法】\n各月間の変動額:\n" + details + "\n\n絶対値が最大: " + maxMonth + " の " + signed + "\n\n【ポイント】\n・折れ線の傾きが急なほど変動が大きい\n・増減の方向（プラス/マイナス）に注意";
+    },
+    // chart_pie_01（円グラフ）
+    pie1Title: function (total) { return "月間支出の内訳（総額: " + total.toLocaleString() + "円）"; },
+    pie1Label: "支出",
+    pie1Intro: function (total) { return "次の円グラフは月間支出（総額 " + total.toLocaleString() + "円）の内訳を示している。"; },
+    pie1Exp: function (cat, pct, total, amount) {
+      return "【考え方】\n円グラフから割合を読み取り、総額に掛けて金額を求めます。\n\n【解法】\n① " + cat + "の割合: " + pct + "%\n② 金額 = " + total.toLocaleString() + " × " + pct + " / 100\n  = " + amount.toLocaleString() + "円\n\n【ポイント】\n・円グラフの各部分は全体に対する割合を表す\n・金額 = 総額 × 割合(%) / 100";
+    },
+    // chart_pie_compare_01（2つの円グラフ）
+    costCats: ["人件費", "材料費", "広告費", "その他"],
+    pieCmpNameSets: [["A部門", "B部門"], ["東日本", "西日本"], ["上半期", "下半期"]],
+    pieCmpTitle: "部門別経費の内訳",
+    // ⚠️ ja は pieSubtitle を持たない。円グラフ上のサブタイトル
+    //    「A部門（計 3,200万円）」は _base.js の drawMultiPieChart が
+    //    従来どおり組み立てる（ja の chartConfig を1バイトも変えないため）。
+    pieCmpIntro: function (n0, t0, n1, t1) { return "次の2つの円グラフは" + n0 + "（計 " + t0.toLocaleString() + "万円）と" + n1 + "（計 " + t1.toLocaleString() + "万円）の経費内訳を示している。"; },
+    pieCmpAsk: function (cat) { return cat + "の金額の差はいくらか。"; },
+    pieCmpExp: function (p) {
+      return "【考え方】\n各円グラフの割合からそれぞれの金額を算出し、差を求めます。\n\n【解法】\n① " + p.n0 + "の" + p.cat + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "万円\n② " + p.n1 + "の" + p.cat + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "万円\n③ 差額 = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "万円\n  （" + p.larger + "の方が大きい）\n\n【ポイント】\n・2つの円グラフの比較は割合ではなく金額で比較\n・総額が異なるため、同じ割合でも金額は異なる";
+    }
   },
   en: {
     departments: ["Sales", "Development", "Administration", "Planning"],
@@ -18,7 +96,85 @@ var ZUHYO_WORDS = {
     salesAsk: function (d) { return "What is the total annual revenue of the " + d + " department?"; },
     salesExpLead: function (d) { return "Quarterly revenue of the " + d + " department:"; },
     money: function (n) { return String(n); },
-    total: "Total"
+    total: "Total",
+    // table_sales_02
+    products: ["Product A", "Product B", "Product C", "Product D"],
+    years: ["2022", "2023", "2024"],
+    sales2Intro: "The table below shows the annual number of units sold for each product.",
+    sales2Ask: function (p, y1, y2) { return "What is the percentage change in units sold for " + p + " from " + y1 + " to " + y2 + "? (Round to the nearest whole number. Use a minus sign for a decrease.)"; },
+    sales2ExpLead: function (p) { return "Units sold for " + p + ":"; },
+    count: function (n) { return n + " units"; },
+    sales2Rate: function (v2, v1, r) { return "Percentage change = (" + v2 + " - " + v1 + ") / " + v1 + " × 100 = " + r + "%"; },
+    // table_composition_01
+    expenseCats: ["Food", "Housing", "Transportation", "Education", "Other"],
+    comp1Header: function (total) { return "[Monthly Expenses] Total: " + total.toLocaleString() + " yen\n\n"; },
+    amountAsk: function (cat) { return "What is the amount for " + cat + "?"; },
+    comp1Share: function (cat, pct) { return "Share of " + cat + ": " + pct + "%"; },
+    comp1Calc: function (total, pct, amount) { return "Amount = " + total.toLocaleString() + " × " + pct + "/100 = " + amount.toLocaleString() + " yen"; },
+    // table_max_01
+    cities: ["Tokyo", "Osaka", "Nagoya", "Fukuoka", "Sapporo"],
+    tempMonths: ["January", "April", "July", "October"],
+    max1Intro: "The table below shows the average monthly temperature in each city.",
+    max1Ask: function (m) { return "Which city has the highest average temperature in " + m + "?"; },
+    max1ExpLead: function (m) { return "Temperatures in " + m + ":"; },
+    temp: function (n) { return n + "°C"; },
+    max1ExpEnd: function (city, val) { return "The highest is " + city + " at " + val + "°C."; },
+    // table_diff_01
+    stores: ["Store A", "Store B", "Store C", "Store D"],
+    storeMonths: ["April", "May", "June", "July", "August"],
+    diff1Intro: "The table below shows monthly revenue for each store (in units of 10,000 yen).",
+    diff1Ask: function (s) { return "For " + s + ", what is the amount of the largest month-over-month revenue change (by absolute value)? (Use a plus sign for an increase and a minus sign for a decrease.)"; },
+    diff1ExpLead: function (s) { return "Month-over-month revenue changes for " + s + ":"; },
+    signedMoney: function (d) { return (d >= 0 ? "+" : "") + d; },
+    diff1ExpEnd: function (m) { return "Largest change: " + m + " at "; },
+    // chart_bar_01
+    barDeptSets: [
+      ["Sales", "Development", "Administration", "Planning", "HR"],
+      ["Tokyo Branch", "Osaka Branch", "Nagoya Branch", "Fukuoka Branch", "Sapporo Branch"],
+      ["Division A", "Division B", "Division C", "Division D"]
+    ],
+    bar1Title: "Revenue by Department (FY2024)",
+    revenueLabel: "Revenue",
+    revenueAxis: "Revenue (×10,000 yen)",
+    bar1Text: "The chart below shows the annual revenue of each department (in units of 10,000 yen).\n\nWhat is the difference between the highest and the lowest revenue?",
+    bar1Exp: function (maxLabel, maxVal, minLabel, minVal, diff) {
+      return "[Approach]\nRead the highest and lowest values from the bar chart and find the difference.\n\n[Solution]\n① Highest: " + maxLabel + " = " + maxVal + "\n② Lowest: " + minLabel + " = " + minVal + "\n③ Difference = " + maxVal + " - " + minVal + " = " + diff + "\n\n[Notes]\n- Compare the bars by height\n- Difference = highest − lowest";
+    },
+    // chart_bar_compare_01
+    barCmpTitle: "Revenue by Product",
+    prevYear: "Last Year",
+    thisYear: "This Year",
+    barCmpText: "The chart below shows last year's and this year's revenue for each product (in units of 10,000 yen).\n\nWhat is the largest increase in revenue from last year among the products?",
+    barCmpDetail: function (label, prev, curr, d) { return label + ": " + prev + " → " + curr + " (" + (d >= 0 ? "+" : "") + d + ")"; },
+    barCmpExp: function (details, maxLabel, maxIncrease) {
+      return "[Approach]\nFor each product, compute this year minus last year and find the largest increase.\n\n[Solution]\nIncrease for each product:\n" + details + "\n\nLargest increase: " + maxLabel + " at +" + maxIncrease + "\n\n[Notes]\n- Compare the paired bars for each product\n- Increase = this year's value − last year's value";
+    },
+    // chart_line_01
+    lineMonths: ["April", "May", "June", "July", "August", "September"],
+    lineTitle: "Monthly Revenue",
+    lineText: "The chart below shows the monthly revenue of a store (in units of 10,000 yen).\n\nWhat is the amount of the largest month-over-month change (by absolute value)? (Use a plus sign for an increase and a minus sign for a decrease.)",
+    lineExp: function (details, maxMonth, signed) {
+      return "[Approach]\nCompute the change for each month-to-month interval and find the one with the largest absolute value.\n\n[Solution]\nChanges between months:\n" + details + "\n\nLargest absolute change: " + maxMonth + " at " + signed + "\n\n[Notes]\n- A steeper line segment means a larger change\n- Mind the direction of the change (plus/minus)";
+    },
+    // chart_pie_01
+    pie1Title: function (total) { return "Monthly Expenses (Total: " + total.toLocaleString() + " yen)"; },
+    pie1Label: "Expenses",
+    pie1Intro: function (total) { return "The pie chart below shows the breakdown of monthly expenses (total " + total.toLocaleString() + " yen)."; },
+    pie1Exp: function (cat, pct, total, amount) {
+      return "[Approach]\nRead the share from the pie chart and multiply it by the total.\n\n[Solution]\n① Share of " + cat + ": " + pct + "%\n② Amount = " + total.toLocaleString() + " × " + pct + " / 100\n  = " + amount.toLocaleString() + " yen\n\n[Notes]\n- Each slice represents a share of the whole\n- Amount = total × share(%) / 100";
+    },
+    // chart_pie_compare_01
+    costCats: ["Labor", "Materials", "Advertising", "Other"],
+    pieCmpNameSets: [["Division A", "Division B"], ["East Japan", "West Japan"], ["First Half", "Second Half"]],
+    pieCmpTitle: "Expense Breakdown by Division (×10,000 yen)",
+    // en は円グラフ上のサブタイトルも語彙で持つ（Canvas に描かれるため）。
+    // _base.js の drawMultiPieChart が ds.subtitle を優先して描く。
+    pieSubtitle: function (name, total) { return name + " (total " + total.toLocaleString() + ")"; },
+    pieCmpIntro: function (n0, t0, n1, t1) { return "The two pie charts below show the expense breakdown of " + n0 + " (total " + t0.toLocaleString() + ") and " + n1 + " (total " + t1.toLocaleString() + "), in units of 10,000 yen."; },
+    pieCmpAsk: function (cat) { return "What is the difference in the amount for " + cat + "?"; },
+    pieCmpExp: function (p) {
+      return "[Approach]\nCompute each amount from its share and total, then find the difference.\n\n[Solution]\n① " + p.cat + " for " + p.n0 + ": " + p.t0.toLocaleString() + " × " + p.p0 + "% = " + p.a0 + "\n② " + p.cat + " for " + p.n1 + ": " + p.t1.toLocaleString() + " × " + p.p1 + "% = " + p.a1 + "\n③ Difference = |" + p.a0 + " - " + p.a1 + "| = " + p.diff + "\n  (" + p.larger + " is larger)\n\n[Notes]\n- Compare amounts, not shares\n- The totals differ, so the same share means a different amount";
+    }
   }
 };
 
@@ -73,14 +229,16 @@ var ZUHYO_WORDS = {
 
   QUESTION_TEMPLATES.push({
     id: "table_sales_02",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 2,
     type: "table",
-    tableGenerator: function() {
-      var products = ["商品A", "商品B", "商品C", "商品D"];
-      var years = ["2022年", "2023年", "2024年"];
+    tableGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var products = L.products;
+      var years = L.years;
       var data = {};
       products.forEach(function(p) {
         data[p] = {};
@@ -97,16 +255,17 @@ var ZUHYO_WORDS = {
     //    この問題には無い、という指摘）。実測すると正解が負になるのは 33.7%（3000回中1012件）。
     //    符号の指示が無いと、減少のとき利用者が絶対値で答えて不正解になる。
     questionGenerator: function(tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var product = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
       var val1 = tableData.data[product][cols[0]];
       var val2 = tableData.data[product][cols[cols.length - 1]];
       var changeRate = Math.round((val2 - val1) / val1 * 100);
       return {
-        text: "次の表は各商品の年間販売数を示している。\n\n" + formatTable(tableData, lang) + "\n\n" + product + "の" + cols[0] + "から" + cols[cols.length-1] + "への増減率は何%か。（小数点以下を四捨五入。減少の場合はマイナスを付ける）",
+        text: L.sales2Intro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.sales2Ask(product, cols[0], cols[cols.length - 1]),
         answer: changeRate,
         unit: "%",
-        explanation: product + "の販売数:\n" + cols[0] + ": " + val1 + "個\n" + cols[cols.length-1] + ": " + val2 + "個\n\n増減率 = (" + val2 + " - " + val1 + ") / " + val1 + " × 100 = " + changeRate + "%"
+        explanation: L.sales2ExpLead(product) + "\n" + cols[0] + ": " + L.count(val1) + "\n" + cols[cols.length - 1] + ": " + L.count(val2) + "\n\n" + L.sales2Rate(val2, val1, changeRate)
       };
     },
     answerType: "number",
@@ -115,13 +274,15 @@ var ZUHYO_WORDS = {
 
   QUESTION_TEMPLATES.push({
     id: "table_composition_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 2,
     type: "table",
-    tableGenerator: function() {
-      var categories = ["食費", "住居費", "交通費", "教育費", "その他"];
+    tableGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var categories = L.expenseCats;
       var data = {};
       var remaining = 100;
       categories.forEach(function(cat, i) {
@@ -140,18 +301,19 @@ var ZUHYO_WORDS = {
       return { categories: categories, percentages: data, totalAmount: totalAmount };
     },
     questionGenerator: function(tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var cat = tableData.categories[Math.floor(Math.random() * (tableData.categories.length - 1))];
       var pct = tableData.percentages[cat];
       var amount = Math.round(tableData.totalAmount * pct / 100);
-      var tableStr = "【月間支出の内訳】 総額: " + tableData.totalAmount.toLocaleString() + "円\n\n";
+      var tableStr = L.comp1Header(tableData.totalAmount);
       tableData.categories.forEach(function(c) {
         tableStr += c + ": " + tableData.percentages[c] + "%\n";
       });
       return {
-        text: tableStr + "\n" + cat + "の金額はいくらか。",
+        text: tableStr + "\n" + L.amountAsk(cat),
         answer: amount,
         unit: "円",
-        explanation: cat + "の割合: " + pct + "%\n\n金額 = " + tableData.totalAmount.toLocaleString() + " × " + pct + "/100 = " + amount.toLocaleString() + "円"
+        explanation: L.comp1Share(cat, pct) + "\n\n" + L.comp1Calc(tableData.totalAmount, pct, amount)
       };
     },
     answerType: "number",
@@ -160,14 +322,16 @@ var ZUHYO_WORDS = {
 
   QUESTION_TEMPLATES.push({
     id: "table_max_01",
+    i18n: true,
     formats: ["webtesting", "testcenter"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 1,
     type: "table",
-    tableGenerator: function() {
-      var cities = ["東京", "大阪", "名古屋", "福岡", "札幌"];
-      var months = ["1月", "4月", "7月", "10月"];
+    tableGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var cities = L.cities;
+      var months = L.tempMonths;
       var data = {};
       cities.forEach(function(city) {
         data[city] = {};
@@ -179,6 +343,7 @@ var ZUHYO_WORDS = {
       return { rows: cities, cols: months, data: data, unit: "℃" };
     },
     questionGenerator: function(tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var month = tableData.cols[Math.floor(Math.random() * tableData.cols.length)];
 
       // ⚠️ 同点だと「最も高い都市」が2つ以上になり、正解が複数ある問題になる。
@@ -210,12 +375,12 @@ var ZUHYO_WORDS = {
       });
       var choices = tableData.rows.slice();
       return {
-        text: "次の表は各都市の月別平均気温を示している。\n\n" + formatTable(tableData, lang) + "\n\n" + month + "の平均気温が最も高い都市はどこか。",
+        text: L.max1Intro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.max1Ask(month),
         answer: maxCity,
         choices: choices,
-        explanation: month + "の各都市の気温:\n" + tableData.rows.map(function(city) {
-          return city + ": " + tableData.data[city][month] + "℃";
-        }).join("\n") + "\n\n最も高いのは" + maxCity + "の" + maxVal + "℃です。"
+        explanation: L.max1ExpLead(month) + "\n" + tableData.rows.map(function(city) {
+          return city + ": " + L.temp(tableData.data[city][month]);
+        }).join("\n") + "\n\n" + L.max1ExpEnd(maxCity, maxVal)
       };
     },
     answerType: "choice",
@@ -224,14 +389,16 @@ var ZUHYO_WORDS = {
 
   QUESTION_TEMPLATES.push({
     id: "table_diff_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 2,
     type: "table",
-    tableGenerator: function() {
-      var stores = ["A店", "B店", "C店", "D店"];
-      var months = ["4月", "5月", "6月", "7月", "8月"];
+    tableGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var stores = L.stores;
+      var months = L.storeMonths;
       var data = {};
       stores.forEach(function(store) {
         data[store] = {};
@@ -244,6 +411,7 @@ var ZUHYO_WORDS = {
       return { rows: stores, cols: months, data: data, unit: "万円" };
     },
     questionGenerator: function(tableData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var store = tableData.rows[Math.floor(Math.random() * tableData.rows.length)];
       var cols = tableData.cols;
       var maxDiff = 0;
@@ -256,17 +424,17 @@ var ZUHYO_WORDS = {
         }
       }
       return {
-        text: "次の表は各店舗の月別売上を示している。\n\n" + formatTable(tableData, lang) + "\n\n" + store + "で前月比の売上変動額（絶対値）が最も大きかった変動の変動額はいくらか。（増加はプラス、減少はマイナスで答えよ）",
+        text: L.diff1Intro + "\n\n" + formatTable(tableData, lang) + "\n\n" + L.diff1Ask(store),
         answer: maxDiff,
         unit: "万円",
-        explanation: store + "の月別売上変動:\n" + (function() {
+        explanation: L.diff1ExpLead(store) + "\n" + (function() {
           var lines = [];
           for (var i = 1; i < cols.length; i++) {
             var d = tableData.data[store][cols[i]] - tableData.data[store][cols[i-1]];
-            lines.push(cols[i-1] + "→" + cols[i] + ": " + (d >= 0 ? "+" : "") + d + "万円");
+            lines.push(cols[i-1] + "→" + cols[i] + ": " + L.signedMoney(d));
           }
           return lines.join("\n");
-        })() + "\n\n最大変動: " + maxMonth + " で " + (maxDiff >= 0 ? "+" : "") + maxDiff + "万円"
+        })() + "\n\n" + L.diff1ExpEnd(maxMonth) + L.signedMoney(maxDiff)
       };
     },
     answerType: "number",
@@ -274,35 +442,38 @@ var ZUHYO_WORDS = {
   });
 
   // --- グラフ問題 ---
+  // ⚠️ グラフのタイトル・軸ラベル・凡例・サブタイトルは chartConfig に入り、
+  //    _base.js の draw*Chart が Canvas に描く。問題文（text）には出てこないが
+  //    画面には出るので、これらも語彙で引く。test/english.spec.js が
+  //    chartConfig の文字列も検査する。
 
   // chart_bar_01: 棒グラフ（単一系列）- 合計/差額
   QUESTION_TEMPLATES.push({
     id: "chart_bar_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 1,
     type: "chart",
-    chartGenerator: function() {
-      var deptNames = [
-        ["営業部", "開発部", "総務部", "企画部", "人事部"],
-        ["東京支店", "大阪支店", "名古屋支店", "福岡支店", "札幌支店"],
-        ["A事業部", "B事業部", "C事業部", "D事業部"]
-      ];
+    chartGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var deptNames = L.barDeptSets;
       var labels = deptNames[Math.floor(Math.random() * deptNames.length)];
       var data = labels.map(function() {
         return (Math.floor(Math.random() * 40) + 10) * 10;
       });
       return {
         chartType: "bar",
-        title: "部門別売上高（2024年度）",
+        title: L.bar1Title,
         labels: labels,
-        datasets: [{ label: "売上高", data: data, color: "#4285f4" }],
+        datasets: [{ label: L.revenueLabel, data: data, color: "#4285f4" }],
         unit: "万円",
-        yAxisLabel: "売上高（万円）"
+        yAxisLabel: L.revenueAxis
       };
     },
     questionGenerator: function(chartData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var data = chartData.datasets[0].data;
       var labels = chartData.labels;
       var maxVal = Math.max.apply(null, data);
@@ -312,10 +483,10 @@ var ZUHYO_WORDS = {
       var minLabel = labels[data.indexOf(minVal)];
 
       return {
-        text: "次のグラフは各部門の年間売上高を示している。\n\n売上が最も高い部門と最も低い部門の差額はいくらか。",
+        text: L.bar1Text,
         answer: diff,
         unit: "万円",
-        explanation: "【考え方】\n棒グラフから最大値と最小値を読み取り、差を求めます。\n\n【解法】\n① 最大: " + maxLabel + " = " + maxVal + "万円\n② 最小: " + minLabel + " = " + minVal + "万円\n③ 差額 = " + maxVal + " - " + minVal + " = " + diff + "万円\n\n【ポイント】\n・棒グラフでは棒の高さで数値を比較\n・差額 = 最大値 − 最小値",
+        explanation: L.bar1Exp(maxLabel, maxVal, minLabel, minVal, diff),
         chartConfig: chartData
       };
     },
@@ -326,13 +497,15 @@ var ZUHYO_WORDS = {
   // chart_bar_compare_01: 棒グラフ（2系列比較）- 前年比増加額
   QUESTION_TEMPLATES.push({
     id: "chart_bar_compare_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 2,
     type: "chart",
-    chartGenerator: function() {
-      var labels = ["商品A", "商品B", "商品C", "商品D"];
+    chartGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var labels = L.products;
       var prevData = labels.map(function() {
         return (Math.floor(Math.random() * 30) + 15) * 10;
       });
@@ -348,17 +521,18 @@ var ZUHYO_WORDS = {
       }
       return {
         chartType: "bar",
-        title: "商品別売上高の推移",
+        title: L.barCmpTitle,
         labels: labels,
         datasets: [
-          { label: "前年", data: prevData, color: "#90caf9" },
-          { label: "今年", data: currData, color: "#1565c0" }
+          { label: L.prevYear, data: prevData, color: "#90caf9" },
+          { label: L.thisYear, data: currData, color: "#1565c0" }
         ],
         unit: "万円",
-        yAxisLabel: "売上高（万円）"
+        yAxisLabel: L.revenueAxis
       };
     },
     questionGenerator: function(chartData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var labels = chartData.labels;
       var prevData = chartData.datasets[0].data;
       var currData = chartData.datasets[1].data;
@@ -376,14 +550,14 @@ var ZUHYO_WORDS = {
 
       var details = labels.map(function(label, i) {
         var diff = currData[i] - prevData[i];
-        return label + ": " + prevData[i] + " → " + currData[i] + "（" + (diff >= 0 ? "+" : "") + diff + "万円）";
+        return L.barCmpDetail(label, prevData[i], currData[i], diff);
       }).join("\n");
 
       return {
-        text: "次のグラフは各商品の前年と今年の売上高を示している。\n\n前年からの売上増加額が最も大きい商品の増加額はいくらか。",
+        text: L.barCmpText,
         answer: maxIncrease,
         unit: "万円",
-        explanation: "【考え方】\n各商品の「今年 − 前年」を計算し、最大の増加額を求めます。\n\n【解法】\n各商品の増加額:\n" + details + "\n\n最大の増加額: " + labels[maxIdx] + " の +" + maxIncrease + "万円\n\n【ポイント】\n・2系列の棒グラフでは同じカテゴリの棒を比較\n・増加額 = 今年の値 − 前年の値",
+        explanation: L.barCmpExp(details, labels[maxIdx], maxIncrease),
         chartConfig: chartData
       };
     },
@@ -394,13 +568,15 @@ var ZUHYO_WORDS = {
   // chart_line_01: 折れ線グラフ - 最大変動期間
   QUESTION_TEMPLATES.push({
     id: "chart_line_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 2,
     type: "chart",
-    chartGenerator: function() {
-      var labels = ["4月", "5月", "6月", "7月", "8月", "9月"];
+    chartGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var labels = L.lineMonths;
       var base = (Math.floor(Math.random() * 20) + 20) * 10;
       var data = [base];
       for (var i = 1; i < labels.length; i++) {
@@ -409,14 +585,15 @@ var ZUHYO_WORDS = {
       }
       return {
         chartType: "line",
-        title: "月別売上高の推移",
+        title: L.lineTitle,
         labels: labels,
-        datasets: [{ label: "売上高", data: data, color: "#4285f4" }],
+        datasets: [{ label: L.revenueLabel, data: data, color: "#4285f4" }],
         unit: "万円",
-        yAxisLabel: "売上高（万円）"
+        yAxisLabel: L.revenueAxis
       };
     },
     questionGenerator: function(chartData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var data = chartData.datasets[0].data;
       var labels = chartData.labels;
 
@@ -435,14 +612,14 @@ var ZUHYO_WORDS = {
       var details = [];
       for (var j = 1; j < data.length; j++) {
         var d = data[j] - data[j - 1];
-        details.push(labels[j - 1] + "→" + labels[j] + ": " + (d >= 0 ? "+" : "") + d + "万円");
+        details.push(labels[j - 1] + "→" + labels[j] + ": " + L.signedMoney(d));
       }
 
       return {
-        text: "次のグラフはある店舗の月別売上高の推移を示している。\n\n前月比の売上変動額（絶対値）が最も大きい期間の変動額はいくらか。（増加はプラス、減少はマイナスで答えよ）",
+        text: L.lineText,
         answer: maxDiffVal,
         unit: "万円",
-        explanation: "【考え方】\n折れ線グラフの各月間の変動額を計算し、絶対値が最大のものを求めます。\n\n【解法】\n各月間の変動額:\n" + details.join("\n") + "\n\n絶対値が最大: " + maxMonth + " の " + (maxDiffVal >= 0 ? "+" : "") + maxDiffVal + "万円\n\n【ポイント】\n・折れ線の傾きが急なほど変動が大きい\n・増減の方向（プラス/マイナス）に注意",
+        explanation: L.lineExp(details.join("\n"), maxMonth, L.signedMoney(maxDiffVal)),
         chartConfig: chartData
       };
     },
@@ -453,13 +630,15 @@ var ZUHYO_WORDS = {
   // chart_pie_01: 円グラフ - 構成比から実数算出
   QUESTION_TEMPLATES.push({
     id: "chart_pie_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 1,
     type: "chart",
-    chartGenerator: function() {
-      var categories = ["食費", "住居費", "交通費", "教育費", "その他"];
+    chartGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var categories = L.expenseCats;
       var pcts = [];
       var remaining = 100;
       for (var i = 0; i < categories.length; i++) {
@@ -477,14 +656,15 @@ var ZUHYO_WORDS = {
       var totalAmount = (Math.floor(Math.random() * 15) + 25) * 10000;
       return {
         chartType: "pie",
-        title: "月間支出の内訳（総額: " + totalAmount.toLocaleString() + "円）",
+        title: L.pie1Title(totalAmount),
         labels: categories,
-        datasets: [{ label: "支出", data: pcts }],
+        datasets: [{ label: L.pie1Label, data: pcts }],
         unit: "%",
         totalAmount: totalAmount
       };
     },
     questionGenerator: function(chartData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var categories = chartData.labels;
       var pcts = chartData.datasets[0].data;
       var totalAmount = chartData.totalAmount;
@@ -495,10 +675,10 @@ var ZUHYO_WORDS = {
       var amount = Math.round(totalAmount * pct / 100);
 
       return {
-        text: "次の円グラフは月間支出（総額 " + totalAmount.toLocaleString() + "円）の内訳を示している。\n\n" + cat + "の金額はいくらか。",
+        text: L.pie1Intro(totalAmount) + "\n\n" + L.amountAsk(cat),
         answer: amount,
         unit: "円",
-        explanation: "【考え方】\n円グラフから割合を読み取り、総額に掛けて金額を求めます。\n\n【解法】\n① " + cat + "の割合: " + pct + "%\n② 金額 = " + totalAmount.toLocaleString() + " × " + pct + " / 100\n  = " + amount.toLocaleString() + "円\n\n【ポイント】\n・円グラフの各部分は全体に対する割合を表す\n・金額 = 総額 × 割合(%) / 100",
+        explanation: L.pie1Exp(cat, pct, totalAmount, amount),
         chartConfig: chartData
       };
     },
@@ -509,18 +689,20 @@ var ZUHYO_WORDS = {
   // chart_pie_compare_01: 2つの円グラフ比較
   QUESTION_TEMPLATES.push({
     id: "chart_pie_compare_01",
+    i18n: true,
     formats: ["webtesting"],
     category: "図表の読み取り",
     categoryId: 9,
     difficulty: 3,
     type: "chart",
-    chartGenerator: function() {
-      var categories = ["人件費", "材料費", "広告費", "その他"];
+    chartGenerator: function(lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
+      var categories = L.costCats;
       var totals = [
         (Math.floor(Math.random() * 10) + 30) * 100,
         (Math.floor(Math.random() * 10) + 25) * 100
       ];
-      var deptNames = [["A部門", "B部門"], ["東日本", "西日本"], ["上半期", "下半期"]];
+      var deptNames = L.pieCmpNameSets;
       var names = deptNames[Math.floor(Math.random() * deptNames.length)];
       var datasets = names.map(function(name, di) {
         var pcts = [];
@@ -537,17 +719,23 @@ var ZUHYO_WORDS = {
             remaining -= val;
           }
         }
-        return { label: name, data: pcts, total: totals[di] };
+        var ds = { label: name, data: pcts, total: totals[di] };
+        // ⚠️ ja は subtitle を持たせない（drawMultiPieChart が従来どおり
+        //    「A部門（計 3,200万円）」を組み立てるので、chartConfig を変えない）。
+        //    en だけ語彙から与え、描画側は subtitle があれば優先する。
+        if (L.pieSubtitle) ds.subtitle = L.pieSubtitle(name, totals[di]);
+        return ds;
       });
       return {
         chartType: "pie",
-        title: "部門別経費の内訳",
+        title: L.pieCmpTitle,
         labels: categories,
         datasets: datasets,
         unit: "万円"
       };
     },
     questionGenerator: function(chartData, lang) {
+      var L = ZUHYO_WORDS[lang === "en" ? "en" : "ja"];
       var categories = chartData.labels;
       var ds0 = chartData.datasets[0];
       var ds1 = chartData.datasets[1];
@@ -562,10 +750,15 @@ var ZUHYO_WORDS = {
       var larger = amount0 > amount1 ? ds0.label : ds1.label;
 
       return {
-        text: "次の2つの円グラフは" + ds0.label + "（計 " + ds0.total.toLocaleString() + "万円）と" + ds1.label + "（計 " + ds1.total.toLocaleString() + "万円）の経費内訳を示している。\n\n" + cat + "の金額の差はいくらか。",
+        text: L.pieCmpIntro(ds0.label, ds0.total, ds1.label, ds1.total) + "\n\n" + L.pieCmpAsk(cat),
         answer: diff,
         unit: "万円",
-        explanation: "【考え方】\n各円グラフの割合からそれぞれの金額を算出し、差を求めます。\n\n【解法】\n① " + ds0.label + "の" + cat + ": " + ds0.total.toLocaleString() + " × " + ds0.data[idx] + "% = " + amount0 + "万円\n② " + ds1.label + "の" + cat + ": " + ds1.total.toLocaleString() + " × " + ds1.data[idx] + "% = " + amount1 + "万円\n③ 差額 = |" + amount0 + " - " + amount1 + "| = " + diff + "万円\n  （" + larger + "の方が大きい）\n\n【ポイント】\n・2つの円グラフの比較は割合ではなく金額で比較\n・総額が異なるため、同じ割合でも金額は異なる",
+        explanation: L.pieCmpExp({
+          cat: cat,
+          n0: ds0.label, t0: ds0.total, p0: ds0.data[idx], a0: amount0,
+          n1: ds1.label, t1: ds1.total, p1: ds1.data[idx], a1: amount1,
+          diff: diff, larger: larger
+        }),
         chartConfig: chartData
       };
     },

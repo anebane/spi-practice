@@ -56,7 +56,7 @@ function unitLabelFor(key, lang) {
 
 var UNIT_LABELS = {
   "":     { ja: "" },
-  "%":    { ja: "%" },
+  "%":    { ja: "%", en: "%" },
   "cm":   { ja: "cm" },
   "g":    { ja: "g" },
   "km":   { ja: "km" },
@@ -69,8 +69,9 @@ var UNIT_LABELS = {
   //    説明しているので、単位そのものは "×10,000 yen" と書く。
   "万円":  { ja: "万円", en: "\u00d710,000 yen" },
   "人":   { ja: "人" },
-  "個":   { ja: "個" },
-  "円":   { ja: "円" },
+  // 「個」は答えの単位ではなく表の注記（table_sales_02）で使う。英語では単に units
+  "個":   { ja: "個", en: "units" },
+  "円":   { ja: "円", en: "yen" },
   "分":   { ja: "分" },
   "分後":  { ja: "分後" },
   "回":   { ja: "回" },
@@ -82,7 +83,9 @@ var UNIT_LABELS = {
   "歳":   { ja: "歳" },
   "秒":   { ja: "秒" },
   "秒後":  { ja: "秒後" },
-  "通り":  { ja: "通り" }
+  "通り":  { ja: "通り" },
+  // table_max_01 の表の注記（tableData.unit）で使う。℃ は世界共通ではないので en は °C
+  "℃":   { ja: "℃", en: "°C" }
 };
 
 
@@ -1609,11 +1612,16 @@ function drawMultiPieChart(ctx, w, h, config) {
     var cy = h / 2;
 
     // サブタイトル（ds.totalがあればそちらを表示、なければdata合計）
+    // ⚠️ 「（計 …）」は日本語の直書き。英語のチャートは chartGenerator が
+    //    ds.subtitle を語彙から与えるので、あればそちらを優先する。
+    //    ja は subtitle を持たないため、従来の組み立てが1文字も変わらず生きる。
     var displayTotal = ds.total != null ? ds.total : total;
+    var subtitle = ds.subtitle != null ? ds.subtitle
+      : ds.label + "（計 " + displayTotal.toLocaleString() + (config.unit || "") + "）";
     ctx.font = "bold 12px system-ui";
     ctx.fillStyle = "#333";
     ctx.textAlign = "center";
-    ctx.fillText(ds.label + "（計 " + displayTotal.toLocaleString() + (config.unit || "") + "）", cx, 40);
+    ctx.fillText(subtitle, cx, 40);
 
     // 扇形
     var startAngle = -Math.PI / 2;
