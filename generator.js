@@ -131,8 +131,19 @@ var QuestionGenerator = (function() {
     //    （templateText を持たない型なので、他の分野と同じ方式が使えない）。
     //    受け取らない既存の実装は、引数を無視するだけで従来どおり動く。
     var tableData = template.tableGenerator(lang);
-    var qData = template.questionGenerator(tableData, lang);
+    return buildDataQuestion(template, template.questionGenerator(tableData, lang), lang);
+  }
 
+  // 表・グラフに共通の組み立て。
+  //
+  // ⚠️ 表とグラフで**同じ形の result を2箇所に書いていた**（2026-09-09に整理）。
+  //    片方だけ直す事故が実際に起きうる形で、実際 unitKey を足したときは
+  //    2箇所とも手で直している。項目を1つ足すたびに2回書く構造だった。
+  //
+  // ⚠️ chartConfig は「グラフのときだけ足す」ではなく「qData が持っていたら足す」
+  //    にしてある。type で分岐すると、型を1つ足すたびにここが増える。
+  //    localizeChartConfig は chartConfig を持たない型では呼ばれない。
+  function buildDataQuestion(template, qData, lang) {
     var result = {
       id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
       templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
@@ -147,6 +158,14 @@ var QuestionGenerator = (function() {
       explanation: qData.explanation,
       timeLimitSec: template.timeLimitSec
     };
+
+    // ⚠️ chartConfig の中の単位を言語で引き直す。
+    //    テンプレート側で個別に直すと必ず漏れる（実際、9本を英語化したとき
+    //    unit だけ「万円」のまま残り、グラフ4本が日本語混じりで出た。
+    //    2026-09-07に実測で発覚）。**エンジンで一括して変換する。**
+    if (qData.chartConfig) {
+      result.chartConfig = localizeChartConfig(qData.chartConfig, lang);
+    }
 
     if (qData.choices) {
       result.choices = qData.choices;
@@ -162,35 +181,7 @@ var QuestionGenerator = (function() {
   function generateChartQuestion(template, lang) {
     lang = lang || "ja";
     var chartData = template.chartGenerator(lang);
-    var qData = template.questionGenerator(chartData, lang);
-
-    var result = {
-      id: template.id + "_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない
-      category: categoryLabelFor(template.categoryId, template.category, lang),
-      categoryId: template.categoryId,
-      difficulty: template.difficulty || 2,
-      text: qData.text,
-      answerType: template.answerType,
-      correctAnswer: qData.answer,
-      unit: unitLabelFor(qData.unit || "", lang),
-      unitKey: qData.unit || "",
-      explanation: qData.explanation,
-      // ⚠️ chartConfig の中の単位を言語で引き直す。
-      //    テンプレート側で個別に直すと必ず漏れる（実際、9本を英語化したとき
-      //    unit だけ「万円」のまま残り、グラフ4本が日本語混じりで出た。
-      //    2026-09-07に実測で発覚）。**エンジンで一括して変換する。**
-      chartConfig: localizeChartConfig(qData.chartConfig, lang),
-      timeLimitSec: template.timeLimitSec
-    };
-
-    if (qData.choices) {
-      result.choices = qData.choices;
-      var idx = qData.choices.indexOf(qData.answer);
-      result.correctAnswer = idx >= 0 ? idx : 0;
-    }
-
-    return result;
+    return buildDataQuestion(template, template.questionGenerator(chartData, lang), lang);
   }
 
   // --- テンプレート型問題の生成 ---

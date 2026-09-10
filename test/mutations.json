@@ -2441,8 +2441,8 @@
     "name": "グラフの単位を言語変換しない",
     "why": "chartConfig.unit が日本語のまま残る。テンプレート側で個別に直すと必ず漏れる（実際9本を英語化したとき unit だけ「万円」が残り、グラフ4本が日本語混じりで出た。検査もキーを列挙していたため見逃した）",
     "file": "generator.js",
-    "find": "      chartConfig: localizeChartConfig(qData.chartConfig, lang),",
-    "replace": "      chartConfig: qData.chartConfig,",
+    "find": "      result.chartConfig = localizeChartConfig(qData.chartConfig, lang);",
+    "replace": "      result.chartConfig = qData.chartConfig;",
     "expect": "english"
   },
   {
@@ -2774,12 +2774,12 @@
     "replace": "    shareTags: \"#公務員試験 #数的処理 #判断推理\""
   },
   {
-    "name": "表の問題から unitKey を落とす",
+    "name": "生成結果から unitKey を落とす",
     "expect": "generator",
     "file": "generator.js",
-    "why": "unitKey は翻訳前の単位キー。落ちると未翻訳の単位を機械で洗い出せなくなる。表示は unit があるので画面は壊れず、翻訳漏れの検知だけが静かに死ぬ",
-    "find": "    var qData = template.questionGenerator(tableData, lang);\n\n    var result = {\n      id: template.id + \"_\" + Date.now() + \"_\" + Math.random().toString(36).substr(2, 5),\n      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない\n      category: categoryLabelFor(template.categoryId, template.category, lang),\n      categoryId: template.categoryId,\n      difficulty: template.difficulty || 2,\n      text: qData.text,\n      answerType: template.answerType,\n      correctAnswer: qData.answer,\n      unit: unitLabelFor(qData.unit || \"\", lang),\n      unitKey: qData.unit || \"\",",
-    "replace": "    var qData = template.questionGenerator(tableData, lang);\n\n    var result = {\n      id: template.id + \"_\" + Date.now() + \"_\" + Math.random().toString(36).substr(2, 5),\n      templateId: template.id,   // 集計用。id は毎問ユニークなので分析に使えない\n      category: categoryLabelFor(template.categoryId, template.category, lang),\n      categoryId: template.categoryId,\n      difficulty: template.difficulty || 2,\n      text: qData.text,\n      answerType: template.answerType,\n      correctAnswer: qData.answer,\n      unit: unitLabelFor(qData.unit || \"\", lang),"
+    "why": "unitKey は翻訳前の単位キー。落ちると未翻訳の単位を機械で洗い出せなくなる。表示は unit があるので画面は壊れず、翻訳漏れの検知だけが静かに死ぬ。2026-09-09に表とグラフの組み立てを1つにまとめたので、1箇所で表・グラフ両方に効く",
+    "find": "      unit: unitLabelFor(qData.unit || \"\", lang),\n      unitKey: qData.unit || \"\",",
+    "replace": "      unit: unitLabelFor(qData.unit || \"\", lang),"
   },
   {
     "name": "既定の言語で表記表を引かない",
