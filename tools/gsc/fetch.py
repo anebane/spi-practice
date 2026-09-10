@@ -48,6 +48,12 @@ def query(svc, site, start, end, dims, limit=25000):
 
 def main():
     p = argparse.ArgumentParser()
+    # ⚠️ 既定はドメインプロパティだが、**2026-09-10時点では旧URLのプロパティに
+    #    検索流入の96%が計上されている**（28日で 695 vs 27クリック）。
+    #    旧URL https://anebane.github.io/spi-practice/ は 301 で正しく転送されており
+    #    サイトは壊れていないが、Googleが移行を反映しきっていない。
+    #    ⚠️ **この既定値だけを見て「集客が無い」と結論しないこと。**実際にやった。
+    #    両方を見るには --all-sites を使う（sites().list() で見えるもの全部を出す）。
     p.add_argument("--site", default="sc-domain:tekisei-drill.com",
                    help="ドメインプロパティは sc-domain:example.com 形式")
     p.add_argument("--days", type=int, default=28, help="遡る日数")
