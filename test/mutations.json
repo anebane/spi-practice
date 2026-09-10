@@ -2774,10 +2774,10 @@
     "replace": "    shareTags: \"#公務員試験 #数的処理 #判断推理\""
   },
   {
-    "name": "生成結果から unitKey を落とす",
+    "name": "表・グラフの問題から unitKey を落とす",
     "expect": "generator",
     "file": "generator.js",
-    "why": "unitKey は翻訳前の単位キー。落ちると未翻訳の単位を機械で洗い出せなくなる。表示は unit があるので画面は壊れず、翻訳漏れの検知だけが静かに死ぬ。2026-09-09に表とグラフの組み立てを1つにまとめたので、1箇所で表・グラフ両方に効く",
+    "why": "unitKey は翻訳前の単位キー。落ちると未翻訳の単位を機械で洗い出せなくなる。表示は unit があるので画面は壊れず、翻訳漏れの検知だけが静かに死ぬ。⚠️ 通常の問題を壊す変異（「生成結果から unitKey を落とす」）とは別経路。こちらは buildDataQuestion 側で、表とグラフの両方に1箇所で効く",
     "find": "      unit: unitLabelFor(qData.unit || \"\", lang),\n      unitKey: qData.unit || \"\",",
     "replace": "      unit: unitLabelFor(qData.unit || \"\", lang),"
   },
