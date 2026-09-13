@@ -1209,10 +1209,10 @@
   },
   {
     "name": "プリキャッシュをごっそり減らす",
-    "why": "リスト整理のつもりで大半を消す。オフラインで開けないページだらけになる",
+    "why": "リスト整理のつもりで大半を消す。オフラインで開けないページだらけになる。⚠️ find に一覧の全行を書くと、URLを1つ足すたびに空振りする（2026-09-11に3回目）。配列の開始だけを掴む形にした",
     "file": "sw.js",
-    "find": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/generator.js\",\n  \"/app.js\",\n  \"/favicon.svg\",\n  \"/manifest.json\",\n  OFFLINE_URL,\n  \"/koumuin/\",\n  \"/en/\",\n  \"/tamatebako-shisoku/\",\n  \"/tamatebako-shisoku/app.js\",\n  \"/icons/icon-192.png\",\n  \"/icons/icon-512.png\",\n  \"/icons/icon-maskable-512.png\",\n  \"/icons/apple-touch-icon-180.png\",",
-    "replace": "  \"/\",\n  \"/style.css\",\n  \"/questions.js\",\n  \"/app.js\",",
+    "find": "const PRECACHE_URLS = [\n  \"/\",\n  \"/style.css\",",
+    "replace": "const PRECACHE_URLS = [\n  \"/\",\n];\nconst UNUSED_PRECACHE = [\n  \"/style.css\",",
     "expect": "pwa"
   },
   {
@@ -2230,8 +2230,9 @@
     "name": "プロファイルの宣言を app.js より後に下げる",
     "file": "koumuin/index.html",
     "expect": "profile",
-    "find": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>\n  <script src=\"../generator.js\"></script>\n  <script src=\"../affiliate.js\"></script>\n  <script src=\"../app.js\"></script>",
-    "replace": "  <script src=\"../generator.js\"></script>\n  <script src=\"../affiliate.js\"></script>\n  <script src=\"../app.js\"></script>\n  <script>var ACTIVE_PROFILE = \"koumuin\";</script>"
+    "find": "  <script>var ACTIVE_PROFILE = \"koumuin\";</script>",
+    "replace": "  <!-- 宣言をここから外し、app.js の後ろへ動かす（壊し方の再現） -->",
+    "why": "この宣言が app.js より後ろにあると、app.js は ACTIVE_PROFILE を読めず 既定の \"spi\" に倒れる。公務員ページなのにSPIの出題になるが、画面は正常に動くので気づけない。⚠️ 2026-09-11に abtest.js を差し込んだとき find が空振りになった。宣言そのものを外す形にして、間に何が入っても成立するようにした"
   },
   {
     "name": "プロファイルの id をキーと食い違わせる",
@@ -2852,5 +2853,149 @@
     "find": "        choices: tableData.rows.slice(),\n        explanation: L.growthExp(",
     "replace": "        explanation: L.growthExp(",
     "expect": "generator"
+  },
+  {
+    "name": "ABの群を偏らせる",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "群が偏ると、広告の効果と群の偏りを区別できなくなる。数字は出続けるので気づけない",
+    "find": "        v = AB_GROUPS[Math.floor(Math.random() * AB_GROUPS.length)];",
+    "replace": "        v = Math.random() < 0.8 ? AB_GROUPS[1] : AB_GROUPS[0];"
+  },
+  {
+    "name": "ABの群を利用者ごとに固定しない",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "振り直されると同じ人が広告あり/なしを行き来し、完走率の差が薄まる。効果があっても無いように見える",
+    "find": "        global.localStorage.setItem(AB_KEY, v);",
+    "replace": "        void 0;"
+  },
+  {
+    "name": "保存できない環境でABの群わけが例外を投げる",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "プライベートウィンドウ等で localStorage が例外を投げる。握りつぶさないとその利用者の計測が全部消え、集計では「少し減った」としか見えない",
+    "find": "    } catch (e) {\n      cache = \"unassigned\";\n    }",
+    "replace": "    } catch (e) {\n      throw e;\n    }"
+  },
+  {
+    "name": "ABの群を全イベントに乗せるのをやめる",
+    "expect": "abtest",
+    "file": "app.js",
+    "why": "trackEvent で一括して乗せないと、書き忘れた面が必ず出る。profile で同じ事故を起こしている（2026-09-06に /koumuin/ で発覚）",
+    "find": "      if (p.ab_group === undefined && typeof abGroup === \"function\") {\n        p.ab_group = abGroup();\n      }",
+    "replace": "      void 0;"
+  },
+  {
+    "name": "ads.txt から AdSense の宣言を消す",
+    "expect": "adstxt",
+    "file": "ads.txt",
+    "why": "片方のネットワークの管理画面が出す内容をそのまま貼ると、もう片方の行が消える。例外は出ず、その収益計上だけが静かに止まる。気づくのは月末の明細",
+    "find": "google.com, pub-5409685648363967, DIRECT, f08c47fec0942fa0\n",
+    "replace": ""
+  },
+  {
+    "name": "ads.txt から忍者AdMaxの宣言を消す",
+    "expect": "adstxt",
+    "file": "ads.txt",
+    "why": "同上。逆方向。AdSenseの内容だけを貼り直すと忍者側が消える",
+    "find": "adm.shinobi.jp,231519,DIRECT\n",
+    "replace": ""
+  },
+  {
+    "name": "abtest.js を app.js より後ろに読み込む",
+    "expect": "abtest",
+    "file": "index.html",
+    "why": "読み込み順が逆でも例外は出ない。typeof のフォールバックがあるので、その面だけ群が付かないまま静かに進む。集計では「一部に ab_group が無い」としか見えず、どの面が抜けているか分からない。2026-09-11に28面中1面で実際に起きた",
+    "find": "  <!-- ABテストの群わけ。app.js より前に読み込む\n       ⚠️ 無いと全イベントに群が乗らず、ABの比較が成立しない -->\n  <script src=\"abtest.js\"></script>\n  <script src=\"app.js\"></script>",
+    "replace": "  <script src=\"app.js\"></script>\n  <script src=\"abtest.js\"></script>"
+  },
+  {
+    "name": "記事ページの広告を全員に出す",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "ABテストの ads 群だけに出す判定を外すと、control 群にも広告が出る。対照群が汚れると「広告を出したら完走率がどう動いたか」を後から言えなくなる。広告は表示されるので画面上は正常に見える",
+    "find": "    if (typeof abShowAds !== \"function\" || !abShowAds()) return false;",
+    "replace": "    if (false) return false;"
+  },
+  {
+    "name": "ABの群を1つに潰す",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "群が1つしかないとABの比較にならない。広告は全員に出るか誰にも出ないかのどちらかになり、比較の前提が消える。画面は正常に動く",
+    "find": "  var AB_GROUPS = [\"control\", \"ads\"];",
+    "replace": "  var AB_GROUPS = [\"ads\"];"
+  },
+  {
+    "name": "保存できない環境でも群を割り当てる",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "localStorage が使えない環境で control/ads を返すと、毎回振り直しになって同じ人が両群を行き来する。集計上は群が付いているので気づけない",
+    "find": "      cache = \"unassigned\";",
+    "replace": "      cache = AB_GROUPS[Math.floor(Math.random() * AB_GROUPS.length)];"
+  },
+  {
+    "name": "割り当てられない利用者にも広告を出す",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "unassigned に広告を出すと対照群が汚れる。「広告を出したら完走率がどう動いたか」を後から言えなくなる",
+    "find": "    return abGroup() === \"ads\";",
+    "replace": "    return abGroup() !== \"control\";"
+  },
+  {
+    "name": "群を個別のイベントに手書きする",
+    "expect": "abtest",
+    "file": "app.js",
+    "why": "trackEvent の一括付与に加えて個別に書くと二重管理になる。片方だけ直す事故が起き、面によって群がずれる",
+    "find": "    trackEvent(\"share_x\", { score_percent: percent });",
+    "replace": "    trackEvent(\"share_x\", { score_percent: percent, ab_group: \"control\" });"
+  },
+  {
+    "name": "広告タグをPC用だけにする",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "PC 58% / スマホ 40%（実測）。片方の枠を落とすとそのデバイスには出ないが、もう片方では出るので画面を見ても気づけない",
+    "find": "    sp: \"https://adm.shinobi.jp/s/3699c5a4a3decd176accb15405a99283\"",
+    "replace": "    sp: \"https://adm.shinobi.jp/s/701e1f0351b6f71b0986f62aae5e1949\""
+  },
+  {
+    "name": "ads.txt の検査が別のファイルを見る",
+    "expect": "adstxt",
+    "file": "test/adstxt.spec.js",
+    "why": "検査の見る先を取り違えると、ads.txt が壊れていても緑になる。ファイルは存在するので存在検査も素通りし、レコード数・書式の判定が別物に対して行われる",
+    "find": "const file = path.join(ROOT, \"ads.txt\");",
+    "replace": "const file = path.join(ROOT, \"robots.txt\");"
+  },
+  {
+    "name": "ads.txt の置き場所を見失わせる",
+    "expect": "adstxt",
+    "file": "test/adstxt.spec.js",
+    "why": "置き場所を変えたのに検査側を直し忘れると、以後この検査は何も見ない。広告の収益計上が止まっても気づけない",
+    "find": "const file = path.join(ROOT, \"ads.txt\");",
+    "replace": "const file = path.join(ROOT, \"ads-old.txt\");"
+  },
+  {
+    "name": "群わけの実体を見失わせる",
+    "expect": "abtest",
+    "file": "test/abtest.spec.js",
+    "why": "abtest.js を改名・移動したのに検査側を直し忘れると、群わけの中身を一度も読まないまま緑になる",
+    "find": "const abFile = path.join(ROOT, \"abtest.js\");",
+    "replace": "const abFile = path.join(ROOT, \"abtest-old.js\");"
+  },
+  {
+    "name": "記事の広告実装を見失わせる",
+    "expect": "abtest",
+    "file": "test/abtest.spec.js",
+    "why": "記事ページ側の広告実装を見失うと、広告タグや出し分けの検査が全部素通りする",
+    "find": "  const file = path.join(ROOT, \"affiliate-article.js\");",
+    "replace": "  const file = path.join(ROOT, \"affiliate-article-old.js\");"
+  },
+  {
+    "name": "app.js をプロファイル宣言より前に読み込む",
+    "expect": "profile",
+    "file": "en/index.html",
+    "why": "app.js が読む時点で ACTIVE_PROFILE が未定義になり、既定の spi に落ちる。**画面は英語のまま出題だけ日本語のSPIになる**。例外は出ない",
+    "find": "  <script src=\"../questions.js\"></script>\n  <script>var ACTIVE_PROFILE = \"en\";</script>",
+    "replace": "  <script src=\"../questions.js\"></script>\n  <script src=\"../app.js\"></script><script>var ACTIVE_PROFILE = \"en\";</script>"
   }
 ]

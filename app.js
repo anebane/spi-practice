@@ -21,6 +21,13 @@
       if (p.profile === undefined && typeof PROFILE_ID !== "undefined") {
         p.profile = PROFILE_ID;
       }
+      // ⚠️ ABテストの群も一括で乗せる。個別のイベントに書き足す形にすると
+      //    必ず書き忘れる面が出る（profile で同じ判断をした理由と同じ）。
+      //    群わけの実体は abtest.js。記事ページには app.js が無いので、
+      //    両方から使えるよう切り出してある。app.js より前に読み込むこと。
+      if (p.ab_group === undefined && typeof abGroup === "function") {
+        p.ab_group = abGroup();
+      }
       gtag("event", eventName, p);
     }
   }

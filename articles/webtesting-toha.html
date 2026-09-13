@@ -143,6 +143,10 @@
       <!-- 広告枠。中身は affiliate.js が描画する。
            ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
            test/html.spec.js が直書きを検出して落とす）。 -->
+      <!-- ネットワーク広告（忍者AdMax）。中身は affiliate-article.js が入れる。
+           ⚠️ ABテストの ads 群にだけ出る。control 群には出ない。 -->
+      <div id="network-ad-article" style="display:none"></div>
+
       <div id="affiliate-article"></div>
       <p class="legal-note">「SPI」「SPI3」は株式会社リクルートマネジメントソリューションズの登録商標です。当サイトは同社およびその関連会社とは関係がなく、公式に許諾を受けたサービスではありません。上記の表記は、対応する試験形式を説明する目的で使用しています。</p>
     </main>
@@ -160,6 +164,8 @@
   </div>
   <script src="../analytics.js"></script>
   <script src="/pwa.js" defer></script>
+  <!-- ABテストの群わけ。広告の描画より前に読み込む -->
+  <script src="/abtest.js"></script>
   <script src="/affiliate.js"></script>
   <script src="/affiliate-article.js"></script>
 </body>

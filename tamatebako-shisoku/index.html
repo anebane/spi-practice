@@ -104,6 +104,10 @@
            ⚠️ 結果画面(#screen-result)ではなく、常に見えるイントロ側に置く。
            隠れた要素に描くと、誰も見ていないのに affiliate_view が飛び、
            これから測ろうとしている表示回数そのものが汚れる。 -->
+      <!-- ネットワーク広告（忍者AdMax）。中身は affiliate-article.js が入れる。
+           ⚠️ ABテストの ads 群にだけ出る。control 群には出ない。 -->
+      <div id="network-ad-article" style="display:none"></div>
+
       <div id="affiliate-article"></div>
       <p class="legal-note">「SPI」「SPI3」は株式会社リクルートマネジメントソリューションズの登録商標です。当サイトは同社およびその関連会社とは関係がなく、公式に許諾を受けたサービスではありません。上記の表記は、対応する試験形式を説明する目的で使用しています。</p>
     </main>
@@ -191,6 +195,10 @@
 
 <script src="../questions.js"></script>
 <script src="../generator.js"></script>
+<!-- ABテストの群わけ。この面の app.js（四則逆算の独自実装）と
+     広告の描画の両方より前に読み込む。
+     ⚠️ 後ろに置くと群が全イベントに乗らず、ABの比較が成立しない -->
+<script src="/abtest.js"></script>
 <script src="app.js"></script>
 <script src="../analytics.js"></script>
   <script src="/pwa.js" defer></script>

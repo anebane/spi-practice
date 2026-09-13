@@ -72,6 +72,8 @@ const COVLOG = path.join(__dirname, ".mutation-coverage.log");     // 失敗経�
 const REGISTER = path.join(__dirname, "mutations-uncovered.json"); // 未カバーの台帳
 
 const SPECS = {
+  abtest: "test/abtest.spec.js",
+  adstxt: "test/adstxt.spec.js",
   affiliate: "test/affiliate.spec.js",
   analytics: "test/analytics.spec.js",
   app: "test/app.spec.js",

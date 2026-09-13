@@ -124,6 +124,10 @@
       <!-- 広告枠。中身は affiliate.js が描画する。
            ⚠️ ここに直接リンクを書かないこと（PR表記と対象の注記が漏れる。
            test/html.spec.js が直書きを検出して落とす）。 -->
+      <!-- ネットワーク広告（忍者AdMax）。中身は affiliate-article.js が入れる。
+           ⚠️ ABテストの ads 群にだけ出る。control 群には出ない。 -->
+      <div id="network-ad-article" style="display:none"></div>
+
       <div id="affiliate-article"></div>
     </main>
     <footer class="legal-footer">
@@ -140,6 +144,8 @@
   </div>
   <script src="../../analytics.js"></script>
   <script src="/pwa.js" defer></script>
+  <!-- ABテストの群わけ。広告の描画より前に読み込む -->
+  <script src="/abtest.js"></script>
   <script src="/affiliate.js"></script>
   <script src="/affiliate-article.js"></script>
 </body>

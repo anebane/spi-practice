@@ -29,7 +29,7 @@
 // 以前ここには「2回目で直る」と書いてあったが誤りだった。
 // 実際、2026-08-28 の開発中に app.js を直したのに反映されず、
 // Service Worker を手で解除するまで旧版が配られ続けた。
-const VERSION = "2026-09-09a";
+const VERSION = "2026-09-11a";
 const PRECACHE = `precache-${VERSION}`;
 const RUNTIME = `runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -40,6 +40,11 @@ const PRECACHE_URLS = [
   "/questions.js",
   "/generator.js",
   "/app.js",
+  // ⚠️ ABテストの群わけ。オフラインでも試験は動くので、これが無いと
+  //    **オフライン利用者のイベントにだけ群が付かない。**
+  //    「control 群が少なく見える」という形で集計が歪み、しかも例外は出ない。
+  //    広告タグは含まないので、プリキャッシュしても広告が出るわけではない。
+  "/abtest.js",
   "/favicon.svg",
   "/manifest.json",
   OFFLINE_URL,

@@ -403,6 +403,9 @@
   <script>var ACTIVE_PROFILE = "en";</script>
   <script src="../generator.js"></script>
   <script src="../affiliate.js"></script>
+  <!-- ABテストの群わけ。app.js より前に読み込む
+       ⚠️ 無いと全イベントに群が乗らず、ABの比較が成立しない -->
+  <script src="../abtest.js"></script>
   <script src="../app.js"></script>
   <script src="/pwa.js" defer></script>
 </body>

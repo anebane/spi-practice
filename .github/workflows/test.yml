@@ -92,6 +92,14 @@ jobs:
       - name: 画面の文言（ja/en の突き合わせ）
         run: node test/ui-text.spec.js
 
+      # ads.txt。壊れても例外が出ず、広告の収益計上だけが静かに止まる。
+      - name: ads.txt の宣言
+        run: node test/adstxt.spec.js
+
+      # ABテストの群わけ。壊れても例外が出ず、比較の前提だけが静かに崩れる。
+      - name: ABテストの群わけ
+        run: node test/abtest.spec.js
+
       - name: 検査の登録漏れ（CIと破壊テストの両方に載っているか）
         run: node test/wiring.spec.js
 
