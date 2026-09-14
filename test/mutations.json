@@ -3157,5 +3157,13 @@
     "why": "本文の「公開: …」と構造化データの日付がずれる。どちらかを直したときに片方だけ直す事故で起きる",
     "find": "    \"datePublished\": \"2026-08-26\",",
     "replace": "    \"datePublished\": \"2025-08-26\","
+  },
+  {
+    "name": "構造化データが存在しないページを指す",
+    "expect": "html",
+    "file": "categories/goku/index.html",
+    "why": "パンくず・著者・ロゴ・画像は404でも画面に何も出ない。検索結果とAIの側でだけ壊れるので、リンク切れに永久に気づけない",
+    "find": "      \"url\": \"https://tekisei-drill.com/about.html\"",
+    "replace": "      \"url\": \"https://tekisei-drill.com/profile.html\""
   }
 ]

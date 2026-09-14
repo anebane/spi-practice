@@ -514,6 +514,42 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
       }
     }
   }
+  // --- 構造化データが指す自サイトのURLが実在するか ---
+  //
+  // ⚠️ パンくずのリンク・著者・ロゴ・画像は、どれも404でも画面には何も出ない。
+  //    検索結果やAIの側でだけ壊れる。2026-09-15にGoogleのリッチリザルト
+  //    テストが author の url を任意項目として求めたので足したが、
+  //    「足したURLが実在するか」は別問題で、書いた瞬間に嘘になりうる。
+  {
+    let links = 0;
+    const missing = [];
+    const toPath = (u) => {
+      let rel = u.replace(/^https:\/\/tekisei-drill\.com\//, "");
+      if (rel === "" || rel.endsWith("/")) rel += "index.html";
+      return rel;
+    };
+    for (const p of targets) {
+      const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+      for (const raw of [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => m[1])) {
+        let d; try { d = JSON.parse(raw); } catch (e) { continue; }
+        const walk = (o) => {
+          if (Array.isArray(o)) return o.forEach(walk);
+          if (!o || typeof o !== "object") return;
+          for (const [k, v] of Object.entries(o)) {
+            if (typeof v === "string" && v.startsWith("https://tekisei-drill.com/")) {
+              links++;
+              const f = toPath(v);
+              if (!fs.existsSync(path.join(ROOT, f))) missing.push(`${p}: ${k} → ${v}（${f} が無い）`);
+            } else walk(v);
+          }
+        };
+        walk(d);
+      }
+    }
+    cov.covered("構造化データの自サイトURL", links, 100);
+    for (const m of missing.slice(0, 8)) fail("構造化データ", "指しているURLが実在しない", m);
+  }
+
   cov.covered("構造化データを調べたページ", checked, 25);
   cov.covered("構造化データのブロック", blocks, 40);
   cov.skipped("説明文の一致判定", appDesc,
