@@ -1596,6 +1596,69 @@ if (failures.length) process.exitCode = 1;
 }
 
 
+// --- 熟語辞書の不変条件: 1熟語は1構成にしか属さない ---
+//
+// 語ペア辞書と同じ理由でここが要る。熟語の成り立ちは**誤答が構成名そのもの**なので、
+// 1つの熟語が2つの構成に登録された瞬間、正解が2つある問題ができる。
+// 数学的な検算ができない分野なので、辞書の作り方だけが担保になる。
+//
+// ⚠️「増加（似た意味）」と「増減（反対）」のように1字違いで構成が変わる。
+//   語を足すときに読み下さずに入れると、ここで初めて壊れが見える。
+{
+  const JUKUGO_KINDS = vm.runInContext("JUKUGO_KINDS", ctx);
+  const problems = [];
+
+  if (!Array.isArray(JUKUGO_KINDS) || JUKUGO_KINDS.length < 5) {
+    problems.push(`構成が ${JUKUGO_KINDS && JUKUGO_KINDS.length} 種しかない（SPIの出題は5種）`);
+  }
+
+  const ownerOfWord = new Map();   // 熟語 → 最初に見つけた構成
+  const names = new Set();
+  let total = 0;
+
+  for (const k of (JUKUGO_KINDS || [])) {
+    if (!k || typeof k.name !== "string" || !k.name.trim()) {
+      problems.push(`構成に name が無い: ${JSON.stringify(k)}`);
+      continue;
+    }
+    // 構成名が重複すると、選択肢に同じ文字列が2つ並んで正解が決まらない。
+    if (names.has(k.name)) problems.push(`構成名が重複している: ${k.name}`);
+    names.add(k.name);
+    if (typeof k.tell !== "string" || !k.tell.trim()) {
+      problems.push(`構成「${k.name}」に tell（言い換え）が無い。解説が作れない`);
+    }
+    if (!Array.isArray(k.words) || k.words.length < 10) {
+      problems.push(`構成「${k.name}」の熟語が少なすぎる: ${k.words && k.words.length}（最低10語）`);
+      continue;
+    }
+    for (const w of k.words) {
+      total++;
+      if (!Array.isArray(w) || w.length !== 2
+          || w.some(x => typeof x !== "string" || !x.trim())) {
+        problems.push(`構成「${k.name}」に不正な項目: ${JSON.stringify(w)}`);
+        continue;
+      }
+      if ([...w[0]].length !== 2) {
+        problems.push(`「${w[0]}」が二字熟語でない（構成「${k.name}」）`);
+      }
+      if (ownerOfWord.has(w[0]) && ownerOfWord.get(w[0]) !== k.name) {
+        problems.push(`「${w[0]}」が「${ownerOfWord.get(w[0])}」と「${k.name}」の両方に属している`);
+      }
+      ownerOfWord.set(w[0], k.name);
+    }
+  }
+
+  console.log(`\n熟語辞書の不変条件: ${names.size}構成 / ${total}語（異なり ${ownerOfWord.size}語）`);
+  if (!problems.length) {
+    console.log("   ✅ 同じ熟語が2つ以上の構成に現れていない");
+  } else {
+    console.log(`   ❌ ${problems.length}件`);
+    for (const p of problems.slice(0, 10)) console.log("   - " + p);
+    process.exitCode = 1;
+  }
+}
+
+
 // --- 語句の関係: 例示と同じ関係の選択肢がちょうど1つか ---
 //
 // 生成器が何を正解のつもりで作ったかは見ない。問題文と選択肢に出ている

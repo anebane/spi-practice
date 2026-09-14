@@ -611,8 +611,8 @@
     "name": "CATEGORY_PAGES と実在ページを食い違わせる",
     "why": "分野名からページを引く表が実物とずれると、404へ誘導するか、あるページへ導線が出なくなる（2026-09-06にプロファイル由来へ移したので、ずれはプロファイル側で起きる）",
     "file": "src/questions/_profile.js",
-    "find": "      { id: 11, name: \"四則逆算\",     slug: \"shisoku\" },",
-    "replace": "      { id: 11, name: \"四則逆算\",     slug: \"sokudo\" },",
+    "find": "slug: \"shisoku\" }",
+    "replace": "slug: \"sokudo\" }",
     "expect": "profile"
   },
   {
@@ -3029,5 +3029,45 @@
     "why": "st/t.js を読まなければ、キューに積んでも誰も描かない。枠は空のまま残る",
     "find": "  var ADMAX_SDK = \"https://adm.shinobi.jp/st/t.js\";",
     "replace": "  var ADMAX_SDK = \"\";"
+  },
+  {
+    "name": "同じ熟語を2つの構成に登録する",
+    "expect": "generator",
+    "file": "src/questions/16-jukugo.js",
+    "why": "熟語の成り立ちは誤答が構成名そのもの。1語が2構成に属した瞬間、正解が2つある問題ができる。数学的な検算ができない分野なので、辞書の作り方だけが担保",
+    "find": "[\"急流\", \"急な流れ\"]",
+    "replace": "[\"増加\", \"急な流れ\"]"
+  },
+  {
+    "name": "構成名を重複させる",
+    "expect": "generator",
+    "file": "src/questions/16-jukugo.js",
+    "why": "選択肢は構成名そのもの。名前が重複すると同じ文字列が2つ並び、どちらを選んでも正解に見える／不正解になる",
+    "find": "    name: \"主語と述語の関係\",",
+    "replace": "    name: \"似た意味の漢字を重ねる\","
+  },
+  {
+    "name": "読み下しを空にする",
+    "expect": "generator",
+    "file": "src/questions/16-jukugo.js",
+    "why": "tell が無いと解説が「つまりので、答えは」と壊れる。問題文と選択肢は正常なので、解説を開くまで気づけない",
+    "find": "    tell: \"2字の意味が逆になっている\",",
+    "replace": "    tell: \"\","
+  },
+  {
+    "name": "二字でない熟語を混ぜる",
+    "expect": "generator",
+    "file": "src/questions/16-jukugo.js",
+    "why": "三字以上が混ざると読み下しの手順が成立しない。出題は動くので、その語が出た回だけ問題として破綻する",
+    "find": "[\"読書\", \"書を読む\"]",
+    "replace": "[\"読書感想\", \"書を読む\"]"
+  },
+  {
+    "name": "ある構成の熟語を数語だけにする",
+    "expect": "generator",
+    "file": "src/questions/16-jukugo.js",
+    "why": "語数が減っても出題も解説も正常に動くので画面では気づけない。その構成だけ同じ熟語が繰り返し出るようになり、答えを丸暗記できてしまう（無限出題という商品価値そのものが削れる）",
+    "find": "    words: [\n      [\"日没\", \"日が没する\"], [\"地震\", \"地が震える\"], [\"雷鳴\", \"雷が鳴る\"],",
+    "replace": "    words: [\n      [\"日没\", \"日が没する\"], [\"地震\", \"地が震える\"], [\"雷鳴\", \"雷が鳴る\"]], _unused: ["
   }
 ]

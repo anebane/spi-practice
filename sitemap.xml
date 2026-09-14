@@ -154,6 +154,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://tekisei-drill.com/categories/jukugo/</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://tekisei-drill.com/categories/kisokusei/</loc>
     <lastmod>2026-09-04</lastmod>
     <changefreq>monthly</changefreq>

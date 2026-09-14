@@ -57,11 +57,12 @@ var QUESTION_PROFILES = {
     ],
 
     // 模擬試験には出さないが、解説ページと専用モードを持つ分野。
-    // 四則逆算は玉手箱形式（tamatebako-shisoku/）、語句の関係は言語分野（language/）。
+    // 四則逆算は玉手箱形式（tamatebako-shisoku/）、語句の関係と熟語の成り立ちは言語分野（language/）。
     // ⚠️ ここを examCategories に混ぜると、模擬試験の出題に入ってしまう。
     extraCategories: [
-      { id: 11, name: "四則逆算",     slug: "shisoku" },
-      { id: 12, name: "語句の関係",   slug: "goku" }
+      { id: 11, name: "四則逆算",       slug: "shisoku" },
+      { id: 12, name: "語句の関係",     slug: "goku" },
+      { id: 16, name: "熟語の成り立ち", slug: "jukugo" }
     ],
 
     // 設定画面で選べる問題数。index.html の data-value と一致していること。
