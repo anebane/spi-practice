@@ -415,6 +415,112 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   console.log(`広告枠: ${targets.length}面を検査`);
 }
 
+// --- 構造化データ(JSON-LD)が全ページにあり、実物と食い違っていないか ---
+//
+// 【なぜ必要か】
+// 2026-09-14 に28ページぶんを一括生成した。**一括生成の失敗はコピペのずれ**で、
+// 「別ページの見出しが入っている」「urlが1つ前のページのまま」という形で出る。
+// そして構造化データは画面に表示されないので、**目で見ても絶対に気づけない。**
+// 検索結果やAIの引用には出るので、間違ったまま外に出続ける。
+//
+// ⚠️ だから「あるか」ではなく「**実物と一致しているか**」を見る。
+//    url は canonical と、headline は h1 と、description は meta と突き合わせる。
+//    一致を見ない検査は、28ページ全部に同じ内容を入れても緑になる。
+{
+  // offline は検索に出す面ではない（Service Worker の代替表示）。
+  const EXCLUDE = new Set(["offline.html"]);
+  const targets = pages.filter((p) => !EXCLUDE.has(p));
+  let checked = 0, blocks = 0, appDesc = 0;
+
+  for (const p of targets) {
+    const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+    const found = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+      .map((m) => m[1]);
+    checked++;
+    if (!found.length) {
+      fail(p, "構造化データが無い",
+        "検索結果のパンくず表示とAIの読み取りに使われる。出さないなら EXCLUDE に理由つきで挙げること");
+      continue;
+    }
+
+    const canon = (html.match(/rel="canonical"\s+href="([^"]+)"/) || [])[1];
+    const h1raw = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1];
+    const h1 = h1raw ? h1raw.replace(/<[^>]+>/g, "").trim() : null;
+    const desc = (html.match(/name="description"\s+content="([^"]*)"/) || [])[1];
+
+    for (const raw of found) {
+      blocks++;
+      let d;
+      try { d = JSON.parse(raw); }
+      catch (e) { fail(p, "構造化データが壊れている", String(e.message).slice(0, 80)); continue; }
+      if (d["@context"] !== "https://schema.org") {
+        fail(p, "@context が schema.org でない", String(d["@context"]));
+      }
+      if (!d["@type"]) { fail(p, "@type が無い", JSON.stringify(d).slice(0, 60)); continue; }
+
+      if (d["@type"] === "BreadcrumbList") {
+        // ⚠️ 判定は複数あるが、失敗経路は1本にまとめる。
+        //    経路を分けるほど、それぞれに変異を書く義務が増えて台帳が膨らむ。
+        //    どこが壊れたかは detail に全部出るので、診断の情報量は落ちない。
+        const items = d.itemListElement || [];
+        const bad = [];
+        if (items.length < 2) bad.push(`${items.length}段しかない（ホームと現在地で2段以上）`);
+        items.forEach((it, i) => {
+          const last = i === items.length - 1;
+          if (it.position !== i + 1) bad.push(`${i + 1}番目の position が ${it.position}`);
+          if (!it.name) bad.push(`${i + 1}番目に名前が無い`);
+          if (!last && !it.item) bad.push(`${i + 1}番目「${it.name}」にリンクが無い`);
+          if (last && it.item) bad.push(`現在地「${it.name}」にリンクがある`);
+          if (it.item && !/^https:\/\/tekisei-drill\.com\//.test(it.item)) {
+            bad.push(`${i + 1}番目のURLが自サイトでない: ${it.item}`);
+          }
+        });
+        if (bad.length) fail(p, "パンくずの構造が壊れている", bad.join(" / "));
+        continue;
+      }
+
+      // --- 実物との突き合わせ。ここが本体 ---
+      if (canon && d.url && d.url !== canon) {
+        fail(p, "構造化データのURLが canonical と違う", `${d.url} ≠ ${canon}`);
+      }
+      if (h1 && d.headline && d.headline !== h1) {
+        fail(p, "構造化データの見出しが h1 と違う", `「${d.headline}」≠「${h1}」`);
+      }
+      // ⚠️ 説明文の一致を求めるのは「そのページ自体を表す型」だけ。
+      //    WebApplication は**アプリの説明**で、ページの meta description とは
+      //    別物として書かれている（試験4面が実際にそう）。同じ検査を当てると
+      //    意味のない赤が出続け、いずれ検査ごと外される。
+      const PAGE_TYPES = new Set(["Article", "CollectionPage", "WebPage"]);
+      if (PAGE_TYPES.has(d["@type"])) {
+        if (desc && d.description && d.description !== desc) {
+          fail(p, "構造化データの説明が meta description と違う",
+            `「${String(d.description).slice(0, 30)}…」≠「${desc.slice(0, 30)}…」`);
+        }
+      } else { appDesc++; }
+      if (!d.description && d["@type"] !== "FAQPage" && d["@type"] !== "BreadcrumbList") {
+        fail(p, "構造化データに説明が無い", `${d["@type"]}（${p}）`);
+      }
+      // 日付は本文に書いてあるものと一致させる。書いていない日付を足さない。
+      if (d.datePublished) {
+        const m = html.match(/公開[：:]\s*(\d{4})年(\d{1,2})月(\d{1,2})日/);
+        if (!m) {
+          fail(p, "本文に無い公開日を構造化データが名乗っている", String(d.datePublished));
+        } else {
+          const want = `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`;
+          if (d.datePublished !== want) {
+            fail(p, "公開日が本文と食い違う", `${d.datePublished} ≠ ${want}（本文の表示）`);
+          }
+        }
+      }
+    }
+  }
+  cov.covered("構造化データを調べたページ", checked, 25);
+  cov.covered("構造化データのブロック", blocks, 40);
+  cov.skipped("説明文の一致判定", appDesc,
+    "WebApplication/FAQPage はページではなくアプリ・設問を表すため、meta description とは別物。存在だけ見る");
+}
+
+
 // --- AdSense の審査用スニペットが全ページの <head> に入っているか ---
 // 審査はサイト単位なので、1ページでも欠けると「コードが見つかりません」で
 // 弾かれる。手で貼ると必ず漏れるので機械的に守る。新しいページを足したとき

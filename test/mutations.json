@@ -603,8 +603,8 @@
     "name": "実在しない分野の解き方を宣伝する",
     "why": "実在しない解き方を title/description に書くと、期待して来た人が空振りする。⚠️ 2026-09-04に全13分野のページを作ったため、実在分野を使う旧版のfindは成立しなくなった。テンプレに存在しない分野名を使う形に作り替えた",
     "file": "categories/index.html",
-    "find": "SPI非言語の解き方と練習問題。推論・",
-    "replace": "SPI非言語の解き方と練習問題。長文読解・推論・",
+    "find": "name=\"description\" content=\"SPI非言語の解き方と練習問題。推論・",
+    "replace": "name=\"description\" content=\"SPI非言語の解き方と練習問題。長文読解・推論・",
     "expect": "html"
   },
   {
@@ -3069,5 +3069,93 @@
     "why": "語数が減っても出題も解説も正常に動くので画面では気づけない。その構成だけ同じ熟語が繰り返し出るようになり、答えを丸暗記できてしまう（無限出題という商品価値そのものが削れる）",
     "find": "    words: [\n      [\"日没\", \"日が没する\"], [\"地震\", \"地が震える\"], [\"雷鳴\", \"雷が鳴る\"],",
     "replace": "    words: [\n      [\"日没\", \"日が没する\"], [\"地震\", \"地が震える\"], [\"雷鳴\", \"雷が鳴る\"]], _unused: ["
+  },
+  {
+    "name": "構造化データの型指定を壊す",
+    "expect": "html",
+    "file": "tamatebako-shisoku/index.html",
+    "why": "type属性が違うと検索エンジンもAIも構造化データとして読まない。画面は何も変わらないので目視では絶対に気づけない",
+    "find": "<script type=\"application/ld+json\">",
+    "replace": "<script type=\"application/json\">"
+  },
+  {
+    "name": "構造化データのJSONを壊す",
+    "expect": "html",
+    "file": "categories/suiron/index.html",
+    "why": "1文字の壊れでブロック全体が無視される。カンマ1つの入れ違いで起きるが、画面には何も出ない",
+    "find": "    \"headline\": \"推論の解き方\",",
+    "replace": "    \"headline\": \"推論の解き方\",,"
+  },
+  {
+    "name": "構造化データの語彙を別物にする",
+    "expect": "html",
+    "file": "categories/soneki/index.html",
+    "why": "@context が schema.org でないと、項目名が解釈されず全部無視される",
+    "find": "    \"@context\": \"https://schema.org\",\n    \"@type\": \"BreadcrumbList\",",
+    "replace": "    \"@context\": \"http://schema.example\",\n    \"@type\": \"BreadcrumbList\","
+  },
+  {
+    "name": "構造化データの型名を落とす",
+    "expect": "html",
+    "file": "categories/shugo/index.html",
+    "why": "@type が無いと何を表すデータか決まらず、丸ごと無視される",
+    "find": "    \"@type\": \"BreadcrumbList\",",
+    "replace": "    \"@typeName\": \"BreadcrumbList\","
+  },
+  {
+    "name": "パンくずの現在地にリンクを付ける",
+    "expect": "html",
+    "file": "categories/noudo/index.html",
+    "why": "現在地に item を付けると階層が1段多い扱いになり、検索結果のパンくず表示が実際の構造とずれる",
+    "find": "        \"name\": \"濃度算の解き方\"\n      }",
+    "replace": "        \"name\": \"濃度算の解き方\",\n        \"item\": \"https://tekisei-drill.com/categories/noudo/\"\n      }"
+  },
+  {
+    "name": "構造化データのURLを別ページのものにする",
+    "expect": "html",
+    "file": "categories/sokudo/index.html",
+    "why": "一括生成のコピペずれで最も起きやすい形。別ページのURLを名乗ると、検索エンジンがどのページの情報か判断できなくなる",
+    "find": "    \"url\": \"https://tekisei-drill.com/categories/sokudo/\",",
+    "replace": "    \"url\": \"https://tekisei-drill.com/categories/shigoto/\","
+  },
+  {
+    "name": "構造化データの見出しを実物とずらす",
+    "expect": "html",
+    "file": "categories/wariai/index.html",
+    "why": "h1と違う見出しを名乗ると、検索結果に出る文言とページの中身が食い違う。画面には出ないので気づけない",
+    "find": "    \"headline\": \"割合・比の解き方\",",
+    "replace": "    \"headline\": \"損益算の解き方\","
+  },
+  {
+    "name": "構造化データの説明を実物とずらす",
+    "expect": "html",
+    "file": "categories/zuhyo/index.html",
+    "why": "meta description と違う説明を出すと、検索結果とAIの引用で別々の説明が使われる",
+    "find": "    \"description\": \"SPI図表の読み取りの解き方。",
+    "replace": "    \"description\": \"べつの分野の説明。SPI図表の読み取りの解き方。"
+  },
+  {
+    "name": "構造化データから説明を落とす",
+    "expect": "html",
+    "file": "categories/junretsu/index.html",
+    "why": "説明が無いと、AIが引用するときに何のページか判断する材料が消える",
+    "find": "    \"description\": \"SPIの順列・組み合わせの解き方。",
+    "replace": "    \"descriptionText\": \"SPIの順列・組み合わせの解き方。"
+  },
+  {
+    "name": "本文に無い公開日を名乗らせる",
+    "expect": "html",
+    "file": "categories/kisokusei/index.html",
+    "why": "画面に出していない日付を構造化データだけが主張する状態。古い記事に見せる／新しく見せかけるの両方が起きる",
+    "find": "    \"headline\": \"規則性・方角の解き方\",",
+    "replace": "    \"headline\": \"規則性・方角の解き方\",\n    \"datePublished\": \"2020-01-01\","
+  },
+  {
+    "name": "公開日を本文と食い違わせる",
+    "expect": "html",
+    "file": "articles/testcenter.html",
+    "why": "本文の「公開: …」と構造化データの日付がずれる。どちらかを直したときに片方だけ直す事故で起きる",
+    "find": "    \"datePublished\": \"2026-08-26\",",
+    "replace": "    \"datePublished\": \"2025-08-26\","
   }
 ]
