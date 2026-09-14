@@ -31,10 +31,22 @@
   // ⚠️ アドネットワークのディスプレイ広告にはPR表記を付けない。
   //    判断の主体と根拠は test/affiliate.spec.js の冒頭に記録してある
   //    （矢野さんの判断・業界慣習。Claude 側では一次情報を確認できていない）。
-  var NETWORK_TAGS = {
-    pc: "https://adm.shinobi.jp/s/701e1f0351b6f71b0986f62aae5e1949",
-    sp: "https://adm.shinobi.jp/s/3699c5a4a3decd176accb15405a99283"
+  /**
+   * 忍者AdMax の広告枠ID（PC用・スマホ用）。**URLではなくIDだけを持つ。**
+   *
+   * ⚠️ 旧来の https://adm.shinobi.jp/s/<ID> というタグURLを使ってはいけない。
+   *    中身が document.write で書かれており、**動的に差し込んだ <script> からの
+   *    document.write はブラウザが無視する**。結果、広告が出ないどころか
+   *    広告のリクエストすら飛ばない。例外も警告も出ない。
+   *    2026-09-14、本番でこれを踏んだ（表示0・リクエスト0・エラー0で3日気づけず）。
+   *    公式のSPA向け実装 github.com/ninjatools/admax-spa-examples に従い、
+   *    admaxads キューへ積んで st/t.js に描かせる。
+   */
+  var NETWORK_SLOTS = {
+    pc: "701e1f0351b6f71b0986f62aae5e1949",
+    sp: "3699c5a4a3decd176accb15405a99283"
   };
+  var ADMAX_SDK = "https://adm.shinobi.jp/st/t.js";
 
   /** スマホ幅かどうか。忍者AdMax が PC/SP で枠を分けているので判定が要る。 */
   function isMobile() {
@@ -57,10 +69,32 @@
     if (!slot) return false;
 
     var mobile = isMobile();
-    var script = document.createElement("script");
-    script.src = mobile ? NETWORK_TAGS.sp : NETWORK_TAGS.pc;
-    script.async = true;
-    slot.appendChild(script);
+    var id = mobile ? NETWORK_SLOTS.sp : NETWORK_SLOTS.pc;
+
+    // 枠の器を置く。SDKは data-admax-id を持つ要素を探して中身を入れる。
+    // ⚠️ class は "admax-ads" 固定。管理画面が出す公式タグと同じでないと拾われない。
+    //    2026-09-14、"admax-banner" と書いて拾われなかった。**推測で書かない。**
+    //    タグの実物は 管理画面 → 広告枠一覧 → タグ確認 → 「非同期タグを表示」。
+    var box = document.createElement("div");
+    box.className = "admax-ads";
+    box.setAttribute("data-admax-id", id);
+    box.style.display = "inline-block";
+    // PC枠は 300x250 を明示する（公式タグがそう出す）。SP枠は指定しない。
+    if (!mobile) { box.style.width = "300px"; box.style.height = "250px"; }
+    slot.appendChild(box);
+
+    // ⚠️ 器を置いてからキューに積み、最後にSDKを読む。この順は公式サンプルと同じ。
+    window.admaxads = window.admaxads || [];
+    window.admaxads.push({ admax_id: id, type: "banner" });
+
+    // SDKは1ページに1回だけ。二重に読むと描画側が多重起動する。
+    if (!document.getElementById("admax-sdk")) {
+      var script = document.createElement("script");
+      script.id = "admax-sdk";
+      script.src = ADMAX_SDK;
+      script.async = true;
+      document.head.appendChild(script);
+    }
     slot.style.display = "";
 
     if (typeof gtag === "function") {
@@ -103,6 +137,6 @@
 
   // 検査から placement の導き方だけを確かめられるようにしておく
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { placementOf: placementOf, NETWORK_TAGS: NETWORK_TAGS, isMobile: isMobile };
+    module.exports = { placementOf: placementOf, NETWORK_SLOTS: NETWORK_SLOTS, isMobile: isMobile };
   }
 })();

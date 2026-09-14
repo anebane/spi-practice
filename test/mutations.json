@@ -2951,14 +2951,6 @@
     "replace": "    trackEvent(\"share_x\", { score_percent: percent, ab_group: \"control\" });"
   },
   {
-    "name": "広告タグをPC用だけにする",
-    "expect": "abtest",
-    "file": "affiliate-article.js",
-    "why": "PC 58% / スマホ 40%（実測）。片方の枠を落とすとそのデバイスには出ないが、もう片方では出るので画面を見ても気づけない",
-    "find": "    sp: \"https://adm.shinobi.jp/s/3699c5a4a3decd176accb15405a99283\"",
-    "replace": "    sp: \"https://adm.shinobi.jp/s/701e1f0351b6f71b0986f62aae5e1949\""
-  },
-  {
     "name": "ads.txt の検査が別のファイルを見る",
     "expect": "adstxt",
     "file": "test/adstxt.spec.js",
@@ -2997,5 +2989,45 @@
     "why": "app.js が読む時点で ACTIVE_PROFILE が未定義になり、既定の spi に落ちる。**画面は英語のまま出題だけ日本語のSPIになる**。例外は出ない",
     "find": "  <script src=\"../questions.js\"></script>\n  <script>var ACTIVE_PROFILE = \"en\";</script>",
     "replace": "  <script src=\"../questions.js\"></script>\n  <script src=\"../app.js\"></script><script>var ACTIVE_PROFILE = \"en\";</script>"
+  },
+  {
+    "name": "広告枠をPC用だけにする",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "PC 58% / スマホ 40%（実測）。片方の枠を落とすとそのデバイスには出ないが、もう片方では出るので画面を見ても気づけない",
+    "find": "    sp: \"3699c5a4a3decd176accb15405a99283\"",
+    "replace": "    sp: \"701e1f0351b6f71b0986f62aae5e1949\""
+  },
+  {
+    "name": "旧方式(document.write)の広告タグに戻す",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "adm.shinobi.jp/s/<ID> は document.write 方式。動的に差し込むとブラウザが document.write を無視し、広告のリクエストすら飛ばない。枠は高さ0のままで例外も出ず、『審査が通っていないから出ない』と区別がつかない。2026-09-14に本番で3日気づけなかった実例",
+    "find": "    box.className = \"admax-ads\";",
+    "replace": "    box.className = \"admax-ads\"; var _legacy = \"https://adm.shinobi.jp/s/701e1f0351b6f71b0986f62aae5e1949\";"
+  },
+  {
+    "name": "枠の器のclassを別名にする",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "SDKは class=\"admax-ads\" の要素を探す。別名だと枠が見つからず、リクエストは飛ぶのに何も描かれない。画面は正常に見える",
+    "find": "    box.className = \"admax-ads\";",
+    "replace": "    box.className = \"admax-banner\";"
+  },
+  {
+    "name": "広告キューへの積み込みをやめる",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "器とSDKがあってもキューに積まなければ広告は要求されない。3つの部品のうち1つ欠けただけで出なくなるが、エラーは出ない",
+    "find": "    window.admaxads.push({ admax_id: id, type: \"banner\" });",
+    "replace": "    window.admaxads.length = 0;"
+  },
+  {
+    "name": "広告SDKを読み込まない",
+    "expect": "abtest",
+    "file": "affiliate-article.js",
+    "why": "st/t.js を読まなければ、キューに積んでも誰も描かない。枠は空のまま残る",
+    "find": "  var ADMAX_SDK = \"https://adm.shinobi.jp/st/t.js\";",
+    "replace": "  var ADMAX_SDK = \"\";"
   }
 ]

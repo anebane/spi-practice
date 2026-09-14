@@ -220,15 +220,48 @@ if (load) {
         + "control 群にも出ると対照群が汚れ、ABの比較が成立しない");
     }
 
-    // タグのURLが両デバイス分そろっているか。
+    // 枠IDが両デバイス分そろっているか。
     // ⚠️ 片方だけだと、そのデバイスの利用者には出ない。
     //    PC 58% / スマホ 40%（2026-08-31〜09-10の実測）なので、どちらを落としても半分近くを失う。
-    const tags = (art.match(/adm\.shinobi\.jp\/s\/[0-9a-f]{32}/g) || []);
-    const uniq = [...new Set(tags)];
-    cov.covered("広告タグ", uniq.length, 2);
-    if (uniq.length < 2) {
-      fail("広告タグが足りない",
-        `${uniq.length}個。PC用とスマホ用の2つが要る（片方だけだとそのデバイスに出ない）`);
+    const slots = [...new Set(art.match(/"[0-9a-f]{32}"/g) || [])];
+    cov.covered("広告枠ID", slots.length, 2);
+    if (slots.length < 2) {
+      fail("広告枠IDが足りない",
+        `${slots.length}個。PC用とスマホ用の2つが要る（片方だけだとそのデバイスに出ない）`);
+    }
+
+    // --- 旧タグ（document.write 方式）を使っていないか ---
+    //
+    // ⚠️ これが今回いちばん高くついた壊れ方。
+    //    https://adm.shinobi.jp/s/<ID> が返すタグの中身は document.write で書かれている。
+    //    それを動的に差し込んだ <script> から実行すると、**ブラウザが document.write を
+    //    無視する**ので、広告が出ないどころか広告のリクエストすら飛ばない。
+    //    例外も警告も出ず、枠は高さ0のまま。「審査が通っていないから出ない」と
+    //    区別がつかないので、本番で3日気づけなかった（2026-09-14に実測で判明）。
+    //    正しくは admaxads キューへ積んで st/t.js に描かせる（管理画面の「非同期タグ」）。
+    if (/adm\.shinobi\.jp\/s\/[0-9a-f]{32}/.test(art)) {
+      fail("旧方式の広告タグを使っている",
+        "adm.shinobi.jp/s/<ID> は document.write 方式。動的に差し込むと"
+        + "広告のリクエストすら飛ばない。admaxads キュー＋st/t.js に置き換えること");
+    }
+
+    // --- 非同期タグの3点がそろっているか ---
+    //
+    // ⚠️ 3つのうち1つでも欠けると広告は出ない。そして**どれが欠けても画面は正常に見える。**
+    //    管理画面が出す公式タグと同じ形であることが条件（推測で書くと拾われない）。
+    const asyncParts = [
+      ["枠の器の class", /className\s*=\s*["']admax-ads["']/,
+        '"admax-ads" 以外だとSDKが枠を見つけられない'],
+      ["data-admax-id", /setAttribute\(\s*["']data-admax-id["']/,
+        "SDKはこの属性で枠を探す"],
+      ["admaxads への push", /admaxads\.push\(\s*\{[^}]*admax_id[^}]*type\s*:\s*["']banner["']/,
+        'キューに {admax_id, type:"banner"} を積むこと'],
+      ["SDKの読み込み", /adm\.shinobi\.jp\/st\/t\.js/,
+        "st/t.js を読まないと誰も描かない"],
+    ];
+    cov.covered("非同期タグの構成要素", asyncParts.length, 4);
+    for (const [name, re, why] of asyncParts) {
+      if (!re.test(art)) fail("非同期タグの部品が欠けている", `${name}: ${why}`);
     }
   }
 }
