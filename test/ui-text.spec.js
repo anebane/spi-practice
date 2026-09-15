@@ -53,6 +53,7 @@ if (startIdx < 0 || endIdx < 0) {
 // ⚠️ 引数の見た目（数字か語か）で結果が変わるものがあるので、実際に出る形に近づける。
 const ARGS = {
   shareText: ["MOCK_LABEL", 85, 17, 20, "MOCK_TAGS"],
+  confirmResume: [7, 20],
   categoriesLabel: [11],
   categoryNote: ["MOCK_CAT"],
   alertError: ["MOCK_MSG"],

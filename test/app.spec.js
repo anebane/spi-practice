@@ -433,6 +433,151 @@ run("連打: 別の対象に効く操作は止めない", () => {
   }
 });
 
+// --- 中断した試験の保存と復帰 ---
+//
+// 【なぜ必要か】
+// 2026-09-15の実測で、モバイルの完走率がデスクトップの3分の2しかなかった
+// （47.1% vs 71.8%）。モバイルは20問中7問あたりで消えるが解説は多く見ており、
+// 飽きて辞めているのではなく途中で止まっている。そして途中状態はどこにも
+// 保存されておらず、中断すれば必ず最初からだった。
+//
+// ⚠️ ここで守りたいのは「保存されること」だけではない。**余計に保存しないこと**
+//    のほうが壊れやすい。完走した試験や自分で辞めた試験が残ると、次の起動で
+//    毎回「続きから？」と聞かれ、終わったはずの試験に引き戻される。
+const RESUME_KEY = "spi_resume_v1";
+
+run("回答すると途中状態が保存される", () => {
+  // ⚠️ 判定は多いが失敗経路は1本にまとめる。経路を分けるほど、それぞれに
+  //    変異を書く義務が増えて台帳が膨らむ（2026-09-15に10件の未カバーを出した）。
+  //    どの項目が欠けたかは detail に全部出るので、診断の情報量は落ちない。
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  const bad = [];
+  if (h.saved(RESUME_KEY)) bad.push("開始しただけで保存されている（回答してから保存する）");
+  h.answerOne();
+  const d = h.saved(RESUME_KEY);
+  if (!d) { fail("保存", "1問答えても保存されていない" + (bad.length ? " / " + bad.join(" / ") : "")); return; }
+  if (!d.examId) bad.push("examId が無い");
+  if (!Array.isArray(d.questions) || !d.questions.length) bad.push("問題が無い（復帰しても同じ問題に戻れない）");
+  if (d.answers.filter(Boolean).length !== 1) bad.push(`回答数が ${d.answers.filter(Boolean).length}（1のはず）`);
+  if (typeof d.totalTimeRemaining !== "number") bad.push("残り時間が無い（復帰で時間が戻ってしまう）");
+  if (!d.profile) bad.push("profile が無い（別の面で復帰してしまう）");
+  if (bad.length) fail("保存", "保存の中身が足りない: " + bad.join(" / "));
+});
+
+run("完走すると保存が消える", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+  if (h.saved(RESUME_KEY)) {
+    fail("保存", "完走したのに途中状態が残っている。次の起動で終わった試験に引き戻される");
+  }
+});
+
+run("1問も答えずに離れても保存される", () => {
+  // ⚠️ 最初この検査は1問答えてから離れていた。それだと回答時の保存が既に
+  //    済んでいて、離脱時の保存を消しても落ちない（変異で実際に素通りした）。
+  //    **回答の保存と離脱の保存を切り分ける**には、答えずに離れるしかない。
+  //    そして1問目を読んでいる途中の中断こそ、モバイルで最も多い離脱の形。
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.hide();
+  const d = h.saved(RESUME_KEY);
+  if (!d) { fail("保存", "1問も答えずにタブを離れると保存されない。モバイルはここで破棄される"); return; }
+  if (d.currentIndex !== 0) {
+    fail("保存", `1問も答えずに離れたのに復帰位置が ${d.currentIndex}（0のはず）。復帰で問題が飛ばされる`);
+  }
+});
+
+run("離れたあとも保存が最新になる", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.answerOne();
+  h.hide();
+  const d = h.saved(RESUME_KEY);
+  const n = d ? d.answers.filter(Boolean).length : -1;
+  if (n !== 2) {
+    fail("保存", `離脱時の保存の回答数が ${n}（2のはず）。保存が無いか、古いまま更新されていない`);
+  }
+});
+
+run("自分で戻ると保存が消える", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.byId("btn-back").click();
+  if (h.saved(RESUME_KEY)) {
+    fail("保存", "自分で辞めた試験が残っている。毎回「続きから？」と聞かれることになる");
+  }
+});
+
+run("復帰しても exam_start を二重に数えない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.hide();
+  const d = h.storage.get(RESUME_KEY);
+  // 同じ保存を持った状態で起動し直す
+  const h2 = createHarness({ questionCount: 10, storageSeed: { [RESUME_KEY]: d } });
+  if (h2.count("exam_start") !== 0) {
+    fail("復帰", `復帰で exam_start が ${h2.count("exam_start")}回。開始が水増しされ完走率の分母が狂う`);
+  }
+  if (h2.count("exam_resume") !== 1) {
+    fail("復帰", `exam_resume が ${h2.count("exam_resume")}回（復帰した回数を数えられないと効果が測れない）`);
+  }
+});
+
+run("続きから始めないと保存は捨てられる", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.hide();
+  const d = h.storage.get(RESUME_KEY);
+  const h2 = createHarness({ questionCount: 10, storageSeed: { [RESUME_KEY]: d }, confirm: false });
+  if (h2.saved(RESUME_KEY)) fail("復帰", "「いいえ」を選んだのに保存が残っている");
+  if (h2.count("exam_resume") !== 0) fail("復帰", "「いいえ」なのに復帰している");
+});
+
+run("別の面の中断では復帰しない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.hide();
+  const d = JSON.parse(h.storage.get(RESUME_KEY));
+  d.profile = "koumuin";                       // 別の面で中断したことにする
+  const h2 = createHarness({ questionCount: 10, storageSeed: { [RESUME_KEY]: JSON.stringify(d) } });
+  if (h2.count("exam_resume") !== 0) {
+    fail("復帰", "別の面の中断から復帰している。公務員の画面でSPIの続きが始まる");
+  }
+});
+
+run("古い中断からは復帰しない", () => {
+  const h = createHarness({ questionCount: 10 });
+  h.start();
+  h.answerOne();
+  h.hide();
+  const d = JSON.parse(h.storage.get(RESUME_KEY));
+  d.savedAt = Date.now() - 25 * 60 * 60 * 1000;   // 25時間前
+  const h2 = createHarness({ questionCount: 10, storageSeed: { [RESUME_KEY]: JSON.stringify(d) } });
+  if (h2.count("exam_resume") !== 0) fail("復帰", "1日以上前の中断から復帰している");
+  if (h2.saved(RESUME_KEY)) fail("復帰", "古い保存が消されていない");
+});
+
+run("壊れた保存で起動が止まらない", () => {
+  // ⚠️ 「復帰しない」と「起動できる」を別の経路にしない。壊れたJSONは
+  //    parse が必ず失敗するので、「復帰してしまう」状態は原理的に作れず、
+  //    その判定はどの変異でも落ちない経路になる（2026-09-15に実測）。
+  //    壊れていても**起動できること**が、ここで守りたい唯一の性質。
+  const h = createHarness({ questionCount: 10, storageSeed: { [RESUME_KEY]: "{壊れたJSON" } });
+  h.start();
+  const bad = [];
+  if (h.count("exam_resume") !== 0) bad.push("壊れた保存から復帰している");
+  if (h.count("exam_start") !== 1) bad.push(`exam_start が ${h.count("exam_start")}回。壊れた保存があると新しい試験を始められない`);
+  if (bad.length) fail("復帰", bad.join(" / "));
+});
+
+
 // ============================================================
 // 出力
 // ============================================================

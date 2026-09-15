@@ -170,7 +170,9 @@ function createHarness(opts) {
     }
   };
 
-  const storage = new Map();
+  // ⚠️ app.js を読み込む**前**に種を入れる。復帰は起動時（init）に判定するので、
+  //    後から入れても「中断した状態で開いた」ことにはならない。
+  const storage = new Map(Object.entries(opts.storageSeed || {}));
   const sandbox = {
     console: { log: noop, error: noop, warn: noop },
     Math, Date, JSON, parseInt, parseFloat, isNaN, isFinite,
@@ -183,7 +185,9 @@ function createHarness(opts) {
       removeItem: k => storage.delete(k)
     },
     alert: noop,
-    confirm: () => true,
+    // ⚠️ 既定は「はい」。中断した試験の復帰を尋ねる確認もここを通るので、
+    //    「いいえ」側の経路を検査するには opts.confirm で差し替える。
+    confirm: () => (opts.confirm === undefined ? true : opts.confirm),
     // タイマーは実際には走らせない。1秒間隔のカウントダウンはテストの対象外で、
     // 走らせると Node が終了しなくなる。
     setInterval: () => 1,
@@ -213,6 +217,11 @@ function createHarness(opts) {
 
   return {
     events, els, byId, user, timeouts,
+    // 保存の中身を検査から読めるようにする。
+    // ⚠️ 「保存したつもり」を防ぐには、呼び出しの有無ではなく**実際に入った値**を見る。
+    storage,
+    saved: (k) => { const v = storage.get(k); if (v === undefined) return null;
+                    try { return JSON.parse(v); } catch (e) { return v; } },
     count: (n) => events.filter(e => e.name === n).length,
     find: (n) => events.find(e => e.name === n),
     reset: () => { events.length = 0; },

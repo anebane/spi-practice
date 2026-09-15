@@ -411,7 +411,7 @@
     "name": "ページ離脱のハンドラを張らない",
     "why": "タブを閉じて離れた人が記録されない。もとの穴そのもの",
     "file": "app.js",
-    "find": "    window.addEventListener(\"pagehide\", function() { reportAbandon(\"pagehide\"); });",
+    "find": "    window.addEventListener(\"pagehide\", function() { saveProgress(); reportAbandon(\"pagehide\"); });",
     "replace": "    void 0;",
     "expect": "app"
   },
@@ -915,7 +915,7 @@
     "name": "visibilitychange のハンドラを張らない",
     "why": "iOS Safari は pagehide が飛ばないことがあり、この1枚を失うとiOSの離脱が丸ごと消える",
     "file": "app.js",
-    "find": "    document.addEventListener(\"visibilitychange\", function() {\n      if (document.visibilityState === \"hidden\") reportAbandon(\"hidden\");\n    });",
+    "find": "    document.addEventListener(\"visibilitychange\", function() {\n      if (document.visibilityState === \"hidden\") { saveProgress(); reportAbandon(\"hidden\"); }\n    });",
     "replace": "",
     "expect": "app"
   },
@@ -1139,16 +1139,16 @@
     "name": "戻るボタンで離脱を記録しない",
     "why": "呼び出しの消し忘れ。ボタン経由の離脱が計測から消える",
     "file": "app.js",
-    "find": "      reportAbandon(\"button\");\n      state.examId = null;",
-    "replace": "      state.examId = null;",
+    "find": "      reportAbandon(\"button\");\n",
+    "replace": "      /* reportAbandon(\"button\"); */\n",
     "expect": "app"
   },
   {
     "name": "戻るボタンで離脱記録をリセットする",
     "why": "戻る＝新しい試験の準備と誤解してフラグを戻す。閉じたときに二重に飛ぶ",
     "file": "app.js",
-    "find": "      reportAbandon(\"button\");\n      state.examId = null;          // この試験からは離れた。以降の離脱は報告しない",
-    "replace": "      reportAbandon(\"button\");\n      state.abandonSent = false;    // 戻る＝新しい試験の準備、と誤解してフラグを戻してしまう壊れ方",
+    "find": "      state.examId = null;          // この試験からは離れた。以降の離脱は報告しない",
+    "replace": "      state.abandonSent = false;    // 戻る＝新しい試験の準備、と誤解してフラグを戻してしまう壊れ方",
     "expect": "app"
   },
   {
@@ -3165,5 +3165,109 @@
     "why": "パンくず・著者・ロゴ・画像は404でも画面に何も出ない。検索結果とAIの側でだけ壊れるので、リンク切れに永久に気づけない",
     "find": "      \"url\": \"https://tekisei-drill.com/about.html\"",
     "replace": "      \"url\": \"https://tekisei-drill.com/profile.html\""
+  },
+  {
+    "name": "回答しても途中状態を保存しない",
+    "expect": "app",
+    "file": "app.js",
+    "why": "中断したら最初からになる。モバイルはページが破棄されるのが日常的に起きるので、ここが効かないと完走率がデスクトップの3分の2のままになる",
+    "find": "    saveProgress();\n\n    // ⚠️ question_id（q.id）は送らない。",
+    "replace": "\n    // ⚠️ question_id（q.id）は送らない。"
+  },
+  {
+    "name": "完走した試験の保存を残す",
+    "expect": "app",
+    "file": "app.js",
+    "why": "終わったはずの試験が残り、次の起動で毎回「続きから？」と聞かれる。画面は正常に動くので、聞かれた本人しか気づけない",
+    "find": "    clearProgress();\n\n    stopTimer();",
+    "replace": "\n    stopTimer();"
+  },
+  {
+    "name": "画面を離れても保存しない",
+    "expect": "app",
+    "file": "app.js",
+    "why": "回答の直後にしか保存されなくなる。1問目を読んでいる途中で中断した人は救えず、モバイルの離脱のかなりの部分を取りこぼす",
+    "find": "      if (document.visibilityState === \"hidden\") { saveProgress(); reportAbandon(\"hidden\"); }",
+    "replace": "      if (document.visibilityState === \"hidden\") { reportAbandon(\"hidden\"); }"
+  },
+  {
+    "name": "自分で戻った試験の保存を残す",
+    "expect": "app",
+    "file": "app.js",
+    "why": "辞めたはずの試験を毎回「続きから？」と聞かれる。復帰させたいのは中断させられた場合だけ",
+    "find": "      clearProgress();\n      state.examId = null;",
+    "replace": "      state.examId = null;"
+  },
+  {
+    "name": "復帰で exam_start を再送する",
+    "expect": "app",
+    "file": "app.js",
+    "why": "開始が二重に数えられ、完走率の分母が狂う。数字は増えるので「改善した」と誤読しやすい",
+    "find": "    trackEvent(\"exam_resume\", {",
+    "replace": "    trackEvent(\"exam_start\", {"
+  },
+  {
+    "name": "別の面の中断から復帰させる",
+    "expect": "app",
+    "file": "app.js",
+    "why": "公務員の画面でSPIの続きが始まる。問題は正常に出るので、何の試験をしているのか分からないまま進む",
+    "find": "    if (d.profile !== PROFILE_ID) return null;",
+    "replace": "    if (false) return null;"
+  },
+  {
+    "name": "古い中断からも復帰させる",
+    "expect": "app",
+    "file": "app.js",
+    "why": "何日も前にやめた試験に引き戻される。残り時間も当時のままなので、開いた瞬間に時間切れになることがある",
+    "find": "    if (!d.savedAt || Date.now() - d.savedAt > RESUME_MAX_AGE_MS) { clearProgress(); return null; }",
+    "replace": "    if (!d.savedAt) { clearProgress(); return null; }"
+  },
+  {
+    "name": "復帰を断っても保存を消さない",
+    "expect": "app",
+    "file": "app.js",
+    "why": "「いいえ」と答えても次の起動でまた聞かれる。断る操作が効かないので、利用者は毎回同じ確認に付き合わされる",
+    "find": "    if (!confirm(T.confirmResume(done, d.questions.length))) {\n      clearProgress();\n      return false;\n    }",
+    "replace": "    if (!confirm(T.confirmResume(done, d.questions.length))) {\n      return false;\n    }"
+  },
+  {
+    "name": "保存する中身から問題を落とす",
+    "expect": "app",
+    "file": "app.js",
+    "why": "復帰しても同じ問題に戻れない。保存はされているので「復帰できた」ように見えるが、別の問題が出るか画面が壊れる",
+    "find": "        questions: state.questions,",
+    "replace": "        questions: [],"
+  },
+  {
+    "name": "開始した時点で保存する",
+    "expect": "app",
+    "file": "app.js",
+    "why": "1問も答えていない試験が復帰の候補になる。次の起動で「0問まで進んだところで中断しています」と聞かれ、意味のない確認が増える",
+    "find": "    clearProgress();   // 前の中断分は、新しい試験を始めた時点で捨てる",
+    "replace": "    clearProgress(); saveProgress();"
+  },
+  {
+    "name": "復帰位置を1つずらす",
+    "expect": "app",
+    "file": "app.js",
+    "why": "復帰すると1問飛ばされる。飛ばされた問題は未回答のまま採点されるので、点数が不当に下がる",
+    "find": "        currentIndex: state.currentIndex,",
+    "replace": "        currentIndex: state.currentIndex + 1,"
+  },
+  {
+    "name": "確認の答えを無視して必ず復帰する",
+    "expect": "app",
+    "file": "app.js",
+    "why": "「いいえ」を選んでも続きから始まる。利用者が新しい試験を始められなくなる",
+    "find": "    if (!confirm(T.confirmResume(done, d.questions.length))) {",
+    "replace": "    if (false && !confirm(T.confirmResume(done, d.questions.length))) {"
+  },
+  {
+    "name": "壊れた保存を検証せず復帰する",
+    "expect": "app",
+    "file": "app.js",
+    "why": "壊れたJSONで例外が出て、起動そのものが止まる。試験が始められなくなる",
+    "find": "    try { d = JSON.parse(raw); } catch (e) { clearProgress(); return null; }",
+    "replace": "    d = JSON.parse(raw);"
   }
 ]

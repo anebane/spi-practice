@@ -81,6 +81,10 @@
       },
       categoriesLabel: function (n) { return "対応分野（" + n + "分野）"; },
       categoryNote: function (name) { return "「" + name + "」だけを出題する設定にしました。変更したい場合は下の出題分野から選び直せます。"; },
+      confirmResume: function (done, total) {
+        return "前回の試験が" + total + "問中" + done + "問まで進んだところで中断しています。\n"
+          + "続きから始めますか？\n\n「キャンセル」を選ぶと、この試験は破棄して最初の画面に戻ります。";
+      },
       alertNoCategory:   "少なくとも1つの分野を選択してください。",
       alertNoDifficulty: "少なくとも1つの難易度を選択してください。",
       alertNoQuestions:  "問題を生成できませんでした。設定を変更してください。",
@@ -128,6 +132,10 @@
       },
       categoriesLabel: function (n) { return "Topics covered (" + n + ")"; },
       categoryNote: function (name) { return "Only \u201c" + name + "\u201d will be set. You can change this in the topic list below."; },
+      confirmResume: function (done, total) {
+        return "Your previous test was interrupted after " + done + " of " + total + " questions.\n"
+          + "Resume from where you left off?\n\nChoosing Cancel discards it and returns to the start screen.";
+      },
       alertNoCategory:   "Select at least one topic.",
       alertNoDifficulty: "Select at least one difficulty level.",
       alertNoQuestions:  "No questions could be generated. Please change your settings.",
@@ -246,6 +254,114 @@
    * question_id で同じ失敗を一度している（recordAnswer のコメント参照）。
    * これは「開始と終了が1対1になっているか」を後から突き合わせるためだけの値。
    */
+  // --- 中断した試験の保存と復帰 ---
+  //
+  // 【なぜ必要か】
+  // 2026-09-15の実測で、モバイルの完走率がデスクトップの3分の2しかなかった。
+  //   デスクトップ 完走71.8% / 離脱0.36回 / 1回あたり11.1問
+  //   モバイル     完走47.1% / 離脱0.61回 / 1回あたり 7.1問
+  // モバイルは20問中7問あたりで消えるが、**解説はデスクトップより多く見ている**
+  //（1.94回 vs 1.39回）。飽きて辞めているのではなく、途中で止まっている。
+  // そして途中状態はどこにも保存されておらず、中断すれば必ず最初からだった。
+  // スマホはメモリ不足でページが破棄されるのが日常的に起きる。
+  //
+  // ⚠️ これが完走率の差の主因かは**証明していない**。「スマホでは20問を通す
+  //    時間がない」だけでも同じ数字になる。ただし進捗が黙って消えるのは
+  //    どちらにせよ欠陥なので、まずこれを直してから測り直す。
+  var RESUME_KEY = "spi_resume_v1";
+  var RESUME_MAX_AGE_MS = 24 * 60 * 60 * 1000;   // 1日。古すぎる再開は混乱のもと
+
+  /**
+   * 途中状態を保存する。
+   *
+   * ⚠️ localStorage が使えない環境（プライベートウィンドウ等）では黙って
+   *    諦める。ここで例外を投げると試験そのものが止まり、保存できない人の
+   *    体験を「保存されない」から「使えない」に悪化させることになる。
+   */
+  function saveProgress() {
+    if (!state.examId || state.finished || !state.questions.length) return;
+    try {
+      localStorage.setItem(RESUME_KEY, JSON.stringify({
+        v: 1,
+        savedAt: Date.now(),
+        // ⚠️ 面が違うのに復帰させない。公務員の画面でSPIの続きが始まると
+        //    「何の試験をしているのか」が分からなくなる。
+        profile: PROFILE_ID,
+        catParam: paramCategoryId,
+        examId: state.examId,
+        questions: state.questions,
+        answers: state.answers,
+        currentIndex: state.currentIndex,
+        mode: state.mode,
+        totalTimeSec: state.totalTimeSec,
+        totalTimeRemaining: state.totalTimeRemaining
+      }));
+    } catch (e) { /* 容量超過・保存拒否。復帰できないだけで試験は続く */ }
+  }
+
+  function clearProgress() {
+    try { localStorage.removeItem(RESUME_KEY); } catch (e) {}
+  }
+
+  /** 保存された途中状態を読む。使えないものは null を返して消す。 */
+  function loadProgress() {
+    var raw;
+    try { raw = localStorage.getItem(RESUME_KEY); } catch (e) { return null; }
+    if (!raw) return null;
+    var d;
+    try { d = JSON.parse(raw); } catch (e) { clearProgress(); return null; }
+    if (!d || d.v !== 1) { clearProgress(); return null; }
+    if (d.profile !== PROFILE_ID) return null;          // 別の面の続き。消さずに放っておく
+    // ⚠️ この2行は「問題が空」の場合を二重に守っている。意図的に残す。
+    //    どちらか片方でも空配列は弾けるが、片方を消しても検査が落ちないので
+    //    「守りが1本減った」ことに気づけない。冗長さと引き換えに、
+    //    範囲外の位置（問題はあるが index が外）も別に弾けるようにしている。
+    if (!Array.isArray(d.questions) || !d.questions.length) { clearProgress(); return null; }
+    if (!(d.currentIndex >= 0) || d.currentIndex >= d.questions.length) { clearProgress(); return null; }
+    if (!d.savedAt || Date.now() - d.savedAt > RESUME_MAX_AGE_MS) { clearProgress(); return null; }
+    return d;
+  }
+
+  /** 保存された試験を画面に戻す。 */
+  function resumeExam(d) {
+    state.questions = d.questions;
+    state.answers = Array.isArray(d.answers) ? d.answers : [];
+    state.currentIndex = d.currentIndex;
+    state.mode = d.mode === "practice" ? "practice" : "exam";
+    state.totalTimeSec = d.totalTimeSec;
+    state.totalTimeRemaining = d.totalTimeRemaining;
+    state.isPracticeWaiting = false;
+    state.isPeeking = false;
+    state.finished = false;
+    state.abandonSent = false;
+    state.examId = d.examId;
+
+    // ⚠️ exam_start を再送しない。開始が二重に数えられ、完走率の分母が狂う。
+    //    復帰は別のイベントにして、後から「復帰した回数」を数えられるようにする。
+    trackEvent("exam_resume", {
+      exam_id: state.examId,
+      questions_answered: state.answers.filter(function (a) { return a; }).length,
+      total_questions: state.questions.length,
+      mode: state.mode
+    });
+    showScreen("exam");
+    showQuestion(state.currentIndex);
+    startTimer();
+  }
+
+  /** 起動時に、中断した試験があれば続きから始めるか尋ねる。 */
+  function offerResume() {
+    var d = loadProgress();
+    if (!d) return false;
+    var done = d.answers.filter(function (a) { return a; }).length;
+    if (!confirm(T.confirmResume(done, d.questions.length))) {
+      clearProgress();
+      return false;
+    }
+    resumeExam(d);
+    return true;
+  }
+
   /**
    * 試験の途中で画面を離れたことを記録する。
    *
@@ -325,9 +441,11 @@
     // pagehide はページから本当に離れるとき、visibilitychange の hidden は
     // タブを切り替えたときにも飛ぶ。iOS Safari では pagehide が飛ばないことが
     // あるので両方を張る。二重に飛ばないのは reportAbandon 側で保証している。
-    window.addEventListener("pagehide", function() { reportAbandon("pagehide"); });
+    // ⚠️ 保存は reportAbandon の外に置く。あちらは exam_id ごとに1回しか
+    //    走らないので、中に入れると2回目以降の中断で保存が更新されない。
+    window.addEventListener("pagehide", function() { saveProgress(); reportAbandon("pagehide"); });
     document.addEventListener("visibilitychange", function() {
-      if (document.visibilityState === "hidden") reportAbandon("hidden");
+      if (document.visibilityState === "hidden") { saveProgress(); reportAbandon("hidden"); }
     });
 
     // 「対応分野」の見出しと一覧を、出題分野のチェックボックスから作る。
@@ -494,6 +612,7 @@
     state.finished = false;          // 前の試験の終了フラグを必ず落とす
     state.abandonSent = false;       // 離脱の報告も試験ごとに1回に戻す
     state.examId = newExamId();
+    clearProgress();   // 前の中断分は、新しい試験を始めた時点で捨てる
 
     // 全体制限時間: 1問あたり60秒 × 問題数
     state.totalTimeSec = state.questions.length * 60;
@@ -897,6 +1016,7 @@
       timeSpent: timeSpent,
       skipped: !!skipped
     };
+    saveProgress();
 
     // ⚠️ question_id（q.id）は送らない。generator が毎問
     //    `<templateId>_<timestamp>_<乱数>` で作るので全部が別の値になり、
@@ -1041,6 +1161,9 @@
   function finishExam() {
     if (state.finished) return;
     state.finished = true;
+    // ⚠️ 完走した試験の途中状態を残さない。残すと次回の起動で
+    //    「続きから始めますか」と聞かれ、終わったはずの試験に戻される。
+    clearProgress();
 
     stopTimer();
 
@@ -1490,6 +1613,10 @@
 
     document.getElementById("btn-back").addEventListener("click", function() {
       reportAbandon("button");
+      // ⚠️ 自分の意思で離れた試験は復帰の対象にしない。残すと、辞めたはずの
+      //    試験を次の起動で毎回「続きから？」と聞かれることになる。
+      //    復帰させたいのは、中断させられた場合（pagehide/hidden）だけ。
+      clearProgress();
       state.examId = null;          // この試験からは離れた。以降の離脱は報告しない
       stopTimer();
       showScreen("start");
@@ -1553,6 +1680,9 @@
   function init() {
     setupStartScreen();
     bindEvents();
+    // ⚠️ 復帰を尋ねるのは配線が済んだあと。先に試験画面を出すと、
+    //    ボタンが効かない試験が始まる。
+    if (offerResume()) return;
     showScreen("start");
   }
 

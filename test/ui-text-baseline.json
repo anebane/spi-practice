@@ -39,5 +39,6 @@
   "diffMedium": "中",
   "diffHard": "難",
   "confirmSkip": "回答が入力されていません。スキップしますか？",
-  "formatWithUnit": "215 %"
+  "formatWithUnit": "215 %",
+  "confirmResume": "前回の試験が20問中7問まで進んだところで中断しています。\n続きから始めますか？\n\n「キャンセル」を選ぶと、この試験は破棄して最初の画面に戻ります。"
 }
