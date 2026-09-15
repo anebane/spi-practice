@@ -371,6 +371,35 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   cov.covered("商標の注記を調べたページ", checked, 8);
 }
 
+// --- lang 属性が置き場所と合っているか ---
+//
+// ⚠️ これが無いと、下の「広告枠」の検査に抜け道ができる。あちらは lang で
+//    対象を決めているので、日本語ページの lang を "en" に書き換えるだけで
+//    検査から外れ、枠が消えても緑になる（2026-09-15に変異で実証した）。
+//    言語の宣言は**置き場所から一意に決まる**ので、そう検査する。
+//    ⚠️ 中身の言語を判定しようとしないこと。混在ページで誤検知して、
+//       いずれ検査ごと外される。規則は「/en/ 配下は英語、他は日本語」だけ。
+{
+  let checked = 0;
+  for (const p of pages) {
+    const html = fs.readFileSync(path.join(ROOT, p), "utf8");
+    const m = html.match(/<html[^>]*\slang="([^"]+)"/i);
+    if (!m) { fail(p, "lang の宣言が無い", "どの言語の面か機械が判断できない"); continue; }
+    checked++;
+    const lang = m[1];
+    const inEn = p === "en/index.html" || p.startsWith("en/");
+    if (inEn && !/^en/i.test(lang)) {
+      fail(p, "lang が置き場所と合っていない", `/en/ 配下なのに lang="${lang}"`);
+    }
+    if (!inEn && !/^ja/i.test(lang)) {
+      fail(p, "lang が置き場所と合っていない",
+        `lang="${lang}"。日本語の面が英語を名乗ると、広告枠の検査から外れて枠の欠落に気づけなくなる`);
+    }
+  }
+  cov.covered("lang を調べたページ", checked, 25);
+}
+
+
 // --- 記事面に広告枠が入っているか ---
 //
 // 結果画面だけに枠があり、記事10ページはゼロだった。検索から来た人が
@@ -397,7 +426,20 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
     }).filter(Boolean)
   );
   const EXCLUDE = new Set(["privacy.html", "about.html", "contact.html", "offline.html"]);
-  const targets = pages.filter((p) => !EXCLUDE.has(p) && !appPages.has(p));
+  // ⚠️ 日本語以外の面には枠を求めない。
+  //    affiliate.js が持つ案件も忍者AdMax の配信も**日本の就活・転職向け**で、
+  //    英語の読者には読めないし成果にもならない（en プロファイルの
+  //    showAffiliate: false と同じ判断）。
+  //    ⚠️ ページ名を並べる形にしないこと。英語ページを足すたびにここへ
+  //       手で足すことになり、書き忘れれば誤って落ちる。**lang 属性から決める**。
+  const langOf = (p) => {
+    const m = fs.readFileSync(path.join(ROOT, p), "utf8").match(/<html[^>]*\slang="([^"]+)"/i);
+    return m ? m[1] : "";
+  };
+  const nonJa = pages.filter((p) => !EXCLUDE.has(p) && !appPages.has(p) && !/^ja/i.test(langOf(p)));
+  const targets = pages.filter((p) => !EXCLUDE.has(p) && !appPages.has(p) && /^ja/i.test(langOf(p)));
+  cov.skipped("広告枠を求めない面", nonJa.length,
+    "日本語以外。案件も配信も日本の就活向けなので、出しても読めず成果にもならない");
   // 0件だと「不足が無い」ではなく「1ページも見ていない」。
   cov.covered("広告枠を置く面", targets.length, 10);
 

@@ -158,7 +158,7 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
   console.log("   ℹ️ lang: \"en\" のテンプレートがまだ無いので、1件も見ていない");
   console.log("   ✅ 検査自体は動作している（テンプレートを足すと効き始める）");
 } else {
-  let checked = 0;
+  let checked = 0, jaChecked = 0;
   const seen = new Set();
   const targets = EN.map(t => ({ t, lang: undefined }))
     .concat(BILINGUAL.map(t => ({ t, lang: "en" })));
@@ -375,6 +375,99 @@ if (EN.length === 0 && BILINGUAL.length === 0) {
     }
   }
 }
+
+// --- 英語の解説ページが、実際に出る問題と食い違っていないか ---
+//
+// 【なぜ必要か】
+// 2026-09-15に英語の解説ページを10枚足した。各ページには「例題」として
+// **実際に生成される問題文**を載せている。手で作った例題を載せると、
+// 練習で出る問題と形が違い、読んだ人を裏切ることになるため。
+//
+// ⚠️ 危ないのは、テンプレート側の文面を直したときに**ページが古いまま残る**こと。
+//    ページは静的なので何も起きず、検査も無ければ、嘘の例題が出続ける。
+//    読者はそれを信じて練習するので、気づくのは本番の試験になる。
+//
+// ⚠️ 全文一致では見ない。数値や店名は毎回変わる。**変わらない骨格**だけを見る。
+{
+  const EN_PAGES = [
+    // [ページ, そのページの例題が来ているテンプレート, テンプレ側に必ずある断片]
+    ["en/tables/index.html",       "table_sales_01",        "What is the total annual revenue of"],
+    ["en/charts/index.html",       "chart_bar_01",          "What is the difference between the highest and the lowest"],
+    ["en/percentages/index.html",  "table_growth_rate_01",  "Which product had the highest percentage growth in revenue"],
+    ["en/ratios/index.html",       "table_ratio_01",        "is how many times that of"],
+    ["en/per-unit/index.html",     "table_per_unit_01",     "What is the average price per unit for"],
+    ["en/forecasting/index.html",  "table_forecast_01",     "at the same percentage rate as from"],
+    ["en/what-is-numerical-reasoning/index.html", "table_sales_01", "What is the total annual revenue of"],
+  ];
+  const zuhyo = fs.readFileSync(path.join(ROOT, "src/questions/09-zuhyo.js"), "utf8");
+  const tplIds = new Set([...zuhyo.matchAll(/id:\s*"([a-z0-9_]+)"/g)].map((m) => m[1]));
+  let checked = 0, jaChecked = 0;
+
+  for (const [rel, tplId, fragment] of EN_PAGES) {
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) {
+      failures.push({ rule: "英語の解説ページ", detail: `${rel} が無い。消したなら EN_PAGES からも消すこと` });
+      continue;
+    }
+    checked++;
+    // そのテンプレートがまだ存在するか
+    if (!tplIds.has(tplId)) {
+      failures.push({ rule: "英語の解説ページ",
+        detail: `${rel}: 例題の出どころ ${tplId} がテンプレートに無い。消したなら解説ページも直すこと` });
+    }
+    // テンプレート側に、その言い回しがまだあるか
+    if (zuhyo.indexOf(fragment) === -1) {
+      failures.push({ rule: "英語の解説ページ",
+        detail: `${rel}: 「${fragment}」がテンプレートから消えている。例題が実物と違うまま残っている` });
+    }
+    // ⚠️ 探す範囲を**例題の中だけ**に絞る。ページ全体を見ると、本文の解説で
+    //    同じ言い回しに触れているせいで、例題を書き換えても素通りする
+    //    （2026-09-15に変異で実証した。ratios ページは本文と例題の2箇所にあった）。
+    const raw = fs.readFileSync(abs, "utf8");
+    const examples = [...raw.matchAll(/<p class="q-example">([\s\S]*?)<\/p>/g)]
+      .map((m) => m[1].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " "));
+    if (!examples.length) {
+      failures.push({ rule: "英語の解説ページ", detail: `${rel}: 例題（q-example）が1つも無い` });
+    } else if (!examples.some((e) => e.indexOf(fragment.replace(/\s+/g, " ")) !== -1)) {
+      failures.push({ rule: "英語の解説ページ",
+        detail: `${rel}: 例題に「${fragment}」が無い。テンプレートと食い違っている` });
+    }
+  }
+
+  // --- 日本語の混入は**全ページ**を見る ---
+  //
+  // ⚠️ 最初これを上のループに入れていたため、例題を持たない3枚
+  //    （faq / how-to-prepare / test-formats）が対象外だった。
+  //    「例題がある面」と「英語で書かれている面」は別の集合。
+  for (const g of ["tables", "charts", "percentages", "ratios", "per-unit", "forecasting",
+                   "what-is-numerical-reasoning", "how-to-prepare", "test-formats", "faq"]) {
+    const abs = path.join(ROOT, "en", g, "index.html");
+    if (!fs.existsSync(abs)) continue;
+    jaChecked++;
+    const body = (fs.readFileSync(abs, "utf8").match(/<main[\s\S]*?<\/main>/) || [""])[0]
+      .replace(/<[^>]+>/g, " ");
+    const ja = (body.match(/[぀-ヿ一-龯]/g) || []).length;
+    if (ja > 0) {
+      failures.push({ rule: "英語の解説ページ",
+        detail: `en/${g}/: 本文に日本語が ${ja} 文字混ざっている（英語の読者には読めない）` });
+    }
+  }
+
+  // ハブから全ページに導線があるか。孤立したページは誰にも読まれない。
+  const hub = fs.existsSync(path.join(ROOT, "en/index.html"))
+    ? fs.readFileSync(path.join(ROOT, "en/index.html"), "utf8") : "";
+  const slugs = ["tables", "charts", "percentages", "ratios", "per-unit", "forecasting",
+                 "what-is-numerical-reasoning", "how-to-prepare", "test-formats", "faq"];
+  const orphans = slugs.filter((g) => hub.indexOf(`href="/en/${g}/"`) === -1);
+  if (orphans.length) {
+    failures.push({ rule: "英語の解説ページ",
+      detail: `ハブ(/en/)から導線が無い: ${orphans.join(", ")}。検索にしか入口が無いページになる` });
+  }
+  cov.covered("英語の解説ページ", checked, 6);
+  cov.covered("日本語混入を調べた面", jaChecked, 10);
+  cov.covered("ハブからの導線を調べた面", slugs.length, 10);
+}
+
 
 // --- 出力 ---
 if (EN.length || BILINGUAL.length) console.log(`英語の問題文を検査（専用${EN.length}本 + 言語対応${BILINGUAL.length}本 × ${ITER}回）`);

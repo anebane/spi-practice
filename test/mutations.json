@@ -3231,6 +3231,54 @@
     "replace": "    if (!confirm(T.confirmResume(done, d.questions.length))) {\n      return false;\n    }"
   },
   {
+    "name": "日本語ページのlangを英語にして広告枠の検査を逃れる",
+    "expect": "html",
+    "file": "categories/soneki/index.html",
+    "why": "lang を変えるだけで広告枠の検査から外れる。日本語の面なのに枠が消えても緑になり、表示0のまま気づけない。lang は他の検査も見ていないので、これ1つで穴になる",
+    "find": "<html lang=\"ja\">",
+    "replace": "<html lang=\"en\">"
+  },
+  {
+    "name": "英語ページのlangを日本語にする",
+    "expect": "html",
+    "file": "en/tables/index.html",
+    "why": "英語の面に日本語の案件が出る扱いになる。読めない広告を見せることになり、成果にもならない",
+    "find": "<html lang=\"en-GB\">",
+    "replace": "<html lang=\"ja\">"
+  },
+  {
+    "name": "テンプレートの文面を変えて解説ページを置き去りにする",
+    "expect": "english",
+    "file": "src/questions/09-zuhyo.js",
+    "why": "解説ページの例題が実物と食い違ったまま残る。ページは静的なので何も起きず、読者は嘘の例題で練習して本番で気づく",
+    "find": "\"What is the average price per unit for \"",
+    "replace": "\"What is the mean unit price for \""
+  },
+  {
+    "name": "解説ページの例題だけを書き換える",
+    "expect": "english",
+    "file": "en/ratios/index.html",
+    "why": "テンプレート側は正しいのにページだけがずれる。ページの文言を直したときに起きる、逆方向の食い違い",
+    "find": "        The revenue of Store D is how many times that of Store C?</p>",
+    "replace": "        The revenue of Store D is what fraction of Store C?</p>"
+  },
+  {
+    "name": "英語ページに日本語を混ぜる",
+    "expect": "english",
+    "file": "en/faq/index.html",
+    "why": "英語の読者が読めない文が出る。文字数としては小さいので、目視では見落とす",
+    "find": "<p>Yes, with a low ceiling.",
+    "replace": "<p>はい。Yes, with a low ceiling."
+  },
+  {
+    "name": "ハブから解説ページへの導線を落とす",
+    "expect": "english",
+    "file": "en/index.html",
+    "why": "検索からしか入口が無いページになる。内部リンクが無いと評価も上がらず、回遊もしない",
+    "find": "          <li><a href=\"/en/how-to-prepare/\">How to prepare</a>",
+    "replace": "          <li><a href=\"/en/how-to-prepare-x/\">How to prepare</a>"
+  },
+  {
     "name": "保存する中身から問題を落とす",
     "expect": "app",
     "file": "app.js",
@@ -3269,5 +3317,37 @@
     "why": "壊れたJSONで例外が出て、起動そのものが止まる。試験が始められなくなる",
     "find": "    try { d = JSON.parse(raw); } catch (e) { clearProgress(); return null; }",
     "replace": "    d = JSON.parse(raw);"
+  },
+  {
+    "name": "英語の解説ページを1枚消す",
+    "expect": "english",
+    "file": "test/english.spec.js",
+    "why": "ページを消したのに検査の一覧だけが残る。逆に一覧を消し忘れると、存在しないページを検査し続けて永久に赤になる",
+    "find": "    [\"en/tables/index.html\",       \"table_sales_01\",        \"What is the total annual revenue of\"],",
+    "replace": "    [\"en/tables-removed/index.html\", \"table_sales_01\",      \"What is the total annual revenue of\"],"
+  },
+  {
+    "name": "例題の出どころに実在しないテンプレートを書く",
+    "expect": "english",
+    "file": "test/english.spec.js",
+    "why": "テンプレートを消したのに解説ページが残っている状態を検出できなくなる。読者は存在しない形式の練習をすることになる",
+    "find": "    [\"en/charts/index.html\",       \"chart_bar_01\",          \"What is the difference between the highest and the lowest\"],",
+    "replace": "    [\"en/charts/index.html\",       \"chart_bar_removed\",     \"What is the difference between the highest and the lowest\"],"
+  },
+  {
+    "name": "解説ページから例題の囲みを消す",
+    "expect": "english",
+    "file": "en/per-unit/index.html",
+    "why": "例題が本文に溶けて、どこからどこまでが問題なのか読者に分からなくなる。検査も照合先を失う",
+    "find": "<p class=\"q-example\">The table below shows the number of units sold",
+    "replace": "<p>The table below shows the number of units sold"
+  },
+  {
+    "name": "lang の宣言を消す",
+    "expect": "html",
+    "file": "en/faq/index.html",
+    "why": "どの言語の面か機械が判断できなくなる。広告枠の検査の対象判定が lang に依存しているので、宣言が無いページは判定から漏れる",
+    "find": "<html lang=\"en-GB\">",
+    "replace": "<html>"
   }
 ]
