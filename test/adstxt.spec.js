@@ -50,6 +50,29 @@ if (!fs.existsSync(file)) {
 
   cov.covered("宣言レコード", records.length, MIN_RECORDS);
 
+  // --- 0. いま配信しているネットワークの DIRECT 行があるか ---
+  // ⚠️ ネットワークを切り替えたのに ads.txt を直し忘れる、が最も起きやすい事故。
+  //    2026-09-16、忍者から i-mobile へ切り替えたとき実際に抜けていた。
+  //    ⚠️ 同じドメインの RESELLER 行があっても代わりにならない。あれは
+  //    別の事業者が再販している宣言で、自分のアカウントの認可ではない。
+  {
+    const NetAd = require("../netad.js");
+    const net = NetAd.NETWORKS[NetAd.ACTIVE_NETWORK];
+    if (!net || !net.adstxt || !net.adstxt.domain || !net.adstxt.id) {
+      fail("配信中のネットワークの ads.txt 記載が宣言されていない",
+        `${NetAd.ACTIVE_NETWORK}。何を書けばよいか分からず、抜けても検査できない`);
+    } else {
+      const esc = (x) => String(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const direct = new RegExp("^" + esc(net.adstxt.domain) + ",\\s*" + esc(net.adstxt.id) + ",\\s*DIRECT", "im");
+      if (!direct.test(raw)) {
+        fail("配信中のネットワークの DIRECT 行が無い",
+          `${net.adstxt.domain},${net.adstxt.id},DIRECT が要る。`
+          + "無いと入札側が未認可の在庫と見なし、収益が静かに落ちる");
+      }
+      cov.covered("配信中のネットワークの認可", 1, 1);
+    }
+  }
+
   // --- 1. 必須の宣言が消えていないか ---
   for (const r of REQUIRED) {
     if (!r.pattern.test(raw)) {

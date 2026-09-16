@@ -3517,5 +3517,29 @@
     "why": "記事ページのサイドが丸ごと出なくなる。記事下は出続けるので画面では気づけず、レポートの合計を見るまで分からない",
     "find": "        articleside: { pc: { mid: 596360, asid: 1944925, size: [300, 250] }, sp: null }",
     "replace": "        articleside: { pc: null, sp: null }"
+  },
+  {
+    "name": "配信中のネットワークの認可行を落とす",
+    "expect": "adstxt",
+    "file": "ads.txt",
+    "why": "入札側が未認可の在庫と見なし、収益が静かに落ちる。例外も警告も出ないので、月末の明細を見るまで気づけない",
+    "find": "i-mobile.co.jp,85441,DIRECT",
+    "replace": ""
+  },
+  {
+    "name": "認可行を再販扱いにする",
+    "expect": "adstxt",
+    "file": "ads.txt",
+    "why": "同じドメインのRESELLER行は他社が再販している宣言で、自分のアカウントの認可ではない。行はあるので目視では気づけない",
+    "find": "i-mobile.co.jp,85441,DIRECT",
+    "replace": "i-mobile.co.jp,85441,RESELLER"
+  },
+  {
+    "name": "ads.txt の記載の宣言を落とす",
+    "expect": "adstxt",
+    "file": "netad.js",
+    "why": "何を書けばよいかの手がかりが消え、ネットワークを切り替えたときの抜けを検査できなくなる",
+    "find": "      adstxt: { domain: \"i-mobile.co.jp\", id: \"85441\" },",
+    "replace": ""
   }
 ]

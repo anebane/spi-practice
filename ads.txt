@@ -4,15 +4,23 @@
 #    片方の管理画面が出す内容をそのまま貼ると、もう片方の収益計上が止まる。
 #
 # 1行目      Google AdSense（2026-08-27〜）
-# 2行目以降   忍者AdMax が配信する事業者一覧（2026-09-11 に管理画面から取得・684行）
+# 2行目      忍者AdMax（直接契約）
+# 3行目      i-mobile（直接契約・2026-09-16〜）
+# 4行目以降   忍者AdMax が配信する事業者一覧（2026-09-11 に管理画面から取得・684行）
 #
 # 更新するとき:
 #   https://admax.shinobi.jp/app/tags/adstxt から取り直し、
-#   **AdSense の行を残したまま** 差し替えること。
+#   **AdSense と i-mobile の行を残したまま** 差し替えること。
 # ⚠️ 忍者側の行は削らない。同じドメイン・IDでも4項目目の認証ID(TAG-ID)が
 #    違う行があり、消すと検証に使われる情報が落ちる。
+#
+# ⚠️ i-mobile.co.jp の RESELLER 行が9行あるが、**あれは忍者経由の再販分**で
+#    自分のアカウントではない。直接契約で配信するには、自分のパートナーID
+#    85441 の DIRECT 行が要る。これが無いと入札側が未認可の在庫と見なす。
+#    （85441 は管理画面のタグの imobile_pid、sellers.json の seller_id と同じ値）
 google.com, pub-5409685648363967, DIRECT, f08c47fec0942fa0
 adm.shinobi.jp,231519,DIRECT
+i-mobile.co.jp,85441,DIRECT
 33across.com,0010b00002Mq2FYAAZ,RESELLER,bbea06d9c4d2853c
 33across.com,0013300001r0t9mAAA,RESELLER,bbea06d9c4d2853c
 33across.com,0014000001aXjnGAAS,RESELLER,bbea06d9c4d2853c

@@ -25,6 +25,12 @@
       sdk: "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104",
       sdkId: "imobile-sdk",
       pid: 85441,
+      // ⚠️ ads.txt にこの行が無いと、入札側が未認可の在庫と見なして値が付かない。
+      //    **切り替えても例外は出ない。**収益が静かに落ちるだけなので、
+      //    test/adstxt.spec.js が「有効なネットワークのDIRECT行があるか」を見る。
+      //    ⚠️ ads.txt には i-mobile.co.jp の RESELLER 行が9行あるが、あれは
+      //    忍者経由の再販分で自分のアカウントではない。DIRECT でなければ意味がない。
+      adstxt: { domain: "i-mobile.co.jp", id: "85441" },
       // 面 → デバイス → 枠
       // ⚠️ size は管理画面で登録した広告サイズ。**飾りではない。**
       //    CSSの器がこれより狭いと広告がはみ出す。test/html.spec.js が
@@ -71,6 +77,7 @@
     admax: {
       sdk: "https://adm.shinobi.jp/st/t.js",
       sdkId: "admax-sdk",
+      adstxt: { domain: "adm.shinobi.jp", id: "231519" },
       slots: {
         article: { pc: "701e1f0351b6f71b0986f62aae5e1949", sp: "3699c5a4a3decd176accb15405a99283" },
         result:  { pc: null, sp: null },      // 未申請
