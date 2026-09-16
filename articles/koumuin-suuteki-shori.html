@@ -80,6 +80,9 @@
 </head>
 <body>
   <div class="legal-page">
+    <!-- ネットワーク広告（記事サイド）。中身は netad.js が入れる。
+         ⚠️ PCのみ・ABテストの ads 群だけ。本文の幅は変えない（絶対配置＋追従）。 -->
+    <aside id="network-ad-articleside" class="article-side-ad" style="display:none"></aside>
     <header class="legal-header">
       <a href="/" class="legal-logo">適性検査無限ドリル</a>
     </header>
@@ -211,6 +214,9 @@
   <!-- ABテストの群わけ。広告の描画より前に読み込む -->
   <script src="/abtest.js"></script>
   <script src="/affiliate.js"></script>
+  <!-- ネットワーク広告。⚠️ abtest.js より後、affiliate-article.js より前。
+       abShowAds() を使うので前だと群が読めず、後だと描画に間に合わない -->
+  <script src="/netad.js"></script>
   <script src="/affiliate-article.js"></script>
 </body>
 </html>

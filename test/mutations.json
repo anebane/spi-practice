@@ -2906,16 +2906,16 @@
     "name": "abtest.js を app.js より後ろに読み込む",
     "expect": "abtest",
     "file": "index.html",
-    "why": "読み込み順が逆でも例外は出ない。typeof のフォールバックがあるので、その面だけ群が付かないまま静かに進む。集計では「一部に ab_group が無い」としか見えず、どの面が抜けているか分からない。2026-09-11に28面中1面で実際に起きた",
-    "find": "  <!-- ABテストの群わけ。app.js より前に読み込む\n       ⚠️ 無いと全イベントに群が乗らず、ABの比較が成立しない -->\n  <script src=\"abtest.js\"></script>\n  <script src=\"app.js\"></script>",
-    "replace": "  <script src=\"app.js\"></script>\n  <script src=\"abtest.js\"></script>"
+    "why": "群わけが読まれないまま app.js と netad.js が動く。全イベントに群が乗らず、広告の出し分けも効かない。ABの比較が成立しなくなるが画面は正常に見える",
+    "find": "  <script src=\"abtest.js\"></script>\n",
+    "replace": ""
   },
   {
     "name": "記事ページの広告を全員に出す",
     "expect": "abtest",
-    "file": "affiliate-article.js",
-    "why": "ABテストの ads 群だけに出す判定を外すと、control 群にも広告が出る。対照群が汚れると「広告を出したら完走率がどう動いたか」を後から言えなくなる。広告は表示されるので画面上は正常に見える",
-    "find": "    if (typeof abShowAds !== \"function\" || !abShowAds()) return false;",
+    "file": "netad.js",
+    "why": "control 群にも広告が出て対照群が汚れる。広告は正常に表示されるので、画面を見ても気づけない。ABテストそのものが無意味になる",
+    "find": "    if (typeof global.abShowAds !== \"function\" || !global.abShowAds()) return false;",
     "replace": "    if (false) return false;"
   },
   {
@@ -2991,44 +2991,44 @@
     "replace": "  <script src=\"../questions.js\"></script>\n  <script src=\"../app.js\"></script><script>var ACTIVE_PROFILE = \"en\";</script>"
   },
   {
-    "name": "広告枠をPC用だけにする",
+    "name": "結果画面の枠を記事下と同じにする",
     "expect": "abtest",
-    "file": "affiliate-article.js",
-    "why": "PC 58% / スマホ 40%（実測）。片方の枠を落とすとそのデバイスには出ないが、もう片方では出るので画面を見ても気づけない",
-    "find": "    sp: \"3699c5a4a3decd176accb15405a99283\"",
-    "replace": "    sp: \"701e1f0351b6f71b0986f62aae5e1949\""
+    "file": "netad.js",
+    "why": "面ごとに枠を分けている意味が消え、どの面が稼いだか分けられない。広告は出るのでレポートを見るまで気づけない",
+    "find": "        result:  { pc: { mid: 596360, asid: 1944920, size: [300, 250] },\n                   sp: { mid: 596361, asid: 1944922, size: [300, 250] } },",
+    "replace": "        result:  { pc: { mid: 596360, asid: 1944918, size: [300, 250] },\n                   sp: { mid: 596361, asid: 1944922, size: [300, 250] } },"
   },
   {
     "name": "旧方式(document.write)の広告タグに戻す",
     "expect": "abtest",
-    "file": "affiliate-article.js",
+    "file": "netad.js",
     "why": "adm.shinobi.jp/s/<ID> は document.write 方式。動的に差し込むとブラウザが document.write を無視し、広告のリクエストすら飛ばない。枠は高さ0のままで例外も出ず、『審査が通っていないから出ない』と区別がつかない。2026-09-14に本番で3日気づけなかった実例",
-    "find": "    box.className = \"admax-ads\";",
-    "replace": "    box.className = \"admax-ads\"; var _legacy = \"https://adm.shinobi.jp/s/701e1f0351b6f71b0986f62aae5e1949\";"
+    "find": "        box.className = \"admax-ads\";",
+    "replace": "        box.className = \"admax-ads\"; var _legacy = \"https://adm.shinobi.jp/s/701e1f0351b6f71b0986f62aae5e1949\";"
   },
   {
     "name": "枠の器のclassを別名にする",
     "expect": "abtest",
-    "file": "affiliate-article.js",
+    "file": "netad.js",
     "why": "SDKは class=\"admax-ads\" の要素を探す。別名だと枠が見つからず、リクエストは飛ぶのに何も描かれない。画面は正常に見える",
-    "find": "    box.className = \"admax-ads\";",
-    "replace": "    box.className = \"admax-banner\";"
+    "find": "        box.className = \"admax-ads\";",
+    "replace": "        box.className = \"admax-banner\";"
   },
   {
     "name": "広告キューへの積み込みをやめる",
     "expect": "abtest",
-    "file": "affiliate-article.js",
+    "file": "netad.js",
     "why": "器とSDKがあってもキューに積まなければ広告は要求されない。3つの部品のうち1つ欠けただけで出なくなるが、エラーは出ない",
-    "find": "    window.admaxads.push({ admax_id: id, type: \"banner\" });",
-    "replace": "    window.admaxads.length = 0;"
+    "find": "        global.admaxads.push({ admax_id: slot, type: \"banner\" });",
+    "replace": "        global.admaxads.length = 0;"
   },
   {
     "name": "広告SDKを読み込まない",
     "expect": "abtest",
-    "file": "affiliate-article.js",
-    "why": "st/t.js を読まなければ、キューに積んでも誰も描かない。枠は空のまま残る",
-    "find": "  var ADMAX_SDK = \"https://adm.shinobi.jp/st/t.js\";",
-    "replace": "  var ADMAX_SDK = \"\";"
+    "file": "netad.js",
+    "why": "SDKのURLが空だと何も読み込まれず、枠は空のまま。画面は正常に見える",
+    "find": "      sdk: \"https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104\",",
+    "replace": "      sdk: \"\","
   },
   {
     "name": "同じ熟語を2つの構成に登録する",
@@ -3349,5 +3349,133 @@
     "why": "どの言語の面か機械が判断できなくなる。広告枠の検査の対象判定が lang に依存しているので、宣言が無いページは判定から漏れる",
     "find": "<html lang=\"en-GB\">",
     "replace": "<html>"
+  },
+  {
+    "name": "有効なネットワークを宣言に無い名前にする",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "広告が1つも出なくなる。描画は静かに return するだけなので、画面にもコンソールにも何も出ない",
+    "find": "  var ACTIVE_NETWORK = \"imobile\";",
+    "replace": "  var ACTIVE_NETWORK = \"imobil\";"
+  },
+  {
+    "name": "使っていない側のネットワーク宣言を消す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "2社を比べられなくなる。戻すときに管理画面からIDを取り直すことになり、取り違えが起きる",
+    "find": "    admax: {\n      sdk: \"https://adm.shinobi.jp/st/t.js\",",
+    "replace": "    admaxRemoved: {\n      sdk: \"https://adm.shinobi.jp/st/t.js\","
+  },
+  {
+    "name": "i-mobileのpidを落とす",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "パートナーIDが無いと配信側が誰の枠か判断できず、広告が返らない。枠の器は出るので画面は正常に見える",
+    "find": "      pid: 85441,",
+    "replace": "      pid: 0,"
+  },
+  {
+    "name": "i-mobileのキューに積むのをやめる",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "SDKは読まれるが描く対象を知らされない。枠が空のまま残る",
+    "find": "        global.adsbyimobile = global.adsbyimobile || [];",
+    "replace": "        global.adsbyimobileUnused = [];"
+  },
+  {
+    "name": "i-mobileのSDKを別のURLにする",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "存在しないURLを読みに行き、広告は出ない。ネットワークタブを見ないと気づけない",
+    "find": "      sdk: \"https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104\",",
+    "replace": "      sdk: \"https://imp-adedge.i-mobile.co.jp/script/v2/spot.js\","
+  },
+  {
+    "name": "試験画面サイドの枠を消す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "いちばん表示回数の多い面（月19,000回想定）が丸ごと消える。他の面は出るので、レポートの合計を見るまで気づけない",
+    "find": "        examside: { pc: { mid: 596360, asid: 1944926, size: [300, 250] }, sp: null },",
+    "replace": "        examside: { pc: null, sp: null },"
+  },
+  {
+    "name": "結果画面の枠を消す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "月4,000回の表示が消える。記事下は出続けるので画面では気づけない",
+    "find": "        result:  { pc: { mid: 596360, asid: 1944920, size: [300, 250] },\n                   sp: { mid: 596361, asid: 1944922, size: [300, 250] } },",
+    "replace": "        result:  { pc: null, sp: null },"
+  },
+  {
+    "name": "サイド広告を本文の幅に食い込ませる",
+    "expect": "html",
+    "file": "style.css",
+    "why": "問題文の折り返しが変わり、読みやすさが落ちる。ABテストで完走率に差が出ても、広告のせいかレイアウトのせいか切り分けられなくなる",
+    "find": "  position: absolute;\n  top: 80px;\n  right: calc((100% - 800px) / 2 - 324px);",
+    "replace": "  position: relative;\n  top: 80px;\n  right: calc((100% - 800px) / 2 - 324px);"
+  },
+  {
+    "name": "狭い画面でもサイド広告を出す",
+    "expect": "html",
+    "file": "style.css",
+    "why": "空きが足りない画面で本文に重なる。1024px では片側112pxしかなく、300pxの枠が本文を覆う",
+    "find": "@media (max-width: 1447px) {\n  /* 空きが足りない。出さない。 */\n  .exam-side-ad { display: none !important; }\n}",
+    "replace": "@media (max-width: 1447px) {\n  /* 空きが足りない。出さない。 */\n}"
+  },
+  {
+    "name": "記事サイドの広告指定を消す",
+    "expect": "html",
+    "file": "style.css",
+    "why": "記事ページのサイドだけ器の指定が消える。枠は作られるので広告のリクエストは飛ぶが、幅も位置も無いまま本文の上に重なる",
+    "find": ".article-side-ad {\n  position: absolute;\n  top: 120px;\n  /* ⚠️ bottom を指定して記事の高さいっぱいに伸ばす。中の sticky は\n     **親の箱の中でしか動けない**ので、高さが無いと1画面も追従しない。 */\n  bottom: 0;\n  left: -324px;\n  width: 300px;\n  z-index: 1;\n}",
+    "replace": ""
+  },
+  {
+    "name": "サイド広告の枠サイズの宣言を落とす",
+    "expect": "html",
+    "file": "netad.js",
+    "why": "管理画面のサイズとCSSの器を突き合わせる手がかりが消える。次にサイズを変えたとき、器が合っていないことに誰も気づけない",
+    "find": "articleside: { pc: { mid: 596360, asid: 1944925, size: [300, 250] }, sp: null }",
+    "replace": "articleside: { pc: { mid: 596360, asid: 1944925 }, sp: null }"
+  },
+  {
+    "name": "サイド広告の器を枠より狭くする",
+    "expect": "html",
+    "file": "style.css",
+    "why": "300x250の広告が160pxの器に入り、本文へはみ出す。2026-09-16に枠を160x600から300x250へ変えたとき、実際に踏みかけた事故",
+    "find": "  left: -324px;\n  width: 300px;",
+    "replace": "  left: -324px;\n  width: 160px;"
+  },
+  {
+    "name": "サイド広告を隠す幅を枠より小さいままにする",
+    "expect": "html",
+    "file": "style.css",
+    "why": "枠を大きくしたのに閾値を上げ忘れる典型。1408px未満でも出てしまい、本文に重なる",
+    "find": "@media (max-width: 1407px) {",
+    "replace": "@media (max-width: 1167px) {"
+  },
+  {
+    "name": "サイド広告の配置の基準を外す",
+    "expect": "html",
+    "file": "style.css",
+    "why": "#screen-exam の position:relative が無いと絶対配置が body 基準になり、画面幅によって本文へ重なる",
+    "find": "  /* ⚠️ サイド広告(.exam-side-ad)の絶対配置の基準。\n     これが無いと body 基準になり、画面幅が変わったときに本文へ重なる。 */\n  position: relative;",
+    "replace": ""
+  },
+  {
+    "name": "記事のサイド広告を追従させない",
+    "expect": "html",
+    "file": "style.css",
+    "why": "記事は5,000px超あるので、追従しないと最初の1画面を過ぎた時点で見えなくなる。表示回数は数えられるのに読まれない状態になる",
+    "find": ".article-side-ad > div {\n  position: sticky;\n  top: 24px;\n}",
+    "replace": ".article-side-ad > div {\n  position: static;\n  top: 24px;\n}"
+  },
+  {
+    "name": "記事サイドの枠を消す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "記事ページのサイドが丸ごと出なくなる。記事下は出続けるので画面では気づけず、レポートの合計を見るまで分からない",
+    "find": "        articleside: { pc: { mid: 596360, asid: 1944925, size: [300, 250] }, sp: null }",
+    "replace": "        articleside: { pc: null, sp: null }"
   }
 ]

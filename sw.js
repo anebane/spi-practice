@@ -29,7 +29,7 @@
 // 以前ここには「2回目で直る」と書いてあったが誤りだった。
 // 実際、2026-08-28 の開発中に app.js を直したのに反映されず、
 // Service Worker を手で解除するまで旧版が配られ続けた。
-const VERSION = "2026-09-15b";
+const VERSION = "2026-09-16b";
 const PRECACHE = `precache-${VERSION}`;
 const RUNTIME = `runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -45,6 +45,7 @@ const PRECACHE_URLS = [
   //    「control 群が少なく見える」という形で集計が歪み、しかも例外は出ない。
   //    広告タグは含まないので、プリキャッシュしても広告が出るわけではない。
   "/abtest.js",
+  "/netad.js",
   "/favicon.svg",
   "/manifest.json",
   OFFLINE_URL,

@@ -345,6 +345,7 @@
       mode: state.mode
     });
     showScreen("exam");
+    if (typeof NetAd !== "undefined") NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
     showQuestion(state.currentIndex);
     startTimer();
   }
@@ -626,6 +627,10 @@
       categories: selectedCategories.join(",")
     });
     showScreen("exam");
+    // ⚠️ サイドはPCのみ（netad.js 側で判定）。本文の幅は変えないので、
+    //    問題の読みやすさには影響しない。ただし**試験中の面**なので、
+    //    完走率への影響をABテストの群別に必ず見ること。
+    if (typeof NetAd !== "undefined") NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
     showQuestion(0);
     startTimer();
     } catch(e) {
@@ -1185,6 +1190,9 @@
   // --- 結果表示 ---
   function showResults() {
     showScreen("result");
+    // ⚠️ 描くのは**画面が出るとき**。読み込み時に描くと、見られていない広告を
+    //    数えることになり、表示回数もRPMも実態から離れる。
+    if (typeof NetAd !== "undefined") NetAd.render("network-ad-result", "result", "result-" + PROFILE_ID);
 
     var totalCorrect = 0;
     var totalTime = 0;

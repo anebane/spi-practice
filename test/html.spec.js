@@ -371,6 +371,110 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   cov.covered("商標の注記を調べたページ", checked, 8);
 }
 
+// --- 試験画面のサイド広告が、本文の幅を変えていないか ---
+//
+// 【なぜ必要か】
+// 2026-09-16に試験中の画面へサイド広告を入れた。**試験中の面に広告を置く**
+// ので、完走率への影響をABテストで測る。そのとき成立していなければならない
+// 前提が1つある：**両群で本文の見え方が同じであること**。
+//
+// ⚠️ サイドをレイアウトに参加させると本文の幅が縮み、問題文の折り返しが変わる。
+//    そうなると完走率に差が出ても「広告のせい」か「読みにくくなったせい」かを
+//    切り分けられず、ABテストが答えを出せなくなる。
+// ⚠️ 空きが足りない画面で出すと本文に重なる。実測（2026-09-16）で
+//    1024px は片側112pxしかなく、300pxの枠が本文を覆う。
+// ⚠️ 記事ページ側にも同じ危険がある。両方まとめて見る。
+{
+  const css = fs.readFileSync(path.join(ROOT, "style.css"), "utf8");
+  const NetAd = require("../netad.js");
+  const slots = (NetAd.NETWORKS[NetAd.ACTIVE_NETWORK] || {}).slots || {};
+
+  // サイドの面ごとに、本文の幅と枠の実サイズから「必要な空き」を計算して照合する。
+  // ⚠️ 数字を直に書かない。本文幅・枠サイズ・閾値のどれか1つだけ直すと落ちる形にする。
+  //    2026-09-16、160x600 の枠に在庫が無く 300x250 へ変えたとき、
+  //    CSSの器を160pxのままにしていたら広告が本文へはみ出していた。
+  const GAP = 24;                       // 本文と枠のあいだに最低限あける余白
+  const RAILS = [
+    { cls: "exam-side-ad",    place: "examside",    本文: 800, 基準: /#screen-exam\s*\{[^}]*position:\s*relative/s,
+      基準の説明: "#screen-exam に position: relative が無いと body 基準になり、本文へ重なる" },
+    { cls: "article-side-ad", place: "articleside", 本文: 760, 追従: true,
+      // 本文を基準に外へ出す方式。基準が無いと枠の高さが記事の高さにならず、追従できない
+      本文基準: true,
+      基準: /\.legal-page\s*\{[^}]*position:\s*relative/s,
+      基準の説明: ".legal-page に position: relative が無いと基準が画面になり、枠が記事の高さを持てず追従しない" }
+  ];
+
+  let checked = 0;
+  for (const rail of RAILS) {
+    const rule = (css.match(new RegExp("\\." + rail.cls + "\\s*\\{([^}]*)\\}")) || [])[1];
+    if (!rule) {
+      fail("style.css", "サイド広告の指定が無い", "." + rail.cls + " の規則が見つからない");
+      continue;
+    }
+    const slot = (slots[rail.place] || {}).pc;
+    if (!slot || !slot.size) {
+      fail("netad.js", "サイド広告の枠サイズが宣言されていない",
+        rail.place + "/pc に size が無い。CSSの器と突き合わせられない");
+      continue;
+    }
+    checked++;
+    const 枠幅 = slot.size[0];
+    const 必要な空き = 枠幅 + GAP;
+    const 必要な画面幅 = rail.本文 + 必要な空き * 2;
+
+    const bad = [];
+    // 本文をずらさないために、レイアウトから外れていること
+    if (!/position\s*:\s*absolute/.test(rule)) {
+      bad.push("position: absolute でない。レイアウトに参加すると本文の幅が変わる");
+    }
+    // 器が枠より狭いと広告が本文へはみ出す
+    const w = (rule.match(/width\s*:\s*(\d+)px/) || [])[1];
+    if (Number(w) !== 枠幅) {
+      bad.push("器の幅が " + w + "px。広告は " + 枠幅 + "px なのではみ出す");
+    }
+    // 本文の外側に置く指定になっていること
+    if (rail.本文基準) {
+      // 本文の箱を基準にして、その外へ 必要な空き だけ出す
+      const off = (rule.match(/(?:left|right)\s*:\s*-(\d+)px/) || [])[1];
+      if (Number(off) !== 必要な空き) {
+        bad.push("本文の外へ出す量が " + off + "px。" + 枠幅 + "px の枠には " + 必要な空き + "px 要る");
+      }
+      // 高さが無いと中の sticky が動けない。2026-09-16、実際に追従しなかった
+      if (!/bottom\s*:\s*0/.test(rule)) {
+        bad.push("bottom の指定が無い。枠の高さが記事の高さにならず、中の sticky が1pxも動けない");
+      }
+    } else {
+      const offset = (rule.match(/calc\(\(100% - (\d+)px\) \/ 2 - (\d+)px\)/) || []);
+      if (Number(offset[1]) !== rail.本文 || Number(offset[2]) !== 必要な空き) {
+        bad.push("配置の計算が本文" + rail.本文 + "px・空き" + 必要な空き + "px と合っていない");
+      }
+    }
+    if (bad.length) fail("style.css", "サイド広告が本文に影響する", rail.cls + ": " + bad.join(" / "));
+
+    // 空きが足りない画面では出さないこと。閾値は計算値と一致していること
+    const m = css.match(new RegExp("@media[^{]*max-width:\\s*(\\d+)px[^{]*\\{[^}]*\\." + rail.cls + "\\s*\\{[^}]*display:\\s*none", "s"));
+    if (!m) {
+      fail("style.css", "狭い画面でサイド広告を隠していない",
+        rail.cls + ": 本文" + rail.本文 + "px + 枠" + 枠幅 + "px + 余白が入らない幅では出さないこと");
+    } else if (Number(m[1]) !== 必要な画面幅 - 1) {
+      fail("style.css", "サイド広告を隠す幅が枠のサイズと合っていない",
+        rail.cls + ": " + m[1] + "px 以下で非表示だが、" + 枠幅 + "px の枠には "
+        + 必要な画面幅 + "px 以上が要る（" + (必要な画面幅 - 1) + "px 以下で隠すべき）");
+    }
+
+    if (rail.基準 && !rail.基準.test(css)) {
+      fail("style.css", "サイド広告の配置の基準が無い", rail.基準の説明);
+    }
+    // 記事は長いので追従させる。固定だと最初の1画面を過ぎたら読まれない
+    if (rail.追従 && !new RegExp("\\." + rail.cls + "\\s*>\\s*div\\s*\\{[^}]*position:\\s*sticky", "s").test(css)) {
+      fail("style.css", "記事のサイド広告が追従しない",
+        "記事は5,000px超あるので、絶対配置のままでは最初の1画面を過ぎると見えなくなる");
+    }
+  }
+  cov.covered("サイド広告の指定", checked, RAILS.length);
+}
+
+
 // --- lang 属性が置き場所と合っているか ---
 //
 // ⚠️ これが無いと、下の「広告枠」の検査に抜け道ができる。あちらは lang で

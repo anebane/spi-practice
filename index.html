@@ -301,6 +301,14 @@
       </div>
     </header>
 
+    <!-- ネットワーク広告（試験画面サイド）。中身は netad.js が入れる。
+
+         ⚠️ PCのみ。本文(exam-body)の幅は変えないので、問題の読みやすさは変わらない。
+
+         ⚠️ 試験中の面なので、完走率への影響をABテストの群別に必ず見ること。 -->
+
+    <aside id="network-ad-examside" class="exam-side-ad" style="display:none"></aside>
+
     <div class="exam-body">
       <div class="question-meta">
         <span class="question-category" id="question-category">分野</span>
@@ -383,6 +391,9 @@
            test/html.spec.js が HTML 内の a8.net URL を検出して落とす）
            位置は分野別成績のあと。利用者自身の成績と次の一手を先に見せる。 -->
       <div id="affiliate-result" style="display:none"></div>
+      <!-- ネットワーク広告（結果画面）。中身は netad.js が入れる。
+           ⚠️ ABテストの ads 群にだけ出る。試験は終わっているので完走率には影響しない。 -->
+      <div id="network-ad-result" style="display:none"></div>
 
       <div class="radar-chart-container">
         <canvas id="radar-chart" width="400" height="400"></canvas>
@@ -450,6 +461,9 @@
   <!-- ABテストの群わけ。app.js より前に読み込む
        ⚠️ 無いと全イベントに群が乗らず、ABの比較が成立しない -->
   <script src="abtest.js"></script>
+  <!-- ネットワーク広告。⚠️ abtest.js より後、app.js より前。
+       abShowAds() を使うので前だと群が読めず、app.js より後だと描画に間に合わない -->
+  <script src="netad.js"></script>
   <script src="app.js"></script>
   <script src="/pwa.js" defer></script>
 </body>
