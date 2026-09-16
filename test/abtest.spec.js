@@ -272,6 +272,15 @@ if (load) {
     }
     cov.covered("宣言されたネットワーク", Object.keys(NETWORKS).length, 2);
 
+    // ⚠️ 関数の中身を見るときは**コメントを落としてから**にする。
+    //    注意書きに書いた文字列に一致して、コードを壊しても素通りする。
+    //    2026-09-16、`class は "admax-ads" 固定` という注記のせいで、
+    //    className を別名に変える変異が検査をすり抜けていた。
+    //    ⚠️ 同じ型の事故をこの日3回踏んでいる：HTMLのコメント・CSSの@media・ここ。
+    const code = (fn) => String(fn)
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+
     // それぞれの宣言が、管理画面が出すタグに必要なものを持っているか
     const shapes = {
       imobile: (n) => {
@@ -304,7 +313,7 @@ if (load) {
         //    文字列としては一致してしまい、変異が素通りする（実際に踏んだ）。
         // ⚠️ 条件を OR でつながないこと。片方が残っていれば通ってしまい、
         //    やはり素通りする（これも踏んだ）。**初期化と push の両方**を要る。
-        const r = String(n.render);
+        const r = code(n.render);
         // ⚠️ netad.js は IIFE の引数 global 経由で window を参照している。
         //    "window." 決め打ちで書くと実物に一致せず、常に赤になる。
         const G = "(?:window|global)";
@@ -324,8 +333,8 @@ if (load) {
         const art2 = (n.slots || {}).article || {};
         if (!art2.pc || !art2.sp) bad.push("article の枠IDが両デバイス分そろっていない");
         if (art2.pc && art2.pc === art2.sp) bad.push("article の PCとSPの枠IDが同じ");
-        const r = String(n.render);
-        if (!/admax-ads/.test(r)) bad.push('class が "admax-ads" でない。SDKが枠を見つけられない');
+        const r = code(n.render);
+        if (!/className\s*=\s*"admax-ads"/.test(r)) bad.push('class が "admax-ads" でない。SDKが枠を見つけられない');
         if (!/data-admax-id/.test(r)) bad.push("data-admax-id を付けていない");
         if (!/admaxads\.push/.test(r)) bad.push("admaxads キューに積んでいない");
         return bad;
@@ -400,7 +409,15 @@ if (load) {
       if (!sandboxed || typeof sandboxed.render !== "function") {
         fail("netad.js が NetAd を公開していない", "描画side を検査できない");
       } else {
-        sandboxed.render("network-ad-article", "article", "spec");
+        // ⚠️ 描画中の例外は握って**検査の失敗として報告する**。素通しにすると
+        //    spec ごと異常終了し、何が壊れたのか出力に残らない。
+        let thrown = null;
+        try {
+          sandboxed.render("network-ad-article", "article", "spec");
+        } catch (e) {
+          thrown = e;
+          fail("広告の描画が例外で止まる", String(e && e.message || e));
+        }
         const loaded = added.map(e => e.src).filter(Boolean);
         if (!loaded.length) {
           fail("広告SDKを読み込んでいない", "描いても script が差し込まれない。広告は出ない");
