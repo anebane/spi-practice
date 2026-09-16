@@ -364,9 +364,45 @@ if (load) {
 
     // 有効なネットワークのSDKを、実際に読み込んでいるか。
     // ⚠️ 宣言だけ正しくても、描画側が別のURLを読んでいたら広告は出ない。
+    //
+    // ⚠️ 文字列の有無で見てはいけない。以前は `art.indexOf("net.sdk") === -1` で
+    //    判定していたが、**"net.sdk" はコード中に必ず存在する**ので条件が常に偽になり、
+    //    この検査は一度も発火しなかった（2026-09-16に変異ランナーの未カバーで露見）。
+    //    **実際に描かせて、差し込まれた script の src を見る。**
     const activeSdk = (NETWORKS[active] || {}).sdk || "";
-    if (activeSdk && art.indexOf("net.sdk") === -1 && art.indexOf(activeSdk) === -1) {
-      fail("有効なネットワークのSDKを読んでいない", activeSdk);
+    {
+      const vm = require("vm");
+      const src = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+      const added = [];
+      const make = () => ({ style: {}, children: [],
+        appendChild(c) { this.children.push(c); }, setAttribute() {} });
+      const host = make();
+      const doc = {
+        // 枠の器だけ在るものとし、それ以外（SDKの重複判定を含む）は未挿入とする
+        getElementById: (id) => (id === "network-ad-article" ? host : null),
+        createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
+        // ⚠️ 数えるのは**差し込まれた時点**。createElement で数えると、
+        //    作るだけ作って appendChild を消しても気づけない（実際に空振りした）。
+        head: { appendChild(e) { added.push(e); } }
+      };
+      const win = { matchMedia: () => ({ matches: false }),   // PC扱い
+                    abShowAds: () => true, abGroup: () => "ads" };
+      const ctx = vm.createContext({ window: win, document: doc });
+      vm.runInContext(src, ctx);
+      const sandboxed = win.NetAd;
+      if (!sandboxed || typeof sandboxed.render !== "function") {
+        fail("netad.js が NetAd を公開していない", "描画side を検査できない");
+      } else {
+        sandboxed.render("network-ad-article", "article", "spec");
+        const loaded = added.map(e => e.src).filter(Boolean);
+        if (!loaded.length) {
+          fail("広告SDKを読み込んでいない", "描いても script が差し込まれない。広告は出ない");
+        } else if (activeSdk && loaded.indexOf(activeSdk) === -1) {
+          fail("有効なネットワークのSDKを読んでいない",
+            `読み込んだのは ${loaded.join(", ")}。有効なのは ${active} の ${activeSdk}`);
+        }
+        cov.covered("実際に読み込んだSDK", loaded.length, 1);
+      }
     }
   }
 }

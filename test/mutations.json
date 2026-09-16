@@ -3541,5 +3541,13 @@
     "why": "何を書けばよいかの手がかりが消え、ネットワークを切り替えたときの抜けを検査できなくなる",
     "find": "      adstxt: { domain: \"i-mobile.co.jp\", id: \"85441\" },",
     "replace": ""
+  },
+  {
+    "name": "別のネットワークのSDKを読ませる",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "宣言は i-mobile のまま、読み込むSDKだけ忍者になる。枠IDが噛み合わず広告は出ないのに、コードの見た目は正しいので気づけない",
+    "find": "      script.src = net.sdk;",
+    "replace": "      script.src = NETWORKS.admax.sdk;"
   }
 ]
