@@ -3549,5 +3549,29 @@
     "why": "宣言は i-mobile のまま、読み込むSDKだけ忍者になる。枠IDが噛み合わず広告は出ないのに、コードの見た目は正しいので気づけない",
     "find": "      script.src = net.sdk;",
     "replace": "      script.src = NETWORKS.admax.sdk;"
+  },
+  {
+    "name": "ブラウザ側の NetAd の名前を変える",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "affiliate-article.js と app.js は typeof NetAd で存在を見ているので、名前が変わると広告が1枚も出ない。require() は通るため、検査を通す書き方だと見逃す",
+    "find": "  global.NetAd = api;",
+    "replace": "  global.NetAdUnused = api;"
+  },
+  {
+    "name": "1問1ページなのに遷移しない",
+    "expect": "app",
+    "file": "app.js",
+    "why": "保存だけして遷移しないので、広告の表示回数は増えないまま体験だけ変わる。画面上は普通に進むので気づけない",
+    "find": "      location.href = location.pathname + location.search;\n      return;",
+    "replace": "      return;"
+  },
+  {
+    "name": "遷移でも開始イベントを送る",
+    "expect": "app",
+    "file": "app.js",
+    "why": "1問進むたびに exam_start が飛び、完走率の分母が10倍以上に膨らむ。完走率が実態の1/10に見える",
+    "find": "    if (byNavigation) { showScreen(\"exam\"); showQuestionAfterResume(); return; }",
+    "replace": "    if (byNavigation) { trackEvent(\"exam_start\", { exam_id: state.examId }); showScreen(\"exam\"); showQuestionAfterResume(); return; }"
   }
 ]

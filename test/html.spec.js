@@ -406,7 +406,11 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
 
   let checked = 0;
   for (const rail of RAILS) {
-    const rule = (css.match(new RegExp("\\." + rail.cls + "\\s*\\{([^}]*)\\}")) || [])[1];
+    // ⚠️ 行頭に限定する。限定しないと、@media の中の
+    //    `.article-side-ad { display: none !important; }` を拾ってしまい、
+    //    **本体の規則を丸ごと消しても「指定はある」と判定される**。
+    //    2026-09-16、変異ランナーの未カバー経路で気づいた。
+    const rule = (css.match(new RegExp("^\\." + rail.cls + "\\s*\\{([^}]*)\\}", "m")) || [])[1];
     if (!rule) {
       fail("style.css", "サイド広告の指定が無い", "." + rail.cls + " の規則が見つからない");
       continue;

@@ -169,14 +169,21 @@ if (load) {
   let checked = 0;
 
   for (const f of pages) {
-    const html = fs.readFileSync(f, "utf8");
+    // ⚠️ コメントを先に落とす。コメントの中に "abtest.js" と書いてあると、
+    //    **タグを消しても見つかってしまい、この検査は素通りする。**
+    //    2026-09-16、netad.js を足すときに書いた注意書き
+    //    「⚠️ abtest.js より後、app.js より前」が、26ページ分まとめて
+    //    この検査を殺していた。変異ランナーの未カバー経路で気づいた。
+    const html = fs.readFileSync(f, "utf8").replace(/<!--[\s\S]*?-->/g, "");
     // 群わけを必要とする面＝app.js（計測）か affiliate-article.js（広告）を使う面
     const usesApp = html.includes('app.js"></script>');
     const usesArticle = html.includes("/affiliate-article.js");
     if (!usesApp && !usesArticle) continue;
     checked++;
 
-    const ab = html.indexOf("abtest.js");
+    // ⚠️ 読み込みタグそのものを探す。ファイル名だけだと、属性や文字列の中の
+    //    一致まで拾ってしまう。
+    const ab = html.indexOf('abtest.js"></script>');
     const consumers = [];
     if (usesApp) consumers.push(html.indexOf('app.js"></script>'));
     if (usesArticle) consumers.push(html.indexOf("/affiliate-article.js"));

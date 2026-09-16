@@ -160,10 +160,17 @@
     return true;
   }
 
-  global.NetAd = { render: render, isMobile: isMobile,
-                   NETWORKS: NETWORKS, ACTIVE_NETWORK: ACTIVE_NETWORK };
+  var api = { render: render, isMobile: isMobile,
+              NETWORKS: NETWORKS, ACTIVE_NETWORK: ACTIVE_NETWORK };
 
+  // ⚠️ ブラウザ側は **この名前** を見る（affiliate-article.js と app.js の
+  //    `typeof NetAd === "undefined"`）。名前が変わると広告が1枚も出ない。
+  global.NetAd = api;
+
+  // ⚠️ 検査から読むための口。global.NetAd とは別に api を渡すこと。
+  //    module.exports = global.NetAd と書くと、上の行を壊しても require() は
+  //    通ってしまい、「ブラウザでだけ出ない」状態を検査が見逃す。
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = global.NetAd;
+    module.exports = api;
   }
 })(typeof window !== "undefined" ? window : this);
