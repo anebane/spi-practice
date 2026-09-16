@@ -3423,6 +3423,46 @@
     "replace": "@media (max-width: 1447px) {\n  /* 空きが足りない。出さない。 */\n}"
   },
   {
+    "name": "1問1ページで位置を進めない",
+    "expect": "app",
+    "file": "app.js",
+    "why": "同じ問題が延々と出て先に進まない。利用者には「壊れている」としか見えず、確実に離脱する",
+    "find": "    state.currentIndex = state.currentIndex + 1;\n    if (EXAM_NAVIGATION === \"perquestion\"",
+    "replace": "    if (EXAM_NAVIGATION === \"perquestion\""
+  },
+  {
+    "name": "遷移の印を付けない",
+    "expect": "app",
+    "file": "app.js",
+    "why": "1問進むたびに「続きから始めますか？」の確認が出る。使い物にならないが、SPAモードでは起きないので既定のままだと気づけない",
+    "find": "      navigating = true;\n      saveProgress();",
+    "replace": "      saveProgress();"
+  },
+  {
+    "name": "遷移を中断と同じ扱いにする",
+    "expect": "app",
+    "file": "app.js",
+    "why": "遷移のたびに確認が出て、さらに exam_resume が飛ぶ。中断からの復帰が何回あったかという本来の数字が埋もれる",
+    "find": "    if (d.navigating) { resumeExam(d, true); return true; }",
+    "replace": "    if (false) { resumeExam(d, true); return true; }"
+  },
+  {
+    "name": "遷移でも復帰イベントを送る",
+    "expect": "app",
+    "file": "app.js",
+    "why": "1試験で10回以上「復帰」したことになり、中断からの復帰の実数が測れなくなる。数字は増えるので改善と誤読しやすい",
+    "find": "    if (byNavigation) { showScreen(\"exam\"); showQuestionAfterResume(); return; }",
+    "replace": "    if (false) { showScreen(\"exam\"); showQuestionAfterResume(); return; }"
+  },
+  {
+    "name": "既定モードでも遷移させる",
+    "expect": "app",
+    "file": "app.js",
+    "why": "SPAのはずが毎問リロードされる。体感が重くなり、中断確認の挙動も変わる。切り替えの宣言が効かなくなる",
+    "find": "    ? \"perquestion\" : \"spa\";",
+    "replace": "    ? \"perquestion\" : \"perquestion\";"
+  },
+  {
     "name": "記事サイドの広告指定を消す",
     "expect": "html",
     "file": "style.css",

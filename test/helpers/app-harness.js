@@ -205,7 +205,18 @@ function createHarness(opts) {
   sandbox.globalThis = sandbox;
   sandbox.addEventListener = (t, f) => { (pageHandlers.win[t] = pageHandlers.win[t] || []).push(f); };
   sandbox.removeEventListener = noop;
-  sandbox.location = { search: search, pathname: "/", href: "http://localhost/" + search };
+  // ⚠️ 1問1ページ（EXAM_NAV="perquestion"）を検査できるように、遷移を記録する。
+  //    href への代入が「ページ読み込み」に相当する。記録しておけば、検査側で
+  //    同じ保存を種にした新しいハーネスを作り、本物の遷移を再現できる。
+  const navigations = [];
+  sandbox.location = {
+    search: search, pathname: "/",
+    reload: () => { navigations.push("reload"); },
+    get href() { return "http://localhost/" + search; },
+    set href(v) { navigations.push(v); }
+  };
+  // 遷移モードの宣言。app.js はこれを読む。
+  if (opts.examNav) sandbox.EXAM_NAV = opts.examNav;
   sandbox.window.scrollTo = noop;
   sandbox.window.open = noop;
   sandbox.window.devicePixelRatio = 1;
@@ -216,7 +227,7 @@ function createHarness(opts) {
   }
 
   return {
-    events, els, byId, user, timeouts,
+    events, els, byId, user, timeouts, navigations,
     // 保存の中身を検査から読めるようにする。
     // ⚠️ 「保存したつもり」を防ぐには、呼び出しの有無ではなく**実際に入った値**を見る。
     storage,

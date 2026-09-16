@@ -578,6 +578,100 @@ run("壊れた保存で起動が止まらない", () => {
 });
 
 
+// --- 1問1ページの遷移モード（EXAM_NAV="perquestion"）---
+//
+// 【なぜ必要か】
+// 広告は「画面が読み込まれたとき」に1回描かれる。SPAだと1試験で1回しか
+// 描かれず、i-mobile のSDKは読み込み後にキューへ積んでも処理しない
+// （2026-09-16に実測）。増やすなら本当に遷移させるしかない。
+//
+// ⚠️ **既定は "spa" で、この経路はいま本番で使われていない。**
+//    使われないコードは静かに腐るので、検査では必ず両モードを動かす。
+//    出そうと思ったときに動かない、という事態を避けるため。
+{
+  const RK = "spi_resume_v1";
+
+  // 遷移を再現する。href への代入＝ページ読み込みなので、
+  // そのときの保存を種にした新しいハーネスを作る。
+  const navigateOnce = (h, extra) => {
+    const seed = {};
+    for (const [k, v] of h.storage) seed[k] = v;
+    return createHarness(Object.assign({ questionCount: 10, examNav: "perquestion",
+                                         storageSeed: seed }, extra || {}));
+  };
+
+  run("1問1ページでも最後まで進める", () => {
+    let h = createHarness({ questionCount: 10, examNav: "perquestion" });
+    h.start();
+    let hops = 0;
+    for (let i = 0; i < 30; i++) {
+      if (h.onResult()) break;
+      const before = h.navigations.length;
+      h.answerOne();
+      if (h.navigations.length > before) { h = navigateOnce(h); hops++; }
+    }
+    if (!h.onResult()) { fail("1問1ページ", `${hops}回遷移しても結果画面に到達しない`); return; }
+    if (hops < 5) fail("1問1ページ", `遷移が ${hops} 回しか起きていない。10問なら9回前後のはず`);
+  });
+
+  run("遷移では確認ダイアログを出さない", () => {
+    // ⚠️ ここが壊れると、1問進むたびに「続きから始めますか？」が出る。
+    //    確認は「いいえ」を返す設定にしておき、それでも試験が続くことを見る。
+    let h = createHarness({ questionCount: 10, examNav: "perquestion", confirm: false });
+    h.start();
+    h.answerOne();
+    h = navigateOnce(h, { confirm: false });
+    if (!h.byId("screen-exam").classList.contains("active")) {
+      fail("1問1ページ", "遷移後に試験画面に戻っていない。確認ダイアログで捨てられた可能性");
+    }
+  });
+
+  run("遷移を復帰として数えない", () => {
+    // ⚠️ 遷移のたびに exam_resume が飛ぶと、1試験で10回以上「復帰」したことになり、
+    //    **中断からの復帰が何回あったか**という本来知りたい数字が埋もれる。
+    let h = createHarness({ questionCount: 10, examNav: "perquestion" });
+    h.start();
+    h.answerOne();
+    h = navigateOnce(h);
+    if (h.count("exam_resume") !== 0) {
+      fail("1問1ページ", `遷移で exam_resume が ${h.count("exam_resume")}回。遷移は復帰ではない`);
+    }
+    if (h.count("exam_start") !== 0) {
+      fail("1問1ページ", `遷移で exam_start が ${h.count("exam_start")}回。開始が水増しされ完走率の分母が狂う`);
+    }
+  });
+
+  run("遷移しても同じ問題に戻らない", () => {
+    // ⚠️ 保存より先に遷移すると、前の問題の位置が保存され、同じ問題が延々と出る。
+    //    利用者は「進まない」としか見えず、離脱する。
+    let h = createHarness({ questionCount: 10, examNav: "perquestion" });
+    h.start();
+    const first = h.saved(RK);
+    h.answerOne();
+    const saved = h.saved(RK);
+    if (!saved) { fail("1問1ページ", "遷移前に保存されていない"); return; }
+    if (saved.currentIndex !== 1) {
+      fail("1問1ページ", `保存された位置が ${saved.currentIndex}（1のはず）。同じ問題が繰り返される`);
+    }
+    if (!saved.navigating) {
+      fail("1問1ページ", "遷移の印(navigating)が付いていない。次の読み込みで確認ダイアログが出る");
+    }
+  });
+
+  run("SPAモードでは遷移しない", () => {
+    // 既定の側が壊れていないことも同時に見る。
+    const h = createHarness({ questionCount: 10 });
+    h.start();
+    h.answerOne();
+    if (h.navigations.length !== 0) {
+      fail("SPAモード", `遷移が ${h.navigations.length} 回起きた。既定では画面内で差し替えること`);
+    }
+    const d = h.saved(RK);
+    if (d && d.navigating) fail("SPAモード", "遷移の印が付いている。中断の確認が出なくなる");
+  });
+}
+
+
 // ============================================================
 // 出力
 // ============================================================

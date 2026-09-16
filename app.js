@@ -294,7 +294,11 @@
         currentIndex: state.currentIndex,
         mode: state.mode,
         totalTimeSec: state.totalTimeSec,
-        totalTimeRemaining: state.totalTimeRemaining
+        totalTimeRemaining: state.totalTimeRemaining,
+        // ⚠️ 「自分で画面遷移した」か「中断させられた」かの区別。
+        //    前者は黙って続きを出す。後者は「続きから始めますか」と尋ねる。
+        //    これが無いと、1問進むたびに確認ダイアログが出ることになる。
+        navigating: !!navigating
       }));
     } catch (e) { /* 容量超過・保存拒否。復帰できないだけで試験は続く */ }
   }
@@ -322,8 +326,12 @@
     return d;
   }
 
-  /** 保存された試験を画面に戻す。 */
-  function resumeExam(d) {
+  /**
+   * 保存された試験を画面に戻す。
+   *
+   * @param {boolean} byNavigation 自分で進めた遷移による再開か（1問1ページのとき）
+   */
+  function resumeExam(d, byNavigation) {
     state.questions = d.questions;
     state.answers = Array.isArray(d.answers) ? d.answers : [];
     state.currentIndex = d.currentIndex;
@@ -338,6 +346,11 @@
 
     // ⚠️ exam_start を再送しない。開始が二重に数えられ、完走率の分母が狂う。
     //    復帰は別のイベントにして、後から「復帰した回数」を数えられるようにする。
+    //
+    // ⚠️ 自分で進めた遷移では exam_resume を送らない。1問1ページにすると
+    //    1試験で10回以上「復帰」したことになり、**中断からの復帰が何回あったか**
+    //    という本来知りたい数字が埋もれる。遷移は復帰ではない。
+    if (byNavigation) { showScreen("exam"); showQuestionAfterResume(); return; }
     trackEvent("exam_resume", {
       exam_id: state.examId,
       questions_answered: state.answers.filter(function (a) { return a; }).length,
@@ -345,6 +358,11 @@
       mode: state.mode
     });
     showScreen("exam");
+    showQuestionAfterResume();
+  }
+
+  /** 復帰・遷移のどちらでも共通の、画面を出す処理。 */
+  function showQuestionAfterResume() {
     if (typeof NetAd !== "undefined") NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
     showQuestion(state.currentIndex);
     startTimer();
@@ -354,6 +372,9 @@
   function offerResume() {
     var d = loadProgress();
     if (!d) return false;
+    // ⚠️ 自分で進めた遷移なら黙って続きを出す。ここで尋ねると、
+    //    1問進むたびに確認ダイアログが出る。
+    if (d.navigating) { resumeExam(d, true); return true; }
     var done = d.answers.filter(function (a) { return a; }).length;
     if (!confirm(T.confirmResume(done, d.questions.length))) {
       clearProgress();
@@ -1117,12 +1138,52 @@
     moveToNext();
   }
 
+  /**
+   * 1問ごとにページを遷移させるか。
+   *
+   * ⚠️ 既定は "spa"（画面内で差し替え）。"perquestion" にすると、1問ごとに
+   *    本当にページを読み込み直す。
+   *
+   * 【なぜ用意してあるか】
+   * 広告は「画面が読み込まれたとき」に1回描かれる。SPAだと1試験で1回しか
+   * 描かれず、1問1ページの従来型サイトなら自然に発生する回数（1試験あたり
+   * 11.6回・実測）に対して1/12になる。
+   * ⚠️ i-mobile のSDKは**読み込み後にキューへ積んでも処理しない**（2026-09-16に
+   *    実測）。つまり画面内での再描画という手段は存在しない。増やすなら
+   *    本当に遷移させるしかない。
+   *
+   * ⚠️ **切り替えは金額だけで決めない。**試験中の体験が変わるので、完走率を
+   *    ABテストで測ってから決めること。実測（2026-09-16）では、必要な標本は
+   *    5ポイントの差を見るのに1群あたり約1,334試験。デスクトップの試験開始は
+   *    月3,351回なので、2群なら約1か月。広告のABと同時に回すと4群になり、
+   *    各838では検出力が足りない。
+   */
+  // ⚠️ 宣言は外から差し替えられる（ACTIVE_PROFILE と同じ流儀）。
+  //    HTML側で `var EXAM_NAV = "perquestion";` を app.js より前に置けば切り替わる。
+  //    こうしておかないと、検査が既定の側しか動かせず、使われていない経路が
+  //    静かに腐る。**両モードとも常に検査で動かすこと。**
+  var EXAM_NAVIGATION = (typeof EXAM_NAV !== "undefined" && EXAM_NAV === "perquestion")
+    ? "perquestion" : "spa";
+
+  // 遷移のために保存しているのかどうか。saveProgress が印を書き込む。
+  var navigating = false;
+
   function moveToNext() {
     if (state.currentIndex + 1 >= state.questions.length) {
       finishExam();
-    } else {
-      showQuestion(state.currentIndex + 1);
+      return;
     }
+    state.currentIndex = state.currentIndex + 1;
+    if (EXAM_NAVIGATION === "perquestion" && typeof location !== "undefined" && location.reload) {
+      // ⚠️ 位置を進めてから保存し、そのあと遷移する。順番を逆にすると
+      //    「前の問題」で保存された状態に戻り、同じ問題が延々と出る。
+      navigating = true;
+      saveProgress();
+      navigating = false;
+      location.href = location.pathname + location.search;
+      return;
+    }
+    showQuestion(state.currentIndex);
   }
 
   // --- 回答のフォーマット ---
