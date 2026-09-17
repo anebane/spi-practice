@@ -478,6 +478,49 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   cov.covered("サイド広告の指定", checked, RAILS.length);
 }
 
+// --- 試験画面の本文内広告が、選択肢より下にあるか ---
+//
+// 【なぜ必要か】
+// ⚠️ 広告が**選択肢より上**にあると、解いている途中で広告が読み込まれた瞬間に
+//    選択肢が下へずれ、押そうとした指が別の答えに当たる。誤答が増えるだけでなく、
+//    広告を誤クリックさせる形になり、無効トラフィックとして扱われうる。
+// ⚠️ HTMLの並びを1行動かすだけで壊れる。しかも画面を開いただけでは気づけない
+//    （広告が返ってこない日は何も起きない）ので、機械で見張る。
+{
+  let checked = 0;
+  for (const rel of pages) {
+    const html = fs.readFileSync(path.join(ROOT, rel), "utf8");
+    if (html.indexOf('id="screen-exam"') < 0) continue;
+
+    const lang = (html.match(/<html[^>]*\slang="([^"]+)"/) || [])[1] || "";
+    if (!/^ja/.test(lang)) { cov.skipped("日本語以外の試験画面", 1, "案件も配信も日本の就活向けなので広告を置かない"); continue; }
+
+    // 「回答して次へ」の形を持たない試験画面は対象外。
+    // ⚠️ 四則逆算は選択肢を押した瞬間に次へ進むので、近くに広告を置かない。
+    if (html.indexOf('class="exam-actions"') < 0) {
+      cov.skipped("回答ボタンの無い試験画面", 1, rel + ": 選択で即座に次へ進む作りなので、誤クリックを避けて広告を置かない");
+      continue;
+    }
+    checked++;
+
+    const slot = html.indexOf('id="network-ad-examinline"');
+    if (slot < 0) {
+      fail(rel, "試験画面の本文内広告が無い", "network-ad-examinline の器が無い。この面だけ収益が出ない");
+      continue;
+    }
+    const answers = html.indexOf('id="answer-area"');
+    const actions = html.indexOf('class="exam-actions"');
+    if (answers >= 0 && slot < answers) {
+      fail(rel, "広告が選択肢より上にある",
+        "広告の読み込みで選択肢がずれ、押し間違いと誤クリックが起きる");
+    } else if (actions >= 0 && slot < actions) {
+      fail(rel, "広告が回答ボタンより上にある",
+        "「回答して次へ」の下に置くこと。上にあると操作を邪魔する");
+    }
+  }
+  cov.covered("試験画面の本文内広告", checked, 2);
+}
+
 
 // --- lang 属性が置き場所と合っているか ---
 //

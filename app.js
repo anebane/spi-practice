@@ -363,7 +363,12 @@
 
   /** 復帰・遷移のどちらでも共通の、画面を出す処理。 */
   function showQuestionAfterResume() {
-    if (typeof NetAd !== "undefined") NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
+    if (typeof NetAd !== "undefined") {
+      NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
+      // ⚠️ サイドはPCだけ、インラインはPC・SPとも出す。面を分けてあるので、
+      //    どちらが稼いだかをレポートで分けられる。
+      NetAd.render("network-ad-examinline", "examinline", "examinline-" + PROFILE_ID);
+    }
     showQuestion(state.currentIndex);
     startTimer();
   }
@@ -651,7 +656,12 @@
     // ⚠️ サイドはPCのみ（netad.js 側で判定）。本文の幅は変えないので、
     //    問題の読みやすさには影響しない。ただし**試験中の面**なので、
     //    完走率への影響をABテストの群別に必ず見ること。
-    if (typeof NetAd !== "undefined") NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
+    if (typeof NetAd !== "undefined") {
+      NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
+      // ⚠️ サイドはPCだけ、インラインはPC・SPとも出す。面を分けてあるので、
+      //    どちらが稼いだかをレポートで分けられる。
+      NetAd.render("network-ad-examinline", "examinline", "examinline-" + PROFILE_ID);
+    }
     showQuestion(0);
     startTimer();
     } catch(e) {

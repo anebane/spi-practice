@@ -3573,5 +3573,37 @@
     "why": "1問進むたびに exam_start が飛び、完走率の分母が10倍以上に膨らむ。完走率が実態の1/10に見える",
     "find": "    if (byNavigation) { showScreen(\"exam\"); showQuestionAfterResume(); return; }",
     "replace": "    if (byNavigation) { trackEvent(\"exam_start\", { exam_id: state.examId }); showScreen(\"exam\"); showQuestionAfterResume(); return; }"
+  },
+  {
+    "name": "試験画面の本文内広告の器を消す",
+    "expect": "html",
+    "file": "index.html",
+    "why": "試験画面はPVの7割を占める面。ここだけ器が消えても他の面は出るので、レポートの内訳を見るまで気づけない",
+    "find": "<div id=\"network-ad-examinline\" class=\"exam-inline-ad\" style=\"display:none\"></div>",
+    "replace": ""
+  },
+  {
+    "name": "試験画面の広告を選択肢より上に置く",
+    "expect": "html",
+    "file": "index.html",
+    "why": "広告が読み込まれた瞬間に選択肢が下へずれ、押そうとした指が別の答えに当たる。誤答が増えるうえ、広告の誤クリックは無効トラフィックとして扱われる",
+    "find": "      <div class=\"answer-area\" id=\"answer-area\">",
+    "replace": "      <div id=\"network-ad-examinline\" class=\"exam-inline-ad\" style=\"display:none\"></div>\n      <div class=\"answer-area\" id=\"answer-area\">"
+  },
+  {
+    "name": "試験画面インラインの枠を消す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "試験画面の本文内広告が丸ごと出なくなる。サイドは出続けるのでPCでは気づきにくく、スマホは全滅する",
+    "find": "        examinline: { pc: { mid: 596360, asid: 1945331, size: [300, 250] },\n                      sp: { mid: 596361, asid: 1945332, size: [300, 250] } },",
+    "replace": "        examinline: { pc: null, sp: null },"
+  },
+  {
+    "name": "試験画面インラインのSP枠を落とす",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "PCでは出るのにスマホでは出ない。PVの多数はスマホなので、いちばん大きい面が静かに欠ける",
+    "find": "                      sp: { mid: 596361, asid: 1945332, size: [300, 250] } },",
+    "replace": "                      sp: null },"
   }
 ]

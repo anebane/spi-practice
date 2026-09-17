@@ -345,6 +345,16 @@
         <button class="btn-secondary" id="btn-peek">解説を見る</button>
       </div>
 
+      <!-- ネットワーク広告（試験画面インライン）。中身は netad.js が入れる。
+
+           ⚠️ 置き場所は「回答して次へ」の**下**。問題文と選択肢の間には入れない。
+              解く動作を邪魔するし、選択肢のすぐ隣だと誤クリックを誘発する。
+
+           ⚠️ 試験中の面なので、完走率への影響をABテストの群別に必ず見ること。
+              2026-09-17に追加したので、それ以前の群別完走率とは地続きで比べない。 -->
+      <div id="network-ad-examinline" class="exam-inline-ad" style="display:none"></div>
+
+
       <!-- 解説プレビュー（一時停止）オーバーレイ -->
       <div class="peek-overlay" id="peek-overlay" style="display:none;">
         <div class="peek-overlay-backdrop" id="peek-backdrop"></div>

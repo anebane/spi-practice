@@ -289,7 +289,9 @@ if (load) {
         if (!/imp-adedge\.i-mobile\.co\.jp\/script\/v1\/spot\.js/.test(n.sdk || "")) bad.push("SDKのURLが違う");
         // ⚠️ 面ごとに枠を持つ構造（2026-09-16〜）。記事下だけでなく
         //    結果画面・試験画面サイドの枠もここで見る。
-        for (const place of ["article", "result"]) {
+        // ⚠️ インラインはPC・SPの両方を必須にする。片方だけ申請して片方を
+        //    忘れると、そのデバイスでは広告が出ないのに画面は正常に見える。
+        for (const place of ["article", "result", "examinline"]) {
           for (const dev of ["pc", "sp"]) {
             const sl = ((n.slots || {})[place] || {})[dev];
             if (!sl) { bad.push(`${place}/${dev} の枠が無い`); continue; }
