@@ -478,6 +478,27 @@ for (const m of sm.matchAll(/<loc>([^<]+)<\/loc>/g)) {
   cov.covered("サイド広告の指定", checked, RAILS.length);
 }
 
+// --- 解説ページがトップから直接リンクされているか ---
+//
+// 【なぜ必要か】
+// トップは被リンクと評価が最も集まるページ。そこから直接リンクされていないと、
+// 解説ページに評価が渡らず検索に出ない。
+// ⚠️ 2026-09-17まで、トップにあったのは「分野一覧」への1本だけで、16枚の解説
+//    ページは2ホップ先にあった。その間の検索表示は1枚あたり2〜56回、クリックは
+//    ほぼ0。**リンクが無くても画面は正常に見えるので、目視では気づけない。**
+// ⚠️ 一覧ページ経由のリンクでは代わりにならない。ここで見るのは**トップからの直リンク**。
+{
+  const home = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const dir = path.join(ROOT, "categories");
+  const slugs = fs.readdirSync(dir).filter(d => fs.statSync(path.join(dir, d)).isDirectory()).sort();
+  const missing = slugs.filter(sl => home.indexOf('href="categories/' + sl + '/"') < 0);
+  if (missing.length) {
+    fail("index.html", "解説ページがトップから直接リンクされていない",
+      missing.join(" / ") + "。評価が渡らず検索に出ない");
+  }
+  cov.covered("トップからの解説ページへの直リンク", slugs.length - missing.length, 16);
+}
+
 // --- 試験画面の本文内広告が、選択肢より下にあるか ---
 //
 // 【なぜ必要か】
