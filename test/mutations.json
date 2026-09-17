@@ -3605,5 +3605,13 @@
     "why": "PCでは出るのにスマホでは出ない。PVの多数はスマホなので、いちばん大きい面が静かに欠ける",
     "find": "                      sp: { mid: 596361, asid: 1945332, size: [300, 250] } },",
     "replace": "                      sp: null },"
+  },
+  {
+    "name": "試験画面の広告を回答ボタンより上に置く",
+    "expect": "html",
+    "file": "index.html",
+    "why": "選択肢の下・ボタンの上という位置は、次へ進もうとした指がちょうど通る場所。広告が読み込まれるとボタンが下へずれ、押したつもりが広告に当たる。誤クリックは無効トラフィックとして扱われる",
+    "find": "      <div class=\"exam-actions\">\n        <button class=\"btn-primary\" id=\"btn-answer\">回答して次へ</button>\n        <button class=\"btn-secondary\" id=\"btn-skip\">スキップ</button>\n        <button class=\"btn-secondary\" id=\"btn-peek\">解説を見る</button>\n      </div>\n\n      <!-- ネットワーク広告（試験画面インライン）。中身は netad.js が入れる。\n\n           ⚠️ 置き場所は「回答して次へ」の**下**。問題文と選択肢の間には入れない。\n              解く動作を邪魔するし、選択肢のすぐ隣だと誤クリックを誘発する。\n\n           ⚠️ 試験中の面なので、完走率への影響をABテストの群別に必ず見ること。\n              2026-09-17に追加したので、それ以前の群別完走率とは地続きで比べない。 -->\n      <div id=\"network-ad-examinline\" class=\"exam-inline-ad\" style=\"display:none\"></div>",
+    "replace": "      <div id=\"network-ad-examinline\" class=\"exam-inline-ad\" style=\"display:none\"></div>\n\n      <div class=\"exam-actions\">\n        <button class=\"btn-primary\" id=\"btn-answer\">回答して次へ</button>\n        <button class=\"btn-secondary\" id=\"btn-skip\">スキップ</button>\n        <button class=\"btn-secondary\" id=\"btn-peek\">解説を見る</button>\n      </div>\n\n      <!-- ネットワーク広告（試験画面インライン）。中身は netad.js が入れる。\n\n           ⚠️ 置き場所は「回答して次へ」の**下**。問題文と選択肢の間には入れない。\n              解く動作を邪魔するし、選択肢のすぐ隣だと誤クリックを誘発する。\n\n           ⚠️ 試験中の面なので、完走率への影響をABテストの群別に必ず見ること。\n              2026-09-17に追加したので、それ以前の群別完走率とは地続きで比べない。 -->"
   }
 ]
