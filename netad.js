@@ -31,6 +31,13 @@
       //    ⚠️ ads.txt には i-mobile.co.jp の RESELLER 行が9行あるが、あれは
       //    忍者経由の再販分で自分のアカウントではない。DIRECT でなければ意味がない。
       adstxt: { domain: "i-mobile.co.jp", id: "85441" },
+      // ⚠️ このSDKは**読み込まれた瞬間に1回だけ**キュー（adsbyimobile）を取り出して
+      //    描く。push を差し替えないので、後から積んだ枠は永久に処理されない。
+      //    ただし**SDKをもう一度差し込めば、そのとき積まれている分を処理する**
+      //    （2026-09-30に実ブラウザで確認。広告リクエストは握りつぶして配信はさせていない）。
+      //    画面内で描き直す面（結果画面・2本目以降の試験）はこれに頼っている。
+      //    false にすると、それらの面は**例外も出さずに空のまま**になる。
+      requeue: true,
       // 面 → デバイス → 枠
       // ⚠️ size は管理画面で登録した広告サイズ。**飾りではない。**
       //    CSSの器がこれより狭いと広告がはみ出す。test/html.spec.js が
@@ -118,17 +125,49 @@
   }
 
   /**
+   * SDKに、いまキューに積まれている枠を処理させる。
+   *
+   * ⚠️ 初回は1ページに1回だけ読む。二重に読むと描画側が多重起動する。
+   * ⚠️ 2回目以降（SDKが一度読み終わった後に積んだ枠）は、requeue なネットワークに限り
+   *    SDKを差し込み直す。差し込まないと枠は積まれたまま処理されない。
+   *    2026-09-16〜30、これが無かったせいで結果画面は15日で3表示（完走は約830回）、
+   *    同じページで2本目以降の試験には広告が1度も出ていなかった。
+   * ⚠️ 読み込み中に重ねて差し込まない。読み終わった1本がキューを全部取り出すので、
+   *    同時に描く面（試験画面のサイドとインライン）は1本で足りる。
+   */
+  var sdkState = {};   // ネットワーク名 → "loading" | "loaded"
+
+  function loadSdk(name, net) {
+    var first = !document.getElementById(net.sdkId);
+    if (!first && !net.requeue) return;
+    if (!first && sdkState[name] !== "loaded") return;   // 読み込み中。読み終わった1本が全部取り出す
+    var script = document.createElement("script");
+    if (first) script.id = net.sdkId;
+    script.src = net.sdk;
+    script.async = true;
+    sdkState[name] = "loading";
+    script.onload = script.onerror = function () { sdkState[name] = "loaded"; };
+    document.head.appendChild(script);
+  }
+
+  /**
    * 指定の面に広告を描く。
    *
    * ⚠️ ABテストの ads 群にだけ出す。control 群と、群を割り当てられない利用者
    *    （localStorage が使えない環境）には出さない。対照群が汚れると
    *    「広告を出したら完走率がどう動いたか」を後から言えなくなる。
    *
+   * ⚠️ opts.fresh は「新しい画面として描き直す」。前の枠を消してから描く。
+   *    使うのは**利用者の操作で画面が変わったとき**だけ（試験の開始・結果画面）。
+   *    時間経過やタブ復帰で描き直すと自動リフレッシュになり、規約違反になりうる。
+   *    1問ごとにも描き直さない（体験が変わるので、やるならABで測ってから）。
+   *
    * @param {string} placeId  枠を入れる要素のid
-   * @param {string} place    "article" | "result" | "examside"
+   * @param {string} place    "article" | "result" | "examside" | "examinline" | "articleside"
    * @param {string} where    計測用の面の名前
+   * @param {Object} [opts]   { fresh: true }
    */
-  function render(placeId, place, where) {
+  function render(placeId, place, where, opts) {
     if (typeof global.abShowAds !== "function" || !global.abShowAds()) return false;
     var host = document.getElementById(placeId);
     if (!host) return false;
@@ -142,16 +181,13 @@
     var slot = mobile ? byDevice.sp : byDevice.pc;
     if (!slot) return false;           // その面・そのデバイスには枠が無い（申請していない）
 
+    // 前の枠を消す。残すと net.render の二重描画防止に掛かって何も描かれない。
+    if (opts && opts.fresh) {
+      while (host.firstChild) host.removeChild(host.firstChild);
+    }
     if (!net.render(host, slot)) return false;
 
-    // SDKは1ページに1回だけ。二重に読むと描画側が多重起動する。
-    if (!document.getElementById(net.sdkId)) {
-      var script = document.createElement("script");
-      script.id = net.sdkId;
-      script.src = net.sdk;
-      script.async = true;
-      document.head.appendChild(script);
-    }
+    loadSdk(ACTIVE_NETWORK, net);
     host.style.display = "";
 
     if (typeof global.gtag === "function") {

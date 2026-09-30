@@ -656,11 +656,15 @@
     // ⚠️ サイドはPCのみ（netad.js 側で判定）。本文の幅は変えないので、
     //    問題の読みやすさには影響しない。ただし**試験中の面**なので、
     //    完走率への影響をABテストの群別に必ず見ること。
+    // ⚠️ fresh で描き直す。同じページで2本目の試験を始めたとき、前の試験の枠が
+    //    残っていると二重描画防止に掛かって**広告のリクエストが飛ばない**
+    //    （2026-09-16〜30の実測で、i-mobile のページ表示は ads 群の試験開始の半分以下）。
+    //    試験の開始は利用者の操作なので、自動リフレッシュには当たらない。
     if (typeof NetAd !== "undefined") {
-      NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
+      NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID, { fresh: true });
       // ⚠️ サイドはPCだけ、インラインはPC・SPとも出す。面を分けてあるので、
       //    どちらが稼いだかをレポートで分けられる。
-      NetAd.render("network-ad-examinline", "examinline", "examinline-" + PROFILE_ID);
+      NetAd.render("network-ad-examinline", "examinline", "examinline-" + PROFILE_ID, { fresh: true });
     }
     showQuestion(0);
     startTimer();
@@ -1159,8 +1163,9 @@
    * 描かれず、1問1ページの従来型サイトなら自然に発生する回数（1試験あたり
    * 11.6回・実測）に対して1/12になる。
    * ⚠️ i-mobile のSDKは**読み込み後にキューへ積んでも処理しない**（2026-09-16に
-   *    実測）。つまり画面内での再描画という手段は存在しない。増やすなら
-   *    本当に遷移させるしかない。
+   *    実測）。ただしSDKを差し込み直せば処理する（2026-09-30に確認。netad.js の
+   *    requeue）。試験の開始・結果画面はそれで描き直している。
+   *    1問ごとに描き直すかは体験の問題なので、ここと同じくABで測ってから決める。
    *
    * ⚠️ **切り替えは金額だけで決めない。**試験中の体験が変わるので、完走率を
    *    ABテストで測ってから決めること。実測（2026-09-16）では、必要な標本は
@@ -1263,7 +1268,11 @@
     showScreen("result");
     // ⚠️ 描くのは**画面が出るとき**。読み込み時に描くと、見られていない広告を
     //    数えることになり、表示回数もRPMも実態から離れる。
-    if (typeof NetAd !== "undefined") NetAd.render("network-ad-result", "result", "result-" + PROFILE_ID);
+    // ⚠️ fresh で描き直す。2本目の試験の結果画面にも出すため。
+    //    結果画面は試験の**後**に描くので、SDKは読み終わっている。netad.js が
+    //    SDKを差し込み直さないと、この枠は積まれたまま処理されない
+    //    （2026-09-16〜30、結果画面は15日で3表示だった。完走は約830回）。
+    if (typeof NetAd !== "undefined") NetAd.render("network-ad-result", "result", "result-" + PROFILE_ID, { fresh: true });
 
     var totalCorrect = 0;
     var totalTime = 0;

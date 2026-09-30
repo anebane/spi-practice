@@ -3547,8 +3547,8 @@
     "expect": "abtest",
     "file": "netad.js",
     "why": "宣言は i-mobile のまま、読み込むSDKだけ忍者になる。枠IDが噛み合わず広告は出ないのに、コードの見た目は正しいので気づけない",
-    "find": "      script.src = net.sdk;",
-    "replace": "      script.src = NETWORKS.admax.sdk;"
+    "find": "    script.src = net.sdk;",
+    "replace": "    script.src = NETWORKS.admax.sdk;"
   },
   {
     "name": "ブラウザ側の NetAd の名前を変える",
@@ -3621,5 +3621,61 @@
     "why": "トップから解説ページへ評価が渡らなくなる。2ホップ先になるだけで、2026-09-17まで実際に検索へ出ていなかった。画面は正常に見えるので目視では気づけない",
     "find": "<li><a href=\"categories/zuhyo/\">図表の読み取りの解き方</a>",
     "replace": "<li><a href=\"categories/\">図表の読み取りの解き方</a>"
+  },
+  {
+    "name": "i-mobile のSDKを差し込み直さない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "SDKは読み込み時に1回しかキューを取り出さない。差し込み直さないと、結果画面と2本目以降の試験の枠が積まれたまま処理されない。2026-09-16〜30に実際にこの状態で、結果画面は15日で3表示だった。例外は出ず画面も正常に見える",
+    "find": "      requeue: true,\n",
+    "replace": "      requeue: false,\n"
+  },
+  {
+    "name": "読み込み中のSDKを重ねて差し込む",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "試験画面のサイドとインラインを同時に描くたびにSDKが二重に起動する。広告は出るので見た目では気づけない",
+    "find": "    if (!first && sdkState[name] !== \"loaded\") return;",
+    "replace": "    if (!first && !sdkState[name]) return;"
+  },
+  {
+    "name": "SDKを1本も差し込まない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "枠は積まれるがSDKが来ないので広告が1枚も出ない。器は表示されるので空白が見えるだけ",
+    "find": "    sdkState[name] = \"loading\";\n    script.onload = script.onerror = function () { sdkState[name] = \"loaded\"; };\n    document.head.appendChild(script);",
+    "replace": "    sdkState[name] = \"loading\";\n    script.onload = script.onerror = function () { sdkState[name] = \"loaded\"; };"
+  },
+  {
+    "name": "fresh でなくても毎回描き直す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "同じ画面の中で呼ばれるたびに広告を出し直す。タブ復帰などで呼ばれると自動リフレッシュになり、規約違反になりうる",
+    "find": "    if (opts && opts.fresh) {",
+    "replace": "    if (true) {"
+  },
+  {
+    "name": "fresh で前の枠を消さない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "前の枠が残っていて二重描画防止に掛かり、2本目の試験・結果画面の広告が出ない",
+    "find": "      while (host.firstChild) host.removeChild(host.firstChild);\n",
+    "replace": ""
+  },
+  {
+    "name": "前の枠の消し方を器が持たないAPIに変える",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "描き直しの途中で例外になると、その後ろの計測ごと止まる。検査が例外で異常終了せず、失敗として報告できるかを見る",
+    "find": "      while (host.firstChild) host.removeChild(host.firstChild);\n",
+    "replace": "      host.replaceChildren();\n"
+  },
+  {
+    "name": "結果画面を fresh なしで描く",
+    "expect": "abtest",
+    "file": "app.js",
+    "why": "2本目以降の試験の結果画面に広告が出ない。1本目は出るので、手で確かめても気づけない",
+    "find": "NetAd.render(\"network-ad-result\", \"result\", \"result-\" + PROFILE_ID, { fresh: true });",
+    "replace": "NetAd.render(\"network-ad-result\", \"result\", \"result-\" + PROFILE_ID);"
   }
 ]

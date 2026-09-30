@@ -385,7 +385,24 @@ body {
 .exam-inline-ad {
   margin: 40px auto 24px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+/* 広告であることを枠の上に明示する。選択肢や「次へ」の続きに見えると押される。 */
+.exam-inline-ad::before {
+  content: "広告";
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 4px;
+}
+/* ⚠️ スマホは余白をさらに広く取る。
+ *    2026-09-25〜29、スマホのこの枠だけCTRが13〜20%（PCは2%前後）。
+ *    問題ごとに文の長さが変わり「回答して次へ」の位置が上下するので、
+ *    続けて押した指が、ボタンのあった場所に来た広告に当たると見ている。
+ *    誤クリックは無効トラフィックとして扱われ、アカウント停止までありうる。
+ *    境界は netad.js の isMobile（767px）と合わせる。 */
+@media (max-width: 767px) {
+  .exam-inline-ad { margin-top: 120px; }
 }
 
 /* 試験画面のサイド広告。

@@ -433,6 +433,118 @@ if (load) {
   }
 }
 
+// --- 画面内で描き直した枠が、実際にSDKへ渡るか ---
+//
+// 【なぜ必要か】
+// i-mobile のSDKは読み込まれた瞬間に1回だけキューを取り出す。後から積んだ枠は
+// SDKを差し込み直さないと処理されない。2026-09-16〜30はこれが無く、
+// 結果画面は15日で3表示（完走は約830回）、2本目以降の試験には1度も出ていなかった。
+// **どちらも例外は出ず、画面は正常に見える。**管理画面の数字でしか気づけない。
+//
+// 【どこを見るか】
+// 本物の netad.js を、id で引ける最小のDOMの上で動かす。
+{
+  const vm = require("vm");
+  const nsrc = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+  const boot = () => {
+    const byId = {};
+    const added = [];
+    const make = (tag) => {
+      const e = { tagName: tag, style: {}, children: [], parentNode: null, _id: "",
+        get id() { return this._id; },
+        set id(v) { this._id = v; byId[v] = this; },
+        get firstChild() { return this.children[0] || null; },
+        appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+        removeChild(c) {
+          const i = this.children.indexOf(c);
+          if (i >= 0) this.children.splice(i, 1);
+          const drop = (n) => { if (n._id && byId[n._id] === n) delete byId[n._id]; n.children.forEach(drop); };
+          drop(c); c.parentNode = null; return c;
+        },
+        setAttribute() {} };
+      return e;
+    };
+    const doc = {
+      getElementById: (id) => byId[id] || null,
+      createElement: (tag) => make(tag),
+      head: { appendChild(e) { added.push(e); if (e.id) byId[e.id] = e; return e; } }
+    };
+    for (const id of ["network-ad-result", "network-ad-examinline", "network-ad-examside"]) {
+      make("div").id = id;
+    }
+    const win = { matchMedia: () => ({ matches: true }),   // SP扱い
+                  abShowAds: () => true, abGroup: () => "ads" };
+    const ctx = vm.createContext({ window: win, document: doc });
+    vm.runInContext(nsrc, ctx);
+    return { N: win.NetAd, win, added, byId };
+  };
+  const sdkOf = (b) => b.added.filter(e => e.tagName === "script" && e.src);
+  const queued = (b) => (b.win.adsbyimobile || []).length;
+
+  try {
+    // 1. 読み終わった後に描いた枠のために、SDKを差し込み直すか
+    {
+      const b = boot();
+      b.N.render("network-ad-examinline", "examinline", "spec", { fresh: true });
+      b.N.render("network-ad-examside", "examside", "spec", { fresh: true });   // SPには無い面
+      if (sdkOf(b).length !== 1) {
+        fail("試験開始でSDKを読んでいない（または重ねて読んでいる）", `差し込まれたSDK: ${sdkOf(b).length}本（1本であること）`);
+      }
+      // 読み込み中に描いた枠は、読み終わった1本が取り出す。重ねて差し込まない。
+      b.N.render("network-ad-result", "result", "spec");
+      if (sdkOf(b).length !== 1) {
+        fail("読み込み中のSDKを重ねて差し込んでいる", `${sdkOf(b).length}本。二重に起動する`);
+      }
+      sdkOf(b).forEach(e => { if (typeof e.onload === "function") e.onload(); });
+      b.win.adsbyimobile.splice(0);                 // SDKが取り出したことにする
+      b.N.render("network-ad-result", "result", "spec", { fresh: true });
+      const after = sdkOf(b);
+      if (after.length !== 2) {
+        fail("読み終わった後に描いた枠をSDKに渡していない",
+          `SDKの差し込み ${after.length}本（2本であること）。結果画面・2本目の試験の枠が積まれたまま処理されない`);
+      }
+      cov.covered("SDKの差し込み直し", after.length, 2);
+    }
+
+    // 2. fresh は前の枠を消して描き直すか。fresh でなければ描かないか
+    {
+      const b = boot();
+      b.N.render("network-ad-result", "result", "spec", { fresh: true });
+      const first = queued(b);
+      const again = b.N.render("network-ad-result", "result", "spec");
+      if (again !== false || queued(b) !== first) {
+        fail("fresh でないのに同じ枠を二重に描いている", "同じ画面の中で広告が増殖する");
+      }
+      const fresh = b.N.render("network-ad-result", "result", "spec", { fresh: true });
+      if (fresh !== true || queued(b) !== first + 1) {
+        fail("fresh で描き直せていない", "2本目の試験・結果画面に広告が出ない");
+      }
+      cov.covered("fresh の描き直し", queued(b), 2);
+    }
+  } catch (e) {
+    fail("描き直しの検査が例外で止まる", String(e && e.stack || e));
+  }
+
+  // 3. 利用者の操作で画面が変わるところ（試験の開始・結果画面）が fresh で描いているか
+  //    ⚠️ コメントを落としてから見る（注記の文字列に一致して素通りするのを避ける）。
+  {
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+    const need = [
+      ["network-ad-result", "結果画面"],
+      ["network-ad-examinline", "試験開始のインライン"],
+      ["network-ad-examside", "試験開始のサイド"],
+    ];
+    let ok = 0;
+    for (const [id, label] of need) {
+      const re = new RegExp('NetAd\\.render\\(\\s*"' + id + '"[^;]*\\{\\s*fresh\\s*:\\s*true\\s*\\}');
+      if (!re.test(code)) {
+        fail("画面が変わるのに描き直していない", `${label}（${id}）。2本目以降の試験で広告が出ない`);
+      } else ok++;
+    }
+    cov.covered("fresh で描く面", ok, 3);
+  }
+}
+
 // --- 出力 ---
 console.log("ABテストの群わけ: 分布・固定・保存不可・一括付与を検査");
 cov.print();
