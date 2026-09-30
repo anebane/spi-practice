@@ -3547,8 +3547,8 @@
     "expect": "abtest",
     "file": "netad.js",
     "why": "宣言は i-mobile のまま、読み込むSDKだけ忍者になる。枠IDが噛み合わず広告は出ないのに、コードの見た目は正しいので気づけない",
-    "find": "      script.src = net.sdk;",
-    "replace": "      script.src = NETWORKS.admax.sdk;"
+    "find": "    script.src = net.sdk;",
+    "replace": "    script.src = NETWORKS.admax.sdk;"
   },
   {
     "name": "ブラウザ側の NetAd の名前を変える",

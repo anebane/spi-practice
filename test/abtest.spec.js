@@ -462,13 +462,16 @@ if (load) {
       try {
         N.render("network-ad-examinline", "examinline", "spec");
         N.render("network-ad-examside", "examside", "spec");   // SPには枠が無い＝何もしない
+        // 読み込み中に別の枠を描く（この予約は読み込み完了時にまとめて処理される）
+        N.render("network-ad-result", "result", "spec");
         if (sdkCount() !== 1) {
           fail("読み込み中にSDKを重ねて差し込んだ",
-            `試験開始時の差し込みが ${sdkCount()} 本（1本のはず）。同じ予約を取り合って二重描画になりうる`);
+            `読み込み中の差し込みが ${sdkCount()} 本（1本のはず）。同じ予約を取り合って二重描画になりうる`);
         }
         const first = added.find(e => e.src === activeSdk);
         if (first && typeof first.onload === "function") first.onload();
-        N.render("network-ad-result", "result", "spec");
+        // 読み込み後に作る結果画面の枠（試験を終えたとき）
+        N.render("network-ad-result", "result", "spec", { fresh: true });
         if (sdkCount() !== 2) {
           fail("結果画面の枠が処理されない",
             "SDKの読み込み後に作った枠でSDKを差し込み直していない。i-mobile は後から積んだ予約を見ないので、結果画面に広告が出ない");
