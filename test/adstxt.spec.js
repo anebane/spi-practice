@@ -55,12 +55,13 @@ if (!fs.existsSync(file)) {
   //    2026-09-16、忍者から i-mobile へ切り替えたとき実際に抜けていた。
   //    ⚠️ 同じドメインの RESELLER 行があっても代わりにならない。あれは
   //    別の事業者が再販している宣言で、自分のアカウントの認可ではない。
-  {
-    const NetAd = require("../netad.js");
-    const net = NetAd.NETWORKS[NetAd.ACTIVE_NETWORK];
+  // ⚠️ 2026-10-04 から PC は PC_NETWORK（忍者）でも配信する。両方を見る。
+  const NetAd = require("../netad.js");
+  for (const name of [NetAd.ACTIVE_NETWORK, NetAd.PC_NETWORK].filter(Boolean)) {
+    const net = NetAd.NETWORKS[name];
     if (!net || !net.adstxt || !net.adstxt.domain || !net.adstxt.id) {
       fail("配信中のネットワークの ads.txt 記載が宣言されていない",
-        `${NetAd.ACTIVE_NETWORK}。何を書けばよいか分からず、抜けても検査できない`);
+        `${name}。何を書けばよいか分からず、抜けても検査できない`);
     } else {
       const esc = (x) => String(x).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const direct = new RegExp("^" + esc(net.adstxt.domain) + ",\\s*" + esc(net.adstxt.id) + ",\\s*DIRECT", "im");

@@ -397,7 +397,9 @@ if (load) {
       const host = make();
       const doc = {
         // 枠の器だけ在るものとし、それ以外（SDKの重複判定を含む）は未挿入とする
-        getElementById: (id) => (id === "network-ad-article" ? host : null),
+        // ⚠️ PCの結果画面を使う。PCの記事下は 2026-10-04 から忍者（PC_NETWORK）で出るので、
+        //    有効なネットワーク（i-mobile）の描画を確かめられなくなる。
+        getElementById: (id) => (id === "network-ad-result" ? host : null),
         createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
         // ⚠️ 数えるのは**差し込まれた時点**。createElement で数えると、
         //    作るだけ作って appendChild を消しても気づけない（実際に空振りした）。
@@ -415,7 +417,7 @@ if (load) {
         //    spec ごと異常終了し、何が壊れたのか出力に残らない。
         let thrown = null;
         try {
-          sandboxed.render("network-ad-article", "article", "spec");
+          sandboxed.render("network-ad-result", "result", "spec");
         } catch (e) {
           thrown = e;
           fail("広告の描画が例外で止まる", String(e && e.message || e));
@@ -495,6 +497,64 @@ if (load) {
         fail("結果画面の広告の検査が例外で止まる", String(e && e.message || e));
       }
       cov.covered("読み込み後の枠でSDKを差し込み直した回数", sdkCount() - 1, 1);
+    }
+
+    // PCは、忍者に枠がある面だけ忍者で出し、無い面は i-mobile で出すか。
+    // ⚠️ 2026-10-04、i-mobile の PC が 9/25 から埋まらなくなったので PC を忍者へ寄せた。
+    //    順番を間違えると PC の広告は i-mobile のまま空になり、
+    //    代わりを探さないと忍者に枠の無い面（結果画面・試験画面）が丸ごと消える。
+    //    どちらも画面上はただ「広告が無い」だけで、エラーは出ない。
+    {
+      const vm = require("vm");
+      const src = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+      const run = (mobile, place) => {
+        const added = [];
+        const make = () => ({ style: {}, children: [], attrs: {},
+          get firstChild() { return this.children[0] || null; },
+          removeChild(c) { this.children = this.children.filter(x => x !== c); },
+          appendChild(c) { this.children.push(c); },
+          setAttribute(k, v) { this.attrs[k] = String(v); },
+          getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; } });
+        const host = make();
+        const doc = {
+          getElementById: (id) => (id === "host" ? host : null),
+          createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
+          head: { appendChild(e) { added.push(e); } }
+        };
+        const events = [];
+        const win = { matchMedia: () => ({ matches: mobile }),
+                      abShowAds: () => true, abGroup: () => "ads",
+                      gtag: (t, n, p) => events.push(p) };
+        vm.runInContext(src, vm.createContext({ window: win, document: doc }));
+        const drawn = win.NetAd.render("host", place, "spec");
+        return { drawn, imobile: (win.adsbyimobile || []).length, admax: (win.admaxads || []).length,
+                 sdks: added.map(e => e.src), network: (events[0] || {}).network };
+      };
+      const AD = (NETWORKS.admax || {}).sdk, IM = (NETWORKS.imobile || {}).sdk;
+      const cases = [
+        { name: "PCの記事下", mobile: false, place: "article", want: "admax" },
+        { name: "PCの結果画面（忍者に枠なし）", mobile: false, place: "result", want: "imobile" },
+        { name: "スマホの記事下", mobile: true, place: "article", want: "imobile" }
+      ];
+      let checked = 0;
+      for (const c of cases) {
+        let r;
+        try { r = run(c.mobile, c.place); } catch (e) {
+          fail("PCの広告の振り分けが例外で止まる", `${c.name}: ${e && e.message || e}`); continue;
+        }
+        checked++;
+        const got = r.admax ? "admax" : r.imobile ? "imobile" : "なし";
+        if (!r.drawn || got !== c.want || r.admax + r.imobile !== 1) {
+          fail("PCの広告の振り分けが違う",
+            `${c.name}: ${got}（admax ${r.admax} / imobile ${r.imobile}）。${c.want} で1枠出るはず`);
+        } else if (r.sdks.indexOf(c.want === "admax" ? AD : IM) === -1) {
+          fail("振り分けた先のSDKを読んでいない", `${c.name}: ${r.sdks.join(", ") || "なし"}`);
+        } else if (r.network !== c.want) {
+          fail("計測のネットワーク名が実際と違う",
+            `${c.name}: network_ad_view.network=${r.network}。どちらが稼いだか分けられない`);
+        }
+      }
+      cov.covered("PC・スマホの振り分けを確かめた面", checked, 3);
     }
   }
 }

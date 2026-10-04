@@ -80,7 +80,7 @@
       }
     },
 
-    // 忍者AdMax（2026-09-16時点で枠が審査中。通ったら比較する）
+    // 忍者AdMax。2026-10-04 から PC の記事下で使う（PC_NETWORK の注記）。
     // ⚠️ 使っていなくても消さない。消すと戻すときに管理画面からIDを取り直す
     //    ことになり、取り違えが起きる。
     admax: {
@@ -90,7 +90,9 @@
       slots: {
         article: { pc: "701e1f0351b6f71b0986f62aae5e1949", sp: "3699c5a4a3decd176accb15405a99283" },
         result:  { pc: null, sp: null },      // 未申請
-        examside: { pc: null, sp: null }      // 未申請
+        examside: { pc: null, sp: null },     // 未申請
+        examinline: { pc: null, sp: null },   // 未申請
+        articleside: { pc: null, sp: null }   // 未申請
       },
       render: function (host, slot) {
         var elementid = "admax-slot-" + slot;
@@ -113,6 +115,14 @@
   // ⚠️ 同じ枠に2社は出せない。どちらか一方だけが表示される。
   var ACTIVE_NETWORK = "imobile";
 
+  // PCは、その面に忍者の枠があれば忍者で出す（2026-10-04〜、矢野さんの判断）。
+  // ⚠️ i-mobile の PC（mid 596360）は 9/25 から広告がほぼ返らなくなった
+  //    （埋まる割合 約25% → 約1%。スマホは約100%のまま）。サイト側は 9/17 から
+  //    変わっておらず、管理画面の設定もスマホと同じだったので、PC在庫の問題と判断した。
+  // ⚠️ 忍者に枠が無い面は ACTIVE_NETWORK で出す。忍者の管理画面で枠を作り、
+  //    admax.slots の pc に ID を書けば、その面だけ自動で忍者に切り替わる。
+  var PC_NETWORK = "admax";
+
   /**
    * SDKの script を差し込む。id を渡したものが「最初の1本」で、
    * 読み込みが済んだら data-loaded="1" を付ける（差し込み直してよいかの目印）。
@@ -126,6 +136,22 @@
     script.src = net.sdk;
     script.async = true;
     document.head.appendChild(script);
+  }
+
+  /**
+   * この面・このデバイスで使うネットワークと枠を選ぶ。
+   * PCは PC_NETWORK → ACTIVE_NETWORK の順に、枠があるほうを使う。
+   */
+  function pick(place, mobile) {
+    var names = mobile ? [ACTIVE_NETWORK] : [PC_NETWORK, ACTIVE_NETWORK];
+    for (var i = 0; i < names.length; i++) {
+      var net = NETWORKS[names[i]];
+      if (!net) continue;              // 宣言に無い名前。次の候補へ
+      var byDevice = (net.slots || {})[place];
+      var slot = byDevice ? (mobile ? byDevice.sp : byDevice.pc) : null;
+      if (slot) return { name: names[i], net: net, slot: slot };
+    }
+    return null;                       // その面・そのデバイスには枠が無い（申請していない）
   }
 
   /** スマホ幅かどうか。枠をデバイスで分けているので判定が要る。 */
@@ -156,14 +182,10 @@
     var host = document.getElementById(placeId);
     if (!host) return false;
 
-    var net = NETWORKS[ACTIVE_NETWORK];
-    if (!net) return false;            // 宣言に無い名前。出さないほうが安全
-
     var mobile = isMobile();
-    var byDevice = (net.slots || {})[place];
-    if (!byDevice) return false;
-    var slot = mobile ? byDevice.sp : byDevice.pc;
-    if (!slot) return false;           // その面・そのデバイスには枠が無い（申請していない）
+    var chosen = pick(place, mobile);
+    if (!chosen) return false;
+    var net = chosen.net, slot = chosen.slot;
 
     if (opts && opts.fresh) {
       while (host.firstChild) host.removeChild(host.firstChild);
@@ -194,7 +216,7 @@
     if (typeof global.gtag === "function") {
       // ⚠️ 群は abtest.js から取る。個別に書くと trackEvent 側とずれる。
       global.gtag("event", "network_ad_view", {
-        network: ACTIVE_NETWORK,
+        network: chosen.name,
         device: mobile ? "sp" : "pc",
         place: place,
         placement: where || place,
@@ -205,7 +227,7 @@
   }
 
   var api = { render: render, isMobile: isMobile,
-              NETWORKS: NETWORKS, ACTIVE_NETWORK: ACTIVE_NETWORK };
+              NETWORKS: NETWORKS, ACTIVE_NETWORK: ACTIVE_NETWORK, PC_NETWORK: PC_NETWORK };
 
   // ⚠️ ブラウザ側は **この名前** を見る（affiliate-article.js と app.js の
   //    `typeof NetAd === "undefined"`）。名前が変わると広告が1枚も出ない。
