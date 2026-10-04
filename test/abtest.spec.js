@@ -388,10 +388,6 @@ if (load) {
     //    この検査は一度も発火しなかった（2026-09-16に変異ランナーの未カバーで露見）。
     //    **実際に描かせて、差し込まれた script の src を見る。**
     const activeSdk = (NETWORKS[active] || {}).sdk || "";
-    // PCの記事下は、PC_NETWORK に枠があればそちらで出る（2026-10-04〜）。
-    const pcNet = mod.PC_NETWORK;
-    const pcArticleSdk = (pcNet && NETWORKS[pcNet] && ((NETWORKS[pcNet].slots || {}).article || {}).pc)
-      ? NETWORKS[pcNet].sdk : activeSdk;
     {
       const vm = require("vm");
       const src = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
@@ -401,7 +397,9 @@ if (load) {
       const host = make();
       const doc = {
         // 枠の器だけ在るものとし、それ以外（SDKの重複判定を含む）は未挿入とする
-        getElementById: (id) => (id === "network-ad-article" ? host : null),
+        // ⚠️ PCの結果画面を使う。PCの記事下は 2026-10-04 から忍者（PC_NETWORK）で出るので、
+        //    有効なネットワーク（i-mobile）の描画を確かめられなくなる。
+        getElementById: (id) => (id === "network-ad-result" ? host : null),
         createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
         // ⚠️ 数えるのは**差し込まれた時点**。createElement で数えると、
         //    作るだけ作って appendChild を消しても気づけない（実際に空振りした）。
@@ -419,7 +417,7 @@ if (load) {
         //    spec ごと異常終了し、何が壊れたのか出力に残らない。
         let thrown = null;
         try {
-          sandboxed.render("network-ad-article", "article", "spec");
+          sandboxed.render("network-ad-result", "result", "spec");
         } catch (e) {
           thrown = e;
           fail("広告の描画が例外で止まる", String(e && e.message || e));
@@ -427,9 +425,9 @@ if (load) {
         const loaded = added.map(e => e.src).filter(Boolean);
         if (!loaded.length) {
           fail("広告SDKを読み込んでいない", "描いても script が差し込まれない。広告は出ない");
-        } else if (pcArticleSdk && loaded.indexOf(pcArticleSdk) === -1) {
+        } else if (activeSdk && loaded.indexOf(activeSdk) === -1) {
           fail("有効なネットワークのSDKを読んでいない",
-            `読み込んだのは ${loaded.join(", ")}。PCの記事下で使うのは ${pcArticleSdk}`);
+            `読み込んだのは ${loaded.join(", ")}。有効なのは ${active} の ${activeSdk}`);
         }
         cov.covered("実際に読み込んだSDK", loaded.length, 1);
       }
