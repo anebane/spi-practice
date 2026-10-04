@@ -2911,10 +2911,10 @@
     "replace": ""
   },
   {
-    "name": "記事ページの広告を全員に出す",
+    "name": "広告の描画で abShowAds() を見ない",
     "expect": "abtest",
     "file": "netad.js",
-    "why": "control 群にも広告が出て対照群が汚れる。広告は正常に表示されるので、画面を見ても気づけない。ABテストそのものが無意味になる",
+    "why": "広告を出すかを決める場所が abShowAds() 以外にも散る。AB再開や広告の一斉停止をしても効かないが、広告は正常に表示されるので気づけない",
     "find": "    if (typeof global.abShowAds !== \"function\" || !global.abShowAds()) return false;",
     "replace": "    if (false) return false;"
   },
@@ -2935,12 +2935,20 @@
     "replace": "      cache = AB_GROUPS[Math.floor(Math.random() * AB_GROUPS.length)];"
   },
   {
-    "name": "割り当てられない利用者にも広告を出す",
+    "name": "広告を ads 群だけに戻す",
     "expect": "abtest",
     "file": "abtest.js",
-    "why": "unassigned に広告を出すと対照群が汚れる。「広告を出したら完走率がどう動いたか」を後から言えなくなる",
-    "find": "    return abGroup() === \"ads\";",
-    "replace": "    return abGroup() !== \"control\";"
+    "why": "2026-10-04 に全員へ広告を出すと決めた。戻ると以前 control に割り当てられた約半数の利用者に永久に広告が出ない。画面は正常に見える",
+    "find": "  var AB_SHOW_ALL = true;",
+    "replace": "  var AB_SHOW_ALL = false;"
+  },
+  {
+    "name": "保存できない環境の利用者に広告を出さない",
+    "expect": "abtest",
+    "file": "abtest.js",
+    "why": "プライベートウィンドウ等の利用者だけ広告が出なくなる。一部の利用者だけなので集計では気づけない",
+    "find": "    return AB_SHOW_ALL || abGroup() === \"ads\";",
+    "replace": "    return abGroup() !== \"unassigned\" && (AB_SHOW_ALL || abGroup() === \"ads\");"
   },
   {
     "name": "群を個別のイベントに手書きする",
