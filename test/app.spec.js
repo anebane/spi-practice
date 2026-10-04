@@ -672,6 +672,28 @@ run("壊れた保存で起動が止まらない", () => {
 }
 
 
+// --- 同じページで2本目の試験を受けても、広告を描き直す ---
+//     i-mobile は枠を二重に描かない作りなので、描き直しの指示(fresh)が無いと
+//     2本目以降の試験と、その結果画面には広告が出ない（2026-09-30）。
+//     ⚠️ 復帰（同じ試験の続き）では描き直さない。時間や操作のたびに描き直すのは
+//        i-mobile の禁じる自動リフレッシュになる。
+run("2本目の試験の広告", () => {
+  const calls = [];
+  const netAd = { render: (id, place, where, opts) => { calls.push({ place, fresh: !!(opts && opts.fresh) }); return true; } };
+  const h = createHarness({ questionCount: 10, netAd });
+  for (let n = 0; n < 2; n++) {
+    if (n === 0) h.start(); else h.byId("btn-retry").click();
+    for (let i = 0; i < 30 && !h.onResult(); i++) h.answerOne();
+  }
+  const count = (place) => calls.filter(c => c.place === place && c.fresh).length;
+  if (count("examinline") !== 2) {
+    fail("2本目の試験の広告", `試験開始時の描き直し(fresh)が ${count("examinline")} 回（2本受けたので2回のはず）。2本目の試験に広告が出ない`);
+  }
+  if (count("result") !== 2) {
+    fail("2本目の試験の広告", `結果画面の描き直し(fresh)が ${count("result")} 回（2回のはず）。2本目の結果画面に広告が出ない`);
+  }
+});
+
 // ============================================================
 // 出力
 // ============================================================

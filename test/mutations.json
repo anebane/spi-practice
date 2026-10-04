@@ -3547,8 +3547,8 @@
     "expect": "abtest",
     "file": "netad.js",
     "why": "宣言は i-mobile のまま、読み込むSDKだけ忍者になる。枠IDが噛み合わず広告は出ないのに、コードの見た目は正しいので気づけない",
-    "find": "      script.src = net.sdk;",
-    "replace": "      script.src = NETWORKS.admax.sdk;"
+    "find": "    script.src = net.sdk;",
+    "replace": "    script.src = NETWORKS.admax.sdk;"
   },
   {
     "name": "ブラウザ側の NetAd の名前を変える",
@@ -3621,5 +3621,53 @@
     "why": "トップから解説ページへ評価が渡らなくなる。2ホップ先になるだけで、2026-09-17まで実際に検索へ出ていなかった。画面は正常に見えるので目視では気づけない",
     "find": "<li><a href=\"categories/zuhyo/\">図表の読み取りの解き方</a>",
     "replace": "<li><a href=\"categories/\">図表の読み取りの解き方</a>"
+  },
+  {
+    "name": "読み込み後に作った枠でSDKを差し込み直さない",
+    "why": "i-mobileのSDKは読み込み時に1回だけ予約を処理する。結果画面の枠が9/16〜9/30で表示3回しか出ていなかった",
+    "file": "netad.js",
+    "find": "    } else if (net.rescanByReinject && loaded.getAttribute(\"data-loaded\") === \"1\") {\n      injectSdk(net, null);\n    }\n",
+    "replace": "    }\n",
+    "expect": "abtest"
+  },
+  {
+    "name": "読み込み中でもSDKを重ねて差し込む",
+    "why": "同じ予約を2つのSDKが取り合い、二重描画になりうる",
+    "file": "netad.js",
+    "find": "loaded.getAttribute(\"data-loaded\") === \"1\"",
+    "replace": "true",
+    "expect": "abtest"
+  },
+  {
+    "name": "SDKの読み込み完了の目印を付けない",
+    "why": "目印が無いと差し込み直しが一度も起きず、結果画面の枠が処理されないまま",
+    "file": "netad.js",
+    "find": "      script.onload = function () { script.setAttribute(\"data-loaded\", \"1\"); };\n",
+    "replace": "",
+    "expect": "abtest"
+  },
+  {
+    "name": "fresh でも前の枠を消さない",
+    "why": "同じページで2本目の試験を始めても二重描画の防止で弾かれ、広告が出ない",
+    "file": "netad.js",
+    "find": "      while (host.firstChild) host.removeChild(host.firstChild);\n",
+    "replace": "",
+    "expect": "abtest"
+  },
+  {
+    "name": "新しい試験で広告を描き直さない",
+    "why": "同じページで受ける2本目以降の試験に広告が出ない",
+    "file": "app.js",
+    "find": "NetAd.render(\"network-ad-examinline\", \"examinline\", \"examinline-\" + PROFILE_ID, { fresh: true });",
+    "replace": "NetAd.render(\"network-ad-examinline\", \"examinline\", \"examinline-\" + PROFILE_ID);",
+    "expect": "app"
+  },
+  {
+    "name": "結果画面で広告を描き直さない",
+    "why": "2本目以降の試験の結果画面に広告が出ない",
+    "file": "app.js",
+    "find": "NetAd.render(\"network-ad-result\", \"result\", \"result-\" + PROFILE_ID, { fresh: true });",
+    "replace": "NetAd.render(\"network-ad-result\", \"result\", \"result-\" + PROFILE_ID);",
+    "expect": "app"
   }
 ]

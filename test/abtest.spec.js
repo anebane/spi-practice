@@ -430,6 +430,72 @@ if (load) {
         cov.covered("実際に読み込んだSDK", loaded.length, 1);
       }
     }
+
+    // SDKを読み込んだあとに作った枠（結果画面）も、予約が処理されるか。
+    // ⚠️ i-mobile の SDK は読み込み時に1回だけ予約を処理する。1ページの中で
+    //    画面を切り替えるこのサイトでは、試験の終わりに作る結果画面の枠が
+    //    一度も処理されていなかった（9/16〜9/30 で表示 SP 3回 / PC 0回）。
+    //    読み込み済みなら差し込み直し、読み込み中なら差し込まない（二重描画を防ぐ）。
+    if (NETWORKS[active] && NETWORKS[active].rescanByReinject) {
+      const vm = require("vm");
+      const src = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+      const added = [];
+      const byId = {};
+      const make = () => ({ style: {}, children: [], attrs: {},
+        get firstChild() { return this.children[0] || null; },
+        removeChild(c) { this.children = this.children.filter(x => x !== c); if (c.id) delete byId[c.id]; },
+        appendChild(c) { this.children.push(c); if (c.id) byId[c.id] = c; },
+        setAttribute(k, v) { this.attrs[k] = String(v); },
+        getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; } });
+      for (const id of ["network-ad-examinline", "network-ad-examside", "network-ad-result"]) byId[id] = make();
+      const doc = {
+        getElementById: (id) => byId[id] || null,
+        createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
+        head: { appendChild(e) { added.push(e); if (e.id) byId[e.id] = e; } }
+      };
+      const win = { matchMedia: () => ({ matches: true }),   // スマホ扱い
+                    abShowAds: () => true, abGroup: () => "ads" };
+      const ctx = vm.createContext({ window: win, document: doc });
+      vm.runInContext(src, ctx);
+      const N = win.NetAd;
+      const sdkCount = () => added.filter(e => e.src === activeSdk).length;
+      try {
+        N.render("network-ad-examinline", "examinline", "spec");
+        N.render("network-ad-examside", "examside", "spec");   // SPには枠が無い＝何もしない
+        // 読み込み中に別の枠を描く（この予約は読み込み完了時にまとめて処理される）
+        N.render("network-ad-result", "result", "spec");
+        if (sdkCount() !== 1) {
+          fail("読み込み中にSDKを重ねて差し込んだ",
+            `読み込み中の差し込みが ${sdkCount()} 本（1本のはず）。同じ予約を取り合って二重描画になりうる`);
+        }
+        const first = added.find(e => e.src === activeSdk);
+        if (first && typeof first.onload === "function") first.onload();
+        // 読み込み後に作る結果画面の枠（試験を終えたとき）
+        N.render("network-ad-result", "result", "spec", { fresh: true });
+        if (sdkCount() !== 2) {
+          fail("結果画面の枠が処理されない",
+            "SDKの読み込み後に作った枠でSDKを差し込み直していない。i-mobile は後から積んだ予約を見ないので、結果画面に広告が出ない");
+        }
+        N.render("network-ad-result", "result", "spec");   // 同じ枠をもう一度
+        if (sdkCount() !== 2) {
+          fail("描画済みの枠でSDKを差し込み直した", "同じ枠を描くたびにSDKを読み直している");
+        }
+        // 2本目の試験: 利用者が新しい試験を始めたら描き直す（fresh）。
+        const q0 = (win.adsbyimobile || []).length;
+        N.render("network-ad-examinline", "examinline", "spec", { fresh: true });
+        if ((win.adsbyimobile || []).length !== q0 + 1 || sdkCount() !== 3) {
+          fail("2本目の試験に広告が出ない",
+            "fresh で描き直しても予約が積まれないか、SDKを差し込み直していない。同じページで受ける2本目以降の試験は広告0になる");
+        }
+        const inline = byId["network-ad-examinline"];
+        if (inline && inline.children.length !== 1) {
+          fail("描き直しで枠が重なった", `インライン枠の中身が ${inline.children.length} 個（1個のはず）`);
+        }
+      } catch (e) {
+        fail("結果画面の広告の検査が例外で止まる", String(e && e.message || e));
+      }
+      cov.covered("読み込み後の枠でSDKを差し込み直した回数", sdkCount() - 1, 1);
+    }
   }
 }
 
