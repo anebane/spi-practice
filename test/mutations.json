@@ -3351,6 +3351,38 @@
     "replace": "<html>"
   },
   {
+    "name": "PCでも i-mobile を先に使う",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "i-mobile の PC は 9/25 から広告がほぼ返らない。順番が逆だと、忍者に枠があっても PC の広告は空のまま。画面上は広告が無いだけでエラーは出ない",
+    "find": "    var names = mobile ? [ACTIVE_NETWORK] : [PC_NETWORK, ACTIVE_NETWORK];",
+    "replace": "    var names = mobile ? [ACTIVE_NETWORK] : [ACTIVE_NETWORK, PC_NETWORK];"
+  },
+  {
+    "name": "PCの切り替え先を宣言に無い名前にする",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "名前を打ち間違えると候補から黙って外れ、PC は全部 i-mobile に戻る。広告が空になるだけで気づけない",
+    "find": "  var PC_NETWORK = \"admax\";",
+    "replace": "  var PC_NETWORK = \"admx\";"
+  },
+  {
+    "name": "枠が無い面で次のネットワークを探さない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "忍者に枠の無い面（結果画面・試験画面）で i-mobile に回らず、PC の広告が丸ごと消える",
+    "find": "      if (slot) return { name: names[i], net: net, slot: slot };",
+    "replace": "      return slot ? { name: names[i], net: net, slot: slot } : null;"
+  },
+  {
+    "name": "計測のネットワーク名を固定で送る",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "PC で忍者が出しても network_ad_view が imobile と記録される。どちらのネットワークが稼いだかを後から分けられない",
+    "find": "        network: chosen.name,",
+    "replace": "        network: ACTIVE_NETWORK,"
+  },
+  {
     "name": "有効なネットワークを宣言に無い名前にする",
     "expect": "abtest",
     "file": "netad.js",
