@@ -403,7 +403,9 @@ if (load) {
         //    作るだけ作って appendChild を消しても気づけない（実際に空振りした）。
         head: { appendChild(e) { added.push(e); } }
       };
-      const win = { matchMedia: () => ({ matches: false }),   // PC扱い
+      // ⚠️ スマホで見る。PCは 2026-10-04 から忍者に振り分けている（下の「デバイスごとの
+      //    ネットワーク」で別に検査する）。ここは「有効なネットワーク＝i-mobile」の確認。
+      const win = { matchMedia: () => ({ matches: true }),    // スマホ扱い
                     abShowAds: () => true, abGroup: () => "ads" };
       const ctx = vm.createContext({ window: win, document: doc });
       vm.runInContext(src, ctx);
@@ -496,6 +498,90 @@ if (load) {
       }
       cov.covered("読み込み後の枠でSDKを差し込み直した回数", sdkCount() - 1, 1);
     }
+  }
+}
+
+// --- デバイスごとのネットワーク（PC＝忍者、スマホ＝i-mobile）---
+//
+// 【なぜ必要か】
+// i-mobile のPC配信が 2026-09-25 からほぼ止まり（PCサイトの表示 1日11〜30 → 0〜6回）、
+// PCだけ忍者AdMaxに振り分けた。壊れ方はどれも静かに進む。
+//   ・PCが i-mobile に戻る        … 広告は描かれるが、ほぼ埋まらない（今の状態に逆戻り）
+//   ・忍者に枠の無い面で落とさない … その面のPCは広告ゼロ。枠が無いので画面は空白なだけ
+//   ・忍者のSDKを差し込み直せない  … 結果画面と2本目以降の試験のPC広告が出ない
+// 忍者のSDKは window.__admax_tag__ が在ると二度目以降何もしない（2026-10-04、SDKのコードで確認）。
+{
+  const vm = require("vm");
+  const nsrc = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+  const ADMAX_SDK = "https://adm.shinobi.jp/st/t.js";
+  const IMOBILE_SDK = "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104";
+  const boot = (mobile) => {
+    const byId = {}, added = [];
+    const make = (tag) => ({ tagName: tag, style: {}, children: [], attrs: {}, className: "",
+      _id: "", get id() { return this._id; }, set id(v) { this._id = v; byId[v] = this; },
+      get firstChild() { return this.children[0] || null; },
+      appendChild(c) { this.children.push(c); return c; },
+      removeChild(c) { this.children = this.children.filter(x => x !== c); if (c._id && byId[c._id] === c) delete byId[c._id]; },
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; } });
+    for (const id of ["network-ad-article", "network-ad-result", "network-ad-examinline"]) make("div").id = id;
+    const doc = { getElementById: (id) => byId[id] || null, createElement: (t) => make(t),
+      head: { appendChild(e) { added.push(e); if (e._id) byId[e._id] = e; return e; } } };
+    const win = { matchMedia: () => ({ matches: mobile }), abShowAds: () => true, abGroup: () => "ads" };
+    vm.runInContext(nsrc, vm.createContext({ window: win, document: doc }));
+    return { N: win.NetAd, win, added, byId };
+  };
+  const srcs = (b) => b.added.map(e => e.src).filter(Boolean);
+  try {
+    // 1. PCの記事下は忍者、スマホの記事下は i-mobile
+    const pc = boot(false);
+    pc.N.render("network-ad-article", "article", "spec");
+    const pcBox = pc.byId["network-ad-article"].children[0] || {};
+    if (srcs(pc).indexOf(ADMAX_SDK) < 0 || pcBox.className !== "admax-ads") {
+      fail("PCの広告が忍者に振り分けられていない",
+        `読み込んだSDK: ${srcs(pc).join(", ") || "なし"}。i-mobile のPC配信は9/25からほぼ止まっている`);
+    }
+    const sp = boot(true);
+    sp.N.render("network-ad-article", "article", "spec");
+    if (srcs(sp).indexOf(IMOBILE_SDK) < 0 || srcs(sp).indexOf(ADMAX_SDK) >= 0) {
+      fail("スマホの広告が i-mobile でない", `読み込んだSDK: ${srcs(sp).join(", ") || "なし"}。スマホは i-mobile で正常に埋まっている`);
+    }
+
+    // 2. 忍者に枠が無い面のPCは i-mobile に落ちる（広告ゼロにしない）
+    const NETS = (require("../netad.js").NETWORKS) || {};
+    const admaxResult = (((NETS.admax || {}).slots || {}).result || {}).pc;
+    if (!admaxResult) {
+      const fb = boot(false);
+      fb.N.render("network-ad-result", "result", "spec");
+      if (srcs(fb).indexOf(IMOBILE_SDK) < 0) {
+        fail("忍者に枠が無い面でPCの広告が消える", `結果画面PC: 読み込んだSDK ${srcs(fb).join(", ") || "なし"}。i-mobile に落とすこと`);
+      }
+    } else {
+      cov.skipped("忍者に枠が無い面", 1, "結果画面PCの忍者枠ができたので、落とし先の検査は使わない");
+    }
+
+    // 3. 忍者のSDKを読み終えた後に描いた枠のために、印を外して差し込み直す
+    const re = boot(false);
+    re.N.render("network-ad-article", "article", "spec");
+    const first = re.added.find(e => e.src === ADMAX_SDK);
+    if (first && typeof first.onload === "function") first.onload();
+    // 本物のSDKは読み込み時に印を立て、描いた箱に中身を入れる
+    re.win.__admax_tag__ = {};
+    const done = re.byId["network-ad-article"].children[0];
+    if (done) done.appendChild({ tagName: "iframe", children: [] });
+    re.N.render("network-ad-article", "article", "spec", { fresh: true });
+    const n = re.added.filter(e => e.src === ADMAX_SDK).length;
+    if (n !== 2) {
+      fail("忍者のSDKを差し込み直していない", `差し込み ${n}本（2本であること）。結果画面と2本目以降の試験のPC広告が出ない`);
+    } else if (re.win.__admax_tag__ !== undefined) {
+      fail("忍者のSDKの印を外していない", "window.__admax_tag__ が残っていると、差し込み直してもSDKは何もしない");
+    } else if ((re.win.admaxads || []).length !== 1) {
+      fail("処理済みの予約を残したまま差し込み直している",
+        `予約 ${(re.win.admaxads || []).length}件（未処理の1件だけであること）。描いた枠をもう一度要求する`);
+    }
+    cov.covered("デバイスごとのネットワーク", 3, 3);
+  } catch (e) {
+    fail("デバイスごとのネットワークの検査が例外で止まる", String(e && e.stack || e));
   }
 }
 

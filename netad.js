@@ -80,17 +80,39 @@
       }
     },
 
-    // 忍者AdMax（2026-09-16時点で枠が審査中。通ったら比較する）
-    // ⚠️ 使っていなくても消さない。消すと戻すときに管理画面からIDを取り直す
+    // 忍者AdMax（2026-10-04〜 PCで使う。DEVICE_NETWORK の注記）
+    // ⚠️ 使っていない枠も消さない。消すと戻すときに管理画面からIDを取り直す
     //    ことになり、取り違えが起きる。
     admax: {
       sdk: "https://adm.shinobi.jp/st/t.js",
       sdkId: "admax-sdk",
       adstxt: { domain: "adm.shinobi.jp", id: "231519" },
+      // ⚠️ このSDKも読み込み時に1回だけ admaxads を処理する。しかも
+      //    window.__admax_tag__ が在ると二度目以降は**何もしない**（2026-10-04、SDKのコードで確認）。
+      //    差し込み直す前に prepareRescan でその印を外し、未処理の予約だけを残す。
+      rescanByReinject: true,
+      prepareRescan: function () {
+        // admaxads は処理後も空にならない。残すと描いた枠をもう一度要求してしまう。
+        // 未処理 = 箱がまだ在って、中身が入っていないもの。
+        // 同じ枠を描き直したとき（2本目の試験）は古い予約も同じIDで残っているので、1件にまとめる。
+        var left = [], seen = {};
+        var q = global.admaxads || [];
+        for (var i = 0; i < q.length; i++) {
+          var id = q[i].admax_id;
+          var box = document.getElementById("admax-slot-" + id);
+          if (box && !box.firstChild && !seen[id]) { seen[id] = true; left.push(q[i]); }
+        }
+        global.admaxads = left;
+        global.__admax_tag__ = undefined;
+      },
+      // ⚠️ null は「まだ管理画面で枠を作っていない」。その面のPCは i-mobile に落ちる。
+      //    枠を作ったら、管理画面のタグにある admax_id をここに書く（サイズは 300x250）。
       slots: {
         article: { pc: "701e1f0351b6f71b0986f62aae5e1949", sp: "3699c5a4a3decd176accb15405a99283" },
         result:  { pc: null, sp: null },      // 未申請
-        examside: { pc: null, sp: null }      // 未申請
+        examside: { pc: null, sp: null },     // 未申請
+        examinline: { pc: null, sp: null },   // 未申請
+        articleside: { pc: null, sp: null }   // 未申請
       },
       render: function (host, slot) {
         var elementid = "admax-slot-" + slot;
@@ -112,6 +134,30 @@
 
   // ⚠️ 同じ枠に2社は出せない。どちらか一方だけが表示される。
   var ACTIVE_NETWORK = "imobile";
+
+  /**
+   * デバイスごとに使うネットワーク。書いていないデバイスは ACTIVE_NETWORK。
+   *
+   * ⚠️ PCを忍者にしたのは、i-mobile のPC配信が 2026-09-25 からほぼ止まったため。
+   *    PCサイトの表示が1日11〜30 → 0〜6回。サイト側は無変更（本番=main）、
+   *    管理画面の枠・フィルタにも異常なし。スマホは同じ期間も正常。
+   * ⚠️ 選んだネットワークにその面の枠が無ければ ACTIVE_NETWORK に落とす。
+   *    忍者で枠を作るまでの面が、広告ゼロにならないようにするため。
+   */
+  var DEVICE_NETWORK = { pc: "admax" };
+
+  /** その面・そのデバイスで使うネットワーク名と枠。無ければ null。 */
+  function pickSlot(place, mobile) {
+    var dev = mobile ? "sp" : "pc";
+    var names = [DEVICE_NETWORK[dev], ACTIVE_NETWORK];
+    for (var i = 0; i < names.length; i++) {
+      var net = names[i] && NETWORKS[names[i]];
+      var byDevice = net && (net.slots || {})[place];
+      var slot = byDevice && byDevice[dev];
+      if (slot) return { name: names[i], net: net, slot: slot };
+    }
+    return null;
+  }
 
   /**
    * SDKの script を差し込む。id を渡したものが「最初の1本」で、
@@ -156,14 +202,10 @@
     var host = document.getElementById(placeId);
     if (!host) return false;
 
-    var net = NETWORKS[ACTIVE_NETWORK];
-    if (!net) return false;            // 宣言に無い名前。出さないほうが安全
-
     var mobile = isMobile();
-    var byDevice = (net.slots || {})[place];
-    if (!byDevice) return false;
-    var slot = mobile ? byDevice.sp : byDevice.pc;
-    if (!slot) return false;           // その面・そのデバイスには枠が無い（申請していない）
+    var picked = pickSlot(place, mobile);
+    if (!picked) return false;         // どのネットワークにも、その面・そのデバイスの枠が無い
+    var net = picked.net, slot = picked.slot;
 
     if (opts && opts.fresh) {
       while (host.firstChild) host.removeChild(host.firstChild);
@@ -187,6 +229,7 @@
     if (!loaded) {
       injectSdk(net, net.sdkId);
     } else if (net.rescanByReinject && loaded.getAttribute("data-loaded") === "1") {
+      if (typeof net.prepareRescan === "function") net.prepareRescan();
       injectSdk(net, null);
     }
     host.style.display = "";
@@ -194,7 +237,7 @@
     if (typeof global.gtag === "function") {
       // ⚠️ 群は abtest.js から取る。個別に書くと trackEvent 側とずれる。
       global.gtag("event", "network_ad_view", {
-        network: ACTIVE_NETWORK,
+        network: picked.name,
         device: mobile ? "sp" : "pc",
         place: place,
         placement: where || place,
@@ -205,7 +248,8 @@
   }
 
   var api = { render: render, isMobile: isMobile,
-              NETWORKS: NETWORKS, ACTIVE_NETWORK: ACTIVE_NETWORK };
+              NETWORKS: NETWORKS, ACTIVE_NETWORK: ACTIVE_NETWORK,
+              DEVICE_NETWORK: DEVICE_NETWORK, pickSlot: pickSlot };
 
   // ⚠️ ブラウザ側は **この名前** を見る（affiliate-article.js と app.js の
   //    `typeof NetAd === "undefined"`）。名前が変わると広告が1枚も出ない。

@@ -3626,7 +3626,7 @@
     "name": "読み込み後に作った枠でSDKを差し込み直さない",
     "why": "i-mobileのSDKは読み込み時に1回だけ予約を処理する。結果画面の枠が9/16〜9/30で表示3回しか出ていなかった",
     "file": "netad.js",
-    "find": "    } else if (net.rescanByReinject && loaded.getAttribute(\"data-loaded\") === \"1\") {\n      injectSdk(net, null);\n    }\n",
+    "find": "    } else if (net.rescanByReinject && loaded.getAttribute(\"data-loaded\") === \"1\") {\n      if (typeof net.prepareRescan === \"function\") net.prepareRescan();\n      injectSdk(net, null);\n    }\n",
     "replace": "    }\n",
     "expect": "abtest"
   },
@@ -3669,5 +3669,61 @@
     "find": "NetAd.render(\"network-ad-result\", \"result\", \"result-\" + PROFILE_ID, { fresh: true });",
     "replace": "NetAd.render(\"network-ad-result\", \"result\", \"result-\" + PROFILE_ID);",
     "expect": "app"
+  },
+  {
+    "name": "PCを i-mobile に戻す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "i-mobile のPC配信は9/25からほぼ止まっている。PCの広告は描かれるがほぼ埋まらない状態に逆戻りする。例外は出ない",
+    "find": "  var DEVICE_NETWORK = { pc: \"admax\" };",
+    "replace": "  var DEVICE_NETWORK = {};"
+  },
+  {
+    "name": "スマホまで忍者に振り分ける",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "スマホは i-mobile で正常に埋まっている。忍者のSP枠は審査中なので、スマホの広告がゼロになる",
+    "find": "  var DEVICE_NETWORK = { pc: \"admax\" };",
+    "replace": "  var DEVICE_NETWORK = { pc: \"admax\", sp: \"admax\" };"
+  },
+  {
+    "name": "忍者に枠が無い面で i-mobile に落とさない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "忍者で枠を作っていない面（結果画面・試験画面など）のPCが広告ゼロになる。枠が無いだけなので画面は空白で、エラーは出ない",
+    "find": "    var names = [DEVICE_NETWORK[dev], ACTIVE_NETWORK];",
+    "replace": "    var names = [DEVICE_NETWORK[dev] || ACTIVE_NETWORK];"
+  },
+  {
+    "name": "忍者のSDKの印を外さない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "印が残っていると、差し込み直しても忍者のSDKは何もしない。結果画面と2本目以降の試験のPC広告が出ない",
+    "find": "        global.__admax_tag__ = undefined;\n",
+    "replace": ""
+  },
+  {
+    "name": "忍者の差し込み直しの準備を呼ばない",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "忍者は印が残ったままになり、差し込み直しが空振りする。i-mobile 側は影響が無いので、スマホを見ても気づけない",
+    "find": "      if (typeof net.prepareRescan === \"function\") net.prepareRescan();\n",
+    "replace": ""
+  },
+  {
+    "name": "処理済みの忍者の予約を残す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "描いた枠をもう一度要求する。同じ箱に二重に広告を差し込もうとし、表示回数も水増しになる",
+    "find": "          if (box && !box.firstChild && !seen[id]) { seen[id] = true; left.push(q[i]); }",
+    "replace": "          left.push(q[i]);"
+  },
+  {
+    "name": "忍者の予約の箱を器が持たないAPIで探す",
+    "expect": "abtest",
+    "file": "netad.js",
+    "why": "描き直しの準備が例外で止まると、その後ろの広告と計測ごと止まる。検査が異常終了せず失敗として報告できるかを見る",
+    "find": "          var box = document.getElementById(\"admax-slot-\" + id);",
+    "replace": "          var box = document.querySelector(\"#admax-slot-\" + id);"
   }
 ]
