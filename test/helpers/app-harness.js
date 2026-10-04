@@ -201,6 +201,8 @@ function createHarness(opts) {
     // 1つの事実（Affiliate の公開API）を2箇所に書かない。
     Affiliate: stubAffiliate()
   };
+  // 広告の描画を記録したい検査だけが渡す（既定は無し＝app.js 側で描かない）。
+  if (opts.netAd) sandbox.NetAd = opts.netAd;
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   sandbox.addEventListener = (t, f) => { (pageHandlers.win[t] = pageHandlers.win[t] || []).push(f); };

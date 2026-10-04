@@ -417,7 +417,9 @@ if (load) {
       const host = make();
       const doc = {
         // 枠の器だけ在るものとし、それ以外（SDKの重複判定を含む）は未挿入とする
-        getElementById: (id) => (id === "network-ad-article" ? host : null),
+        // ⚠️ PCの結果画面を使う。PCの記事下は 2026-10-04 から忍者（PC_NETWORK）で出るので、
+        //    有効なネットワーク（i-mobile）の描画を確かめられなくなる。
+        getElementById: (id) => (id === "network-ad-result" ? host : null),
         createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
         // ⚠️ 数えるのは**差し込まれた時点**。createElement で数えると、
         //    作るだけ作って appendChild を消しても気づけない（実際に空振りした）。
@@ -435,7 +437,7 @@ if (load) {
         //    spec ごと異常終了し、何が壊れたのか出力に残らない。
         let thrown = null;
         try {
-          sandboxed.render("network-ad-article", "article", "spec");
+          sandboxed.render("network-ad-result", "result", "spec");
         } catch (e) {
           thrown = e;
           fail("広告の描画が例外で止まる", String(e && e.message || e));
@@ -449,6 +451,130 @@ if (load) {
         }
         cov.covered("実際に読み込んだSDK", loaded.length, 1);
       }
+    }
+
+    // SDKを読み込んだあとに作った枠（結果画面）も、予約が処理されるか。
+    // ⚠️ i-mobile の SDK は読み込み時に1回だけ予約を処理する。1ページの中で
+    //    画面を切り替えるこのサイトでは、試験の終わりに作る結果画面の枠が
+    //    一度も処理されていなかった（9/16〜9/30 で表示 SP 3回 / PC 0回）。
+    //    読み込み済みなら差し込み直し、読み込み中なら差し込まない（二重描画を防ぐ）。
+    if (NETWORKS[active] && NETWORKS[active].rescanByReinject) {
+      const vm = require("vm");
+      const src = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+      const added = [];
+      const byId = {};
+      const make = () => ({ style: {}, children: [], attrs: {},
+        get firstChild() { return this.children[0] || null; },
+        removeChild(c) { this.children = this.children.filter(x => x !== c); if (c.id) delete byId[c.id]; },
+        appendChild(c) { this.children.push(c); if (c.id) byId[c.id] = c; },
+        setAttribute(k, v) { this.attrs[k] = String(v); },
+        getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; } });
+      for (const id of ["network-ad-examinline", "network-ad-examside", "network-ad-result"]) byId[id] = make();
+      const doc = {
+        getElementById: (id) => byId[id] || null,
+        createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
+        head: { appendChild(e) { added.push(e); if (e.id) byId[e.id] = e; } }
+      };
+      const win = { matchMedia: () => ({ matches: true }),   // スマホ扱い
+                    abShowAds: () => true, abGroup: () => "ads" };
+      const ctx = vm.createContext({ window: win, document: doc });
+      vm.runInContext(src, ctx);
+      const N = win.NetAd;
+      const sdkCount = () => added.filter(e => e.src === activeSdk).length;
+      try {
+        N.render("network-ad-examinline", "examinline", "spec");
+        N.render("network-ad-examside", "examside", "spec");   // SPには枠が無い＝何もしない
+        // 読み込み中に別の枠を描く（この予約は読み込み完了時にまとめて処理される）
+        N.render("network-ad-result", "result", "spec");
+        if (sdkCount() !== 1) {
+          fail("読み込み中にSDKを重ねて差し込んだ",
+            `読み込み中の差し込みが ${sdkCount()} 本（1本のはず）。同じ予約を取り合って二重描画になりうる`);
+        }
+        const first = added.find(e => e.src === activeSdk);
+        if (first && typeof first.onload === "function") first.onload();
+        // 読み込み後に作る結果画面の枠（試験を終えたとき）
+        N.render("network-ad-result", "result", "spec", { fresh: true });
+        if (sdkCount() !== 2) {
+          fail("結果画面の枠が処理されない",
+            "SDKの読み込み後に作った枠でSDKを差し込み直していない。i-mobile は後から積んだ予約を見ないので、結果画面に広告が出ない");
+        }
+        N.render("network-ad-result", "result", "spec");   // 同じ枠をもう一度
+        if (sdkCount() !== 2) {
+          fail("描画済みの枠でSDKを差し込み直した", "同じ枠を描くたびにSDKを読み直している");
+        }
+        // 2本目の試験: 利用者が新しい試験を始めたら描き直す（fresh）。
+        const q0 = (win.adsbyimobile || []).length;
+        N.render("network-ad-examinline", "examinline", "spec", { fresh: true });
+        if ((win.adsbyimobile || []).length !== q0 + 1 || sdkCount() !== 3) {
+          fail("2本目の試験に広告が出ない",
+            "fresh で描き直しても予約が積まれないか、SDKを差し込み直していない。同じページで受ける2本目以降の試験は広告0になる");
+        }
+        const inline = byId["network-ad-examinline"];
+        if (inline && inline.children.length !== 1) {
+          fail("描き直しで枠が重なった", `インライン枠の中身が ${inline.children.length} 個（1個のはず）`);
+        }
+      } catch (e) {
+        fail("結果画面の広告の検査が例外で止まる", String(e && e.message || e));
+      }
+      cov.covered("読み込み後の枠でSDKを差し込み直した回数", sdkCount() - 1, 1);
+    }
+
+    // PCは、忍者に枠がある面だけ忍者で出し、無い面は i-mobile で出すか。
+    // ⚠️ 2026-10-04、i-mobile の PC が 9/25 から埋まらなくなったので PC を忍者へ寄せた。
+    //    順番を間違えると PC の広告は i-mobile のまま空になり、
+    //    代わりを探さないと忍者に枠の無い面（結果画面・試験画面）が丸ごと消える。
+    //    どちらも画面上はただ「広告が無い」だけで、エラーは出ない。
+    {
+      const vm = require("vm");
+      const src = fs.readFileSync(path.join(ROOT, "netad.js"), "utf8");
+      const run = (mobile, place) => {
+        const added = [];
+        const make = () => ({ style: {}, children: [], attrs: {},
+          get firstChild() { return this.children[0] || null; },
+          removeChild(c) { this.children = this.children.filter(x => x !== c); },
+          appendChild(c) { this.children.push(c); },
+          setAttribute(k, v) { this.attrs[k] = String(v); },
+          getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; } });
+        const host = make();
+        const doc = {
+          getElementById: (id) => (id === "host" ? host : null),
+          createElement: (tag) => { const e = make(); e.tagName = tag; return e; },
+          head: { appendChild(e) { added.push(e); } }
+        };
+        const events = [];
+        const win = { matchMedia: () => ({ matches: mobile }),
+                      abShowAds: () => true, abGroup: () => "ads",
+                      gtag: (t, n, p) => events.push(p) };
+        vm.runInContext(src, vm.createContext({ window: win, document: doc }));
+        const drawn = win.NetAd.render("host", place, "spec");
+        return { drawn, imobile: (win.adsbyimobile || []).length, admax: (win.admaxads || []).length,
+                 sdks: added.map(e => e.src), network: (events[0] || {}).network };
+      };
+      const AD = (NETWORKS.admax || {}).sdk, IM = (NETWORKS.imobile || {}).sdk;
+      const cases = [
+        { name: "PCの記事下", mobile: false, place: "article", want: "admax" },
+        { name: "PCの結果画面（忍者に枠なし）", mobile: false, place: "result", want: "imobile" },
+        { name: "スマホの記事下", mobile: true, place: "article", want: "imobile" }
+      ];
+      let checked = 0;
+      for (const c of cases) {
+        let r;
+        try { r = run(c.mobile, c.place); } catch (e) {
+          fail("PCの広告の振り分けが例外で止まる", `${c.name}: ${e && e.message || e}`); continue;
+        }
+        checked++;
+        const got = r.admax ? "admax" : r.imobile ? "imobile" : "なし";
+        if (!r.drawn || got !== c.want || r.admax + r.imobile !== 1) {
+          fail("PCの広告の振り分けが違う",
+            `${c.name}: ${got}（admax ${r.admax} / imobile ${r.imobile}）。${c.want} で1枠出るはず`);
+        } else if (r.sdks.indexOf(c.want === "admax" ? AD : IM) === -1) {
+          fail("振り分けた先のSDKを読んでいない", `${c.name}: ${r.sdks.join(", ") || "なし"}`);
+        } else if (r.network !== c.want) {
+          fail("計測のネットワーク名が実際と違う",
+            `${c.name}: network_ad_view.network=${r.network}。どちらが稼いだか分けられない`);
+        }
+      }
+      cov.covered("PC・スマホの振り分けを確かめた面", checked, 3);
     }
   }
 }

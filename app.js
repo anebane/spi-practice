@@ -657,10 +657,13 @@
     //    問題の読みやすさには影響しない。ただし**試験中の面**なので、
     //    完走率への影響をABテストの群別に必ず見ること。
     if (typeof NetAd !== "undefined") {
-      NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID);
+      // ⚠️ fresh: 新しい試験を始めるたびに枠を描き直す。描き直さないと、
+      //    同じページで受ける2本目以降の試験には広告が出ない。
+      //    （中断からの復帰では描き直さない。同じ試験の続きなので）
+      NetAd.render("network-ad-examside", "examside", "examside-" + PROFILE_ID, { fresh: true });
       // ⚠️ サイドはPCだけ、インラインはPC・SPとも出す。面を分けてあるので、
       //    どちらが稼いだかをレポートで分けられる。
-      NetAd.render("network-ad-examinline", "examinline", "examinline-" + PROFILE_ID);
+      NetAd.render("network-ad-examinline", "examinline", "examinline-" + PROFILE_ID, { fresh: true });
     }
     showQuestion(0);
     startTimer();
@@ -1263,7 +1266,8 @@
     showScreen("result");
     // ⚠️ 描くのは**画面が出るとき**。読み込み時に描くと、見られていない広告を
     //    数えることになり、表示回数もRPMも実態から離れる。
-    if (typeof NetAd !== "undefined") NetAd.render("network-ad-result", "result", "result-" + PROFILE_ID);
+    // ⚠️ fresh: 試験を終えるたびに結果画面の枠を描き直す（2本目以降の試験の結果にも出す）。
+    if (typeof NetAd !== "undefined") NetAd.render("network-ad-result", "result", "result-" + PROFILE_ID, { fresh: true });
 
     var totalCorrect = 0;
     var totalTime = 0;
