@@ -116,13 +116,33 @@ if (load) {
       fail("保存できない環境で群を割り当てている",
         `群=${g}。固定できないので "unassigned" にして集計から外せるようにすること`);
     } else {
-      // 割り当てられない利用者に広告を出すと、対照群が汚れる。
+      // ABは2026-10-04に終了し、広告は全員に出す。保存できない環境の人も含む。
       let shows = null;
       try { shows = load(denied).abShowAds(); } catch (e) { shows = "例外: " + e.message; }
-      if (shows !== false) {
-        fail("割り当てられない利用者に広告を出している", `abShowAds()=${shows}`);
+      if (shows !== true) {
+        fail("保存できない環境の利用者に広告が出ない", `abShowAds()=${shows}`);
       }
     }
+  }
+
+  // --- 3b. どの群の利用者にも広告が出るか ---
+  // ⚠️ 2026-10-04 にABを終え、全員に出すと決めた（完走率が下がらなかったため）。
+  //    以前に control 群へ割り当てられた人は localStorage に "control" が残っている。
+  //    ここで出ないと、利用者の約半分に永久に広告が出ない。画面は正常に見えるので気づけない。
+  {
+    let checked = 0;
+    for (const g of ["control", "ads"]) {
+      const store = newStore();
+      store.setItem("ab_group_v1", g);
+      const h = load(store);
+      checked++;
+      if (h.abGroup() !== g) {
+        fail("保存済みの群が読めていない", `保存=${g} / abGroup()=${h.abGroup()}`);
+      } else if (h.abShowAds() !== true) {
+        fail("広告が出ない群がある", `${g} 群で abShowAds()=${h.abShowAds()}。全員に出す決定（2026-10-04）に反する`);
+      }
+    }
+    cov.covered("広告の表示を確かめた群", checked, 2);
   }
 
   // --- 4. 群が全イベントに乗るか（個別に書き足す形になっていないか）---
@@ -203,12 +223,12 @@ if (load) {
   }
 }
 
-// --- 6. 広告が ads 群にだけ出るか ---
+// --- 6. 広告の可否を abShowAds() だけが決めているか ---
 //
 // ⚠️ 判定を外しても**広告は表示される**ので、画面上は正常に見える。
-//    壊れるのは対照群のほうで、control 群にも広告が出ると
-//    「広告を出したら完走率がどう動いたか」を後から言えなくなる。
-//    ABテストそのものが無意味になるが、エラーは1つも出ない。
+//    ABは2026-10-04に終えたが、abShowAds() は「広告を出すか」を決める唯一の場所として残す。
+//    描画側がこれを見なくなると、ABを再開しても、広告を一斉に止めようとしても、
+//    どちらも効かない。エラーは1つも出ない。
 {
   const file = path.join(ROOT, "affiliate-article.js");
   if (!fs.existsSync(file)) {
@@ -225,7 +245,7 @@ if (load) {
     if (!guard.test(art)) {
       fail("広告が群で出し分けられていない",
         "netad.js の render で `!abShowAds()` なら描かずに返ること。"
-        + "control 群にも出ると対照群が汚れ、ABの比較が成立しない");
+        + "見なくなると、AB再開や広告の一斉停止が効かなくなる");
     }
 
 
